@@ -73,6 +73,7 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} h-full`}
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
     >
       <head>
         {/* DNS prefetch for external resources */}
