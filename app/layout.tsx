@@ -98,9 +98,11 @@ export default function RootLayout({
               try {
                 var t = localStorage.getItem('theme');
                 if (t) {
-                  document.documentElement.setAttribute('data-theme', t);
+                  if (t === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  }
                 } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                  document.documentElement.setAttribute('data-theme', 'dark');
+                  document.documentElement.classList.add('dark');
                 }
               } catch(e) {}
             `,

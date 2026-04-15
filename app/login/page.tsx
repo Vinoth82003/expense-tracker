@@ -55,7 +55,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex flex-col items-center justify-center p-5 relative overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-center p-5 relative overflow-hidden"
       id="main-content"
     >
       {/* Background decorative elements */}
