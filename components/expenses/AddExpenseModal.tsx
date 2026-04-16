@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, IndianRupee, Tag, FileText, Calendar, ChevronDown, Loader2, Plus, ShoppingCart, Sparkles } from "lucide-react";
+import { X, IndianRupee, Tag, FileText, Calendar, ChevronDown, Loader2, Plus, ShoppingCart, Sparkles, Pencil } from "lucide-react";
 
 interface Category {
   id: string;
@@ -10,15 +10,25 @@ interface Category {
   type: string;
 }
 
+interface Expense {
+  id: string;
+  amount: number;
+  category: string;
+  subcategory: string;
+  note: string | null;
+  date: string;
+}
+
 interface AddExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editExpense?: Expense | null;
 }
 
 const CATEGORY_TYPES = ["Needs", "Wants"];
 
-export function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpenseModalProps) {
+export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: AddExpenseModalProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -35,8 +45,26 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpenseModalP
       fetch("/api/categories")
         .then((res) => res.json())
         .then((data) => setCategories(data.categories || []));
+      
+      if (editExpense) {
+        setForm({
+          amount: editExpense.amount.toString(),
+          category: editExpense.category,
+          subcategory: editExpense.subcategory,
+          note: editExpense.note || "",
+          date: new Date(editExpense.date).toISOString().split("T")[0],
+        });
+      } else {
+        setForm({
+          amount: "",
+          category: "Needs",
+          subcategory: "",
+          note: "",
+          date: new Date().toISOString().split("T")[0],
+        });
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editExpense]);
 
   const filteredSubcategories = categories.filter((c) => c.type === form.category);
 
@@ -55,8 +83,11 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpenseModalP
 
     setLoading(true);
     try {
-      const res = await fetch("/api/expenses", {
-        method: "POST",
+      const url = editExpense ? `/api/expenses/${editExpense.id}` : "/api/expenses";
+      const method = editExpense ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: parseFloat(form.amount),
@@ -68,20 +99,12 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpenseModalP
       });
 
       if (res.ok) {
-        setForm({
-          amount: "",
-          category: "Needs",
-          subcategory: "",
-          note: "",
-          date: new Date().toISOString().split("T")[0],
-        });
-        setErrors({});
         window.dispatchEvent(new CustomEvent('expenseAdded'));
         onSuccess();
         onClose();
       }
     } catch (err) {
-      console.error("Failed to add expense:", err);
+      console.error("Failed to save expense:", err);
     } finally {
       setLoading(false);
     }
@@ -121,10 +144,14 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpenseModalP
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 sm:py-6 border-b border-border-subtle/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center">
-                  <Plus size={22} />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  editExpense ? "bg-tertiary-100 text-tertiary-600" : "bg-primary-100 text-primary-600"
+                }`}>
+                  {editExpense ? <Pencil size={20} /> : <Plus size={22} />}
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight">New Expense</h2>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+                  {editExpense ? "Edit Expense" : "New Expense"}
+                </h2>
               </div>
               <button
                 onClick={onClose}
@@ -234,7 +261,7 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpenseModalP
                     <Loader2 size={24} className="animate-spin" />
                   ) : (
                     <>
-                      Confirm Payment
+                      {editExpense ? "Update Expense" : "Confirm Payment"}
                       <ChevronDown className="-rotate-90" size={20} />
                     </>
                   )}

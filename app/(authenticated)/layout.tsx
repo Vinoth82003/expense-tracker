@@ -125,7 +125,7 @@ export default function DashboardLayout({
                 {isActive && (
                   <motion.div 
                     layoutId="nav-active" 
-                    className="ml-auto w-1.5 h-1.5 rounded-full bg-white" 
+                    className="ml-auto w-1.5 h-1.5 rounded-full bg-current opacity-60" 
                   />
                 )}
               </Link>
