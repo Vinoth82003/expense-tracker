@@ -55,8 +55,27 @@ export default function OnboardingPage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background animate-pulse">
+        <div className="w-full max-w-2xl text-center mb-12">
+          <div className="w-20 h-20 bg-surface-variant rounded-3xl mx-auto mb-6"></div>
+          <div className="h-10 w-3/4 max-w-md bg-surface-variant rounded-xl mx-auto mb-4"></div>
+          <div className="h-4 w-1/2 bg-surface-variant rounded-md mx-auto"></div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 w-full max-w-2xl">
+          <div className="p-8 rounded-[2.5rem] border-2 border-border-subtle bg-surface/50 h-56 flex flex-col justify-center">
+             <div className="w-14 h-14 bg-surface-variant rounded-2xl mb-6"></div>
+             <div className="h-6 w-32 bg-surface-variant rounded-lg mb-4"></div>
+             <div className="h-4 w-full bg-surface-variant rounded-md mb-2"></div>
+             <div className="h-4 w-4/5 bg-surface-variant rounded-md"></div>
+          </div>
+          <div className="p-8 rounded-[2.5rem] border-2 border-border-subtle bg-surface/50 h-56 flex flex-col justify-center">
+             <div className="w-14 h-14 bg-surface-variant rounded-2xl mb-6"></div>
+             <div className="h-6 w-32 bg-surface-variant rounded-lg mb-4"></div>
+             <div className="h-4 w-full bg-surface-variant rounded-md mb-2"></div>
+             <div className="h-4 w-4/5 bg-surface-variant rounded-md"></div>
+          </div>
+        </div>
       </div>
     );
   }

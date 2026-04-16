@@ -46,8 +46,47 @@ export default function DashboardLayout({
 
   if (status === "loading" || !session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex bg-background text-foreground animate-pulse">
+        {/* Skeleton Sidebar - Desktop */}
+        <aside className="hidden lg:flex flex-col w-72 bg-surface/50 border-r border-border-subtle p-6 h-screen">
+          <div className="flex items-center gap-3 mb-10 px-2">
+            <div className="w-10 h-10 bg-surface-variant rounded-xl"></div>
+            <div className="h-6 w-32 bg-surface-variant rounded-lg"></div>
+          </div>
+          <div className="space-y-4 flex-1 mt-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-12 w-full bg-surface-variant rounded-2xl"></div>
+            ))}
+          </div>
+          <div className="mt-auto h-12 w-full bg-surface-variant rounded-2xl"></div>
+        </aside>
+
+        {/* Skeleton Main Area */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0">
+          <header className="flex items-center justify-between p-4 lg:p-6 border-b border-border-subtle lg:border-none">
+            <div className="h-8 w-40 lg:w-48 bg-surface-variant rounded-lg"></div>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:block h-10 w-32 bg-surface-variant rounded-xl"></div>
+              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-surface-variant"></div>
+            </div>
+          </header>
+          
+          <main className="flex-1 p-4 lg:p-8">
+             <div className="space-y-8">
+               <div className="h-16 w-3/4 max-w-md bg-surface-variant rounded-xl"></div>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 {[1, 2, 3].map((i) => (
+                   <div key={i} className="h-32 w-full bg-surface-variant rounded-[2rem]"></div>
+                 ))}
+               </div>
+               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                 {[1, 2].map((i) => (
+                   <div key={i} className="h-64 w-full bg-surface-variant rounded-[2.5rem]"></div>
+                 ))}
+               </div>
+             </div>
+          </main>
+        </div>
       </div>
     );
   }
