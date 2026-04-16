@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, IndianRupee, Tag, FileText, Calendar, ChevronDown, Loader2, Plus, ShoppingCart, Sparkles, Pencil } from "lucide-react";
+import { useUI } from "@/context/UIContext";
 
 interface Category {
   id: string;
@@ -68,6 +69,8 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: Add
 
   const filteredSubcategories = categories.filter((c) => c.type === form.category);
 
+  const { toast } = useUI();
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!form.amount || parseFloat(form.amount) <= 0) newErrors.amount = "Enter a valid amount";
@@ -99,12 +102,16 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: Add
       });
 
       if (res.ok) {
+        toast.success(editExpense ? "Expense updated!" : "Expense recorded!");
         window.dispatchEvent(new CustomEvent('expenseAdded'));
         onSuccess();
         onClose();
+      } else {
+        toast.error("Failed to save. Please check inputs.");
       }
     } catch (err) {
       console.error("Failed to save expense:", err);
+      toast.error("An error occurred during submission.");
     } finally {
       setLoading(false);
     }
@@ -145,7 +152,7 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: Add
             <div className="flex items-center justify-between px-6 py-4 sm:py-6 border-b border-border-subtle/50">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  editExpense ? "bg-tertiary-100 text-tertiary-600" : "bg-primary-100 text-primary-600"
+                  editExpense ? "bg-tertiary-500/10 text-tertiary-500" : "bg-primary-500/10 text-primary-500"
                 }`}>
                   {editExpense ? <Pencil size={20} /> : <Plus size={22} />}
                 </div>

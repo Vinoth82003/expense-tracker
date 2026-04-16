@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
+import { UIProvider } from "@/context/UIContext";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -94,7 +95,7 @@ export default function DashboardLayout({
     );
   }
 
-  return (
+  const content = (
     <div className="min-h-screen flex bg-background text-foreground">
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:flex flex-col w-72 bg-surface border-r border-border-subtle p-6 sticky top-0 h-screen">
@@ -258,5 +259,11 @@ export default function DashboardLayout({
         }}
       />
     </div>
+  );
+
+  return (
+    <UIProvider>
+      {content}
+    </UIProvider>
   );
 }

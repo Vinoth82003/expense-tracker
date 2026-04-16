@@ -21,6 +21,8 @@ import {
   ArrowDown
 } from "lucide-react";
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
+import { useUI } from "@/context/UIContext";
+import { Loader2 } from "lucide-react";
 
 interface Expense {
   id: string;
@@ -49,11 +51,14 @@ export default function ExpensesPage() {
   });
 
   // Modal & Selection state
+  const { toast, confirm } = useUI();
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchExpenses = async () => {
+    // ... existing fetchExpenses logic ...
     setLoading(true);
     try {
       let query = "";
@@ -68,6 +73,7 @@ export default function ExpensesPage() {
       setExpenses(data.expenses || []);
     } catch (error) {
       console.error("Failed to fetch expenses:", error);
+      toast.error("Failed to sync data");
     } finally {
       setLoading(false);
     }
@@ -105,15 +111,31 @@ export default function ExpensesPage() {
   }, [filteredExpenses, session]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this transaction?")) return;
+    const ok = await confirm({
+        title: "Delete Transaction?",
+        message: "This action cannot be undone. This will permanently remove the record from your account.",
+        confirmText: "Yes, Delete",
+        cancelText: "Keep it",
+        variant: "danger"
+    });
+
+    if (!ok) return;
+
+    setDeletingId(id);
     try {
       const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
       if (res.ok) {
+        toast.success("Transaction deleted successfully");
         fetchExpenses();
         window.dispatchEvent(new CustomEvent('expenseAdded'));
+      } else {
+        toast.error("Failed to delete transaction");
       }
     } catch (err) {
       console.error("Failed to delete expense:", err);
+      toast.error("An error occurred. Try again.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -345,10 +367,15 @@ export default function ExpensesPage() {
                   {/* Actions Dropdown */}
                   <div className="relative">
                     <button 
+                      disabled={deletingId === expense.id}
                       onClick={() => setActiveMenuId(activeMenuId === expense.id ? null : expense.id)}
-                      className="p-3 rounded-xl hover:bg-surface-variant text-secondary transition-all active:scale-95"
+                      className="p-3 rounded-xl hover:bg-surface-variant text-secondary transition-all active:scale-95 disabled:opacity-50"
                     >
-                      <MoreVertical size={20} />
+                      {deletingId === expense.id ? (
+                        <Loader2 className="animate-spin" size={20} />
+                      ) : (
+                        <MoreVertical size={20} />
+                      )}
                     </button>
                     
                     <AnimatePresence>
