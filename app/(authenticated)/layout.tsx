@@ -15,11 +15,14 @@ import {
   Plus,
   TrendingUp,
   Menu,
-  X
+  X,
+  Sun,
+  Moon
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
 import { UIProvider } from "@/context/UIContext";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -39,6 +42,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -106,6 +110,13 @@ export default function DashboardLayout({
           <span className="font-extrabold text-2xl tracking-tight">
             Spend<span className="text-primary-600">Wise</span>
           </span>
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-xl bg-surface-variant text-secondary hover:bg-surface hover:text-foreground transition-all"
+          >
+            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
         </div>
 
         <nav className="flex-1 space-y-2">

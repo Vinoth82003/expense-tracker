@@ -17,6 +17,7 @@ import {
   Trophy,
   BarChart2,
   Filter,
+  Eye,
 } from "lucide-react";
 import {
   AreaChart,
@@ -32,6 +33,11 @@ import {
   BarChart,
   Bar,
   ReferenceLine,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
 } from "recharts";
 
 interface Expense {
@@ -50,7 +56,13 @@ const CustomAreaTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-surface border border-border-subtle p-4 rounded-xl shadow-xl z-50">
         <p className="text-muted text-xs font-bold uppercase mb-1">{label}</p>
-        <p className="font-black text-xl text-primary-500">₹{payload[0].value.toLocaleString("en-IN")}</p>
+        {payload.map((p: any, i: number) => (
+          <div key={i} className="flex items-center gap-2 mt-1">
+             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.stroke || p.color }} />
+             <span className="font-bold text-sm text-secondary truncate max-w-[120px]">{p.name}:</span>
+             <span className="font-black text-sm">₹{p.value.toLocaleString("en-IN")}</span>
+          </div>
+        ))}
       </div>
     );
   }
@@ -90,6 +102,7 @@ const CustomPieTooltip = ({ active, payload }: any) => {
 
 export default function ReportsPage() {
   const { data: session } = useSession();
+  const [mounted, setMounted] = useState(false);
   const [rawExpenses, setRawExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -102,10 +115,14 @@ export default function ReportsPage() {
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [categoryFilter, setCategoryFilter] = useState<"All" | "Needs" | "Wants">("All");
   const [selectedPieSlice, setSelectedPieSlice] = useState<string | null>(null);
-  const [trendMode, setTrendMode] = useState<"daily" | "cumulative">("daily");
+  const [trendMode, setTrendMode] = useState<"daily" | "cumulative" | "stacked">("daily");
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
 
   const monthlyLimit = (session?.user as any)?.monthlyLimit || 0;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchExpenses = async () => {
@@ -187,21 +204,36 @@ export default function ReportsPage() {
   }, [filteredExpenses]);
 
   const needsPercentage = stats.total > 0 ? (stats.needs / stats.total) * 100 : 0;
+  const wantsPercentage = stats.total > 0 ? (stats.wants / stats.total) * 100 : 0;
+  const savingsPercentage = 100 - (needsPercentage + wantsPercentage);
 
-  // ── Chart data: Trend (daily or cumulative) ───────────────────────────────
+  // ── Radar Data (50/30/20 Comparison) ──────────────────────────────────────
+  const radarData = [
+    { subject: "Needs (50%)", A: needsPercentage, B: 50, fullMark: 100 },
+    { subject: "Wants (30%)", A: wantsPercentage, B: 30, fullMark: 100 },
+    { subject: "Savings (20%)", A: Math.max(0, savingsPercentage), B: 20, fullMark: 100 },
+  ];
+
+  // ── Trend Data (Daily, Cumulative, or Stacked) ─────────────────────────────
   const trendData = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { total: number; Needs: number; Wants: number }>();
     filteredExpenses.forEach(e => {
       const d = e.date.split("T")[0];
-      map.set(d, (map.get(d) || 0) + e.amount);
+      const cur = map.get(d) || { total: 0, Needs: 0, Wants: 0 };
+      cur.total += e.amount;
+      if (e.category === "Needs") cur.Needs += e.amount;
+      else cur.Wants += e.amount;
+      map.set(d, cur);
     });
     const sorted = Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
     let running = 0;
-    return sorted.map(([date, amount]) => {
-      running += amount;
+    return sorted.map(([date, d]) => {
+      running += d.total;
       return {
         date: new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
-        amount: trendMode === "cumulative" ? running : amount,
+        amount: trendMode === "cumulative" ? running : d.total,
+        Needs: d.Needs,
+        Wants: d.Wants,
       };
     });
   }, [filteredExpenses, trendMode]);
@@ -210,7 +242,8 @@ export default function ReportsPage() {
   const weeklyData = useMemo(() => {
     const map = new Map<string, { Needs: number; Wants: number }>();
     filteredExpenses.forEach(e => {
-      const day = new Date(e.date).getDate();
+      const date = new Date(e.date);
+      const day = date.getDate();
       const wk = `Wk ${Math.ceil(day / 7)}`;
       const cur = map.get(wk) || { Needs: 0, Wants: 0 };
       if (e.category === "Needs") cur.Needs += e.amount;
@@ -287,7 +320,6 @@ export default function ReportsPage() {
       {/* ═══════════ FILTER BAR ═══════════ */}
       <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          {/* View Mode Toggle */}
           <div className="flex p-1 bg-surface-variant rounded-xl gap-1">
             {(["month", "range"] as const).map(mode => (
               <button
@@ -304,7 +336,6 @@ export default function ReportsPage() {
             ))}
           </div>
 
-          {/* Category Filter Popover Button */}
           <div className="relative">
             <button
               onClick={() => setShowCategoryMenu(!showCategoryMenu)}
@@ -390,7 +421,6 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Date Range Controls */}
         {viewMode === "month" ? (
           <div className="flex items-center justify-between bg-surface-variant/30 border border-border-subtle p-1.5 rounded-2xl">
             <button onClick={() => changeMonth(-1)} className="p-3 text-secondary hover:text-foreground transition-colors">
@@ -424,7 +454,6 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {/* Active Filter Chips */}
         <AnimatePresence>
           {activeFiltersCount > 0 && (
             <motion.div
@@ -479,15 +508,15 @@ export default function ReportsPage() {
         </div>
       ) : (
         <>
-          {/* ═══════════ ROW 1: AREA/CUMULATIVE TREND ═══════════ */}
+          {/* ═══════════ ROW 1: TREND CHARTS ═══════════ */}
           <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <h3 className="text-xl font-black flex items-center gap-3">
                 <TrendingUp size={22} className="text-primary-500" />
-                {trendMode === "daily" ? "Daily Spending Trend" : "Cumulative Budget Burn"}
+                {trendMode === "daily" ? "Daily Trend" : trendMode === "cumulative" ? "Budget Burn" : "Category Stacked"}
               </h3>
               <div className="flex p-1 bg-surface-variant rounded-xl gap-1">
-                {(["daily", "cumulative"] as const).map(mode => (
+                {(["daily", "cumulative", "stacked"] as const).map(mode => (
                   <button
                     key={mode}
                     onClick={() => setTrendMode(mode)}
@@ -497,29 +526,27 @@ export default function ReportsPage() {
                         : "text-secondary hover:text-foreground"
                     }`}
                   >
-                    {mode === "daily" ? "Daily" : "Cumulative"}
+                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
             <div className="h-72 w-full">
-              {trendData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+              {mounted && !loading && trendData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
                         <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
+                      <linearGradient id="colorWants" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                      </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#6366f110" />
-                    <XAxis
-                      dataKey="date"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 11, fontWeight: 600 }}
-                      dy={10}
-                    />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600 }} dy={10} />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
@@ -534,40 +561,47 @@ export default function ReportsPage() {
                         stroke="#ef4444"
                         strokeDasharray="6 6"
                         strokeWidth={2}
-                        label={{ value: "Budget", fill: "#ef4444", fontSize: 11, fontWeight: 700 }}
+                        label={{ value: "Budget", fill: "#ef4444", fontSize: 11, fontWeight: 700, position: 'insideTopRight' }}
                       />
                     )}
-                    <Area
-                      type="monotone"
-                      dataKey="amount"
-                      stroke="#6366f1"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#colorTrend)"
-                      activeDot={{ r: 6, strokeWidth: 0, fill: "#6366f1" }}
-                    />
+                    {trendMode === "stacked" ? (
+                      <>
+                        <Area type="monotone" dataKey="Needs" stackId="1" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
+                        <Area type="monotone" dataKey="Wants" stackId="1" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorWants)" />
+                      </>
+                    ) : (
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        name="Spent"
+                        stroke="#6366f1"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorTrend)"
+                        activeDot={{ r: 6, strokeWidth: 0, fill: "#6366f1" }}
+                      />
+                    )}
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted font-bold italic">
-                  No spending data for this period.
+                  {!mounted ? "Initializing..." : "No data available."}
                 </div>
               )}
             </div>
           </div>
 
-          {/* ═══════════ ROW 2: WEEKLY BARS + DONUT ═══════════ */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
+          {/* ═══════════ ROW 2: WEEKLY + RADAR (NEW) ═══════════ */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Weekly Grouped Bar Chart */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm lg:col-span-2">
+            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
               <h3 className="text-xl font-black mb-6 flex items-center gap-3">
                 <BarChart2 size={22} className="text-tertiary-500" />
-                Weekly Breakdown — Needs vs Wants
+                Weekly Breakdown
               </h3>
               <div className="h-64 w-full">
-                {weeklyData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                {mounted && !loading && weeklyData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                     <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }} barGap={4} barCategoryGap="30%">
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#6366f110" />
                       <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700 }} dy={10} />
@@ -585,34 +619,96 @@ export default function ReportsPage() {
                   </ResponsiveContainer>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted font-bold italic">
-                    Not enough data for weekly view.
+                    Not enough data.
                   </div>
                 )}
               </div>
-              <div className="flex gap-6 mt-5">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-primary-500" />
-                  <span className="text-xs font-bold text-secondary">Needs</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded" style={{ backgroundColor: "#8b5cf6" }} />
-                  <span className="text-xs font-bold text-secondary">Wants</span>
-                </div>
+            </div>
+
+            {/* Radar Chart (Budget Profile) */}
+            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm flex flex-col">
+               <h3 className="text-xl font-black mb-1 flex items-center gap-3">
+                <Target size={22} className="text-primary-500" />
+                50/30/20 Alignment
+              </h3>
+              <p className="text-muted text-xs font-bold uppercase tracking-widest mb-4">Actual vs Recommended Profile</p>
+              <div className="flex-1 flex items-center justify-center">
+                {mounted && !loading && stats.total > 0 ? (
+                  <ResponsiveContainer width={300} height={250} minWidth={100} minHeight={100}>
+                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                      <PolarGrid stroke="#6366f120" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: "currentColor", fontSize: 10, fontWeight: 800 }} className="text-secondary" />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} axisLine={false} tick={false} />
+                      <Radar
+                        name="Actual"
+                        dataKey="A"
+                        stroke="#6366f1"
+                        fill="#6366f1"
+                        fillOpacity={0.6}
+                      />
+                      <Radar
+                        name="Suggested"
+                        dataKey="B"
+                        stroke="#8b5cf6"
+                        fill="#8b5cf6"
+                        fillOpacity={0.3}
+                        strokeDasharray="4 4"
+                      />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-muted font-bold italic text-sm">No data to compare.</div>
+                )}
+              </div>
+              <div className="flex justify-center gap-4 text-[10px] font-black uppercase tracking-widest mt-2">
+                 <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-primary-500" /> Actual</div>
+                 <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-tertiary-500 opacity-50 border border-dashed border-tertiary-500" /> Suggested</div>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══════════ ROW 3: BARS + PIE ═══════════ */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Spending Bar Chart */}
+            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
+               <h3 className="text-xl font-black mb-6 flex items-center gap-3">
+                <Eye size={22} className="text-primary-500" />
+                Top Expenditure
+              </h3>
+              <div className="h-64 w-full">
+                {mounted && !loading && topSubcategories.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+                    <BarChart data={topSubcategories} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#6366f110" />
+                      <XAxis type="number" hide />
+                      <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700 }} width={88} />
+                      <Tooltip content={<CustomBarTooltip />} />
+                      <Bar dataKey="value" name="Spent" radius={[0, 6, 6, 0]} maxBarSize={28}>
+                        {topSubcategories.map((_, idx) => (
+                          <Cell key={`hcell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted font-bold italic">No data.</div>
+                )}
               </div>
             </div>
 
-            {/* Interactive Donut Chart */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm flex flex-col">
+             {/* Interactive Donut Chart */}
+             <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm flex flex-col">
               <h3 className="text-xl font-black mb-1 flex items-center gap-3">
                 <ChartIcon size={22} className="text-tertiary-500" />
                 Distribution
               </h3>
-              <p className="text-muted text-xs font-bold uppercase tracking-widest mb-4">Tap a slice to filter</p>
+              <p className="text-muted text-xs font-bold uppercase tracking-widest mb-4">Tap slice to cross-filter</p>
               <div className="flex-1 flex flex-col items-center">
-                {subcategoryData.length > 0 ? (
+                {mounted && !loading && subcategoryData.length > 0 ? (
                   <>
                     <div className="h-52 w-full shrink-0">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                      <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                         <RePieChart>
                           <Pie
                             data={subcategoryData}
@@ -641,134 +737,80 @@ export default function ReportsPage() {
                         </RePieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="w-full space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1 mt-4">
+                    <div className="w-full grid grid-cols-2 gap-2 mt-4 max-h-32 overflow-y-auto custom-scrollbar pr-1">
                       {subcategoryData.map((entry, idx) => (
                         <button
                           key={entry.name}
                           onClick={() => setSelectedPieSlice(selectedPieSlice === entry.name ? null : entry.name)}
-                          className={`w-full flex items-center justify-between text-sm rounded-xl px-2.5 py-1.5 transition-all ${
+                          className={`flex items-center justify-between text-[10px] rounded-lg px-2 py-1.5 transition-all truncate border ${
                             selectedPieSlice === entry.name
-                              ? "bg-surface-variant ring-1 ring-primary-500/30"
-                              : "hover:bg-surface-variant/50"
+                              ? "bg-surface-variant border-primary-500/30"
+                              : "border-transparent hover:bg-surface-variant/50"
                           }`}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                            <span className="font-bold text-secondary truncate text-xs">{entry.name}</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                            <span className="font-bold text-secondary truncate">{entry.name}</span>
                           </div>
-                          <span className="font-black shrink-0 ml-2 text-xs">₹{entry.value.toLocaleString("en-IN")}</span>
+                          <span className="font-black shrink-0 ml-1">₹{entry.value.toLocaleString("en-IN")}</span>
                         </button>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-muted font-bold italic text-sm">
-                    No data available.
-                  </div>
+                  <div className="flex-1 flex items-center justify-center text-muted font-bold italic text-sm">No data.</div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* ═══════════ ROW 3: HORIZONTAL BARS + SMART INSIGHT ═══════════ */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {/* Horizontal Bar Chart — Top categories ranked */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
-              <h3 className="text-xl font-black mb-6 flex items-center gap-3">
-                <TrendingUp size={22} className="text-primary-500" />
-                Top Spending
-              </h3>
-              <div className="h-64 w-full">
-                {topSubcategories.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                    <BarChart
-                      data={topSubcategories}
-                      layout="vertical"
-                      margin={{ top: 0, right: 20, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#6366f110" />
-                      <XAxis
-                        type="number"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 11, fontWeight: 600 }}
-                        tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 11, fontWeight: 700 }}
-                        width={88}
-                      />
-                      <Tooltip content={<CustomBarTooltip />} cursor={{ fill: "#6366f108" }} />
-                      <Bar dataKey="value" name="Spent" radius={[0, 6, 6, 0]} maxBarSize={28}>
-                        {topSubcategories.map((_, idx) => (
-                          <Cell key={`hcell-${idx}`} fill={COLORS[idx % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted font-bold italic">
-                    No transactions to analyze.
-                  </div>
-                )}
-              </div>
+          {/* ═══════════ ROW 4: SMART INSIGHT ═══════════ */}
+          <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 sm:p-10 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform pointer-events-none">
+              <Target size={180} />
             </div>
-
-            {/* Smart Insight Card */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-sm flex flex-col justify-between relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform pointer-events-none">
-                <Target size={120} />
-              </div>
-              <div className="relative z-10">
-                <h3 className="text-2xl font-black mb-5">Smart Insight</h3>
+            <div className="relative z-10 max-w-2xl">
+              <h3 className="text-3xl font-black mb-6">Master Your Money</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  {stats.total === 0 ? (
-                    <p className="text-secondary font-bold leading-relaxed">
-                      No spending data found for this period. Start tracking to see insights!
-                    </p>
-                  ) : (
-                    <>
-                      <p className="text-secondary font-bold leading-snug">
-                        {needsPercentage > 70
-                          ? "⚠️ Over 70% on essentials — check if fixed costs can be trimmed."
-                          : needsPercentage > 50
-                          ? "✅ More than half is essential spending — a healthy pattern."
-                          : "🎯 Discretionary spending is dominant. Balance it with savings."}
-                      </p>
-                      {stats.topCat && (
-                        <p className="text-secondary font-bold leading-snug">
-                          🏆 <strong className="text-foreground">{stats.topCat}</strong> is your biggest expense at ₹{stats.topCatAmt.toLocaleString("en-IN")}.
-                        </p>
-                      )}
-                      {monthlyLimit > 0 && (
-                        <p className={`font-bold leading-snug ${stats.total / monthlyLimit > 0.85 ? "text-error" : "text-secondary"}`}>
-                          {stats.total / monthlyLimit > 1
-                            ? "🚨 You've exceeded your monthly budget!"
-                            : stats.total / monthlyLimit > 0.8
-                            ? `⚡ ${Math.round((stats.total / monthlyLimit) * 100)}% of budget used — pace yourself.`
-                            : `💪 ${Math.round((stats.total / monthlyLimit) * 100)}% of budget used — you're on track!`}
-                        </p>
-                      )}
-                    </>
-                  )}
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 text-primary-500 font-black text-[10px] uppercase tracking-widest border border-primary-500/20">
+                    Strategy Insight
+                  </div>
+                  <p className="text-secondary font-bold text-lg leading-snug">
+                    {needsPercentage > 70
+                      ? "Your 'Needs' are consuming over 70% of your budget. This is often due to high fixed costs like rent or EMIs. Aim to lower this to 50% for financial freedom."
+                      : needsPercentage > 50
+                      ? "You're slightly above the ideal 50% for Needs. Look for small subscriptions or utility optimizations."
+                      : "Outstanding! Your essential costs are well under control, giving you massive leverage for lifestyle or savings."}
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-tertiary-500/10 text-tertiary-500 font-black text-[10px] uppercase tracking-widest border border-tertiary-500/20">
+                    Optimization Tip
+                  </div>
+                  <p className="text-secondary font-bold text-lg leading-snug">
+                    {stats.topCat ? (
+                      <>Your biggest spend is <span className="text-foreground">{stats.topCat}</span>. If you could reduce this by just 10% next month, you'd save <span className="text-primary-500 font-black">₹{(stats.topCatAmt * 0.1).toLocaleString("en-IN")}</span>.</>
+                    ) : (
+                      "Start tracking categories to get personalized optimization tips!"
+                    )}
+                  </p>
                 </div>
               </div>
-              <div className="mt-8 relative z-10">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-variant border border-border-subtle font-bold text-sm text-foreground">
-                  <Zap size={16} className="text-warning" />
-                  50/30/20 Rule
-                </div>
-                <p className="mt-3 text-muted text-sm font-medium">
-                  Allocate 50% on needs, 30% wants, 20% savings every month.
-                </p>
+
+              <div className="mt-12 flex flex-wrap gap-4">
+                 <div className="flex items-center gap-3 bg-surface-variant/50 px-5 py-3 rounded-2xl border border-border-subtle">
+                   <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
+                     <Zap size={20} />
+                   </div>
+                   <div>
+                     <p className="text-[10px] font-black uppercase text-secondary">Total Health Score</p>
+                     <p className="text-xl font-black">{Math.round(100 - Math.abs(50 - needsPercentage) - Math.abs(30 - wantsPercentage))}%</p>
+                   </div>
+                 </div>
               </div>
             </div>
-          </div>
+          </section>
         </>
       )}
     </div>
