@@ -5,8 +5,10 @@ import { prisma } from "@/lib/prisma";
 // DELETE - Delete an expense
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+
   const session = await getServerSession();
 
   if (!session?.user?.email) {
@@ -25,7 +27,7 @@ export async function DELETE(
 
     // Verify ownership before deleting
     const expense = await prisma.expense.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { userId: true },
     });
 
@@ -37,7 +39,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await prisma.expense.delete({ where: { id: params.id } });
+    await prisma.expense.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -49,8 +51,10 @@ export async function DELETE(
 // PATCH - Update an expense
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+
   const session = await getServerSession();
 
   if (!session?.user?.email) {
@@ -71,7 +75,7 @@ export async function PATCH(
     }
 
     const existing = await prisma.expense.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: { userId: true },
     });
 
@@ -80,7 +84,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.expense.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(amount !== undefined && { amount: Number(amount) }),
         ...(category !== undefined && { category }),
