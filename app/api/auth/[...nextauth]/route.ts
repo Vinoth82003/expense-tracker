@@ -16,7 +16,7 @@ const DEFAULT_CATEGORIES = [
   { name: "Other", type: "Wants", isDefault: true },
 ];
 
-const handler = NextAuth({
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -27,7 +27,7 @@ const handler = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account }: { user: any; account: any }) {
       if (!user.email) {
         console.error("Sign-in failed: No email provided by auth provider.");
         return false;
@@ -67,30 +67,29 @@ const handler = NextAuth({
             console.log("Default categories seeded successfully.");
           } catch (seedError) {
             console.error("Warning: Failed to seed default categories:", seedError);
-            // We don't block sign-in if seeding fails, but we should log it.
           }
         }
       } catch (error) {
         console.error("Prisma error during sign-in/upsert:", error);
-        // If it's a P2031 error again, we'll know for sure.
         return false;
       }
 
       return true;
     },
 
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (session.user && token.sub) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: session.user.email! },
-            select: { id: true, onboarded: true, expenseMode: true },
+            select: { id: true, onboarded: true, expenseMode: true, monthlyLimit: true },
           });
 
           if (dbUser) {
             (session.user as any).id = dbUser.id;
             (session.user as any).onboarded = dbUser.onboarded;
             (session.user as any).expenseMode = dbUser.expenseMode;
+            (session.user as any).monthlyLimit = dbUser.monthlyLimit;
           }
         } catch (error) {
           console.error("Error fetching session user from Prisma:", error);
@@ -99,7 +98,9 @@ const handler = NextAuth({
       return session;
     },
   },
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
 

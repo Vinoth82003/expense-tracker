@@ -18,6 +18,8 @@ import {
   X
 } from "lucide-react";
 
+import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
+
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Expenses", href: "/expenses", icon: ReceiptIndianRupee },
@@ -35,6 +37,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -156,7 +159,10 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-3 lg:gap-4">
-            <button className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white font-bold shadow-lg shadow-primary-500/20 hover:scale-105 transition-transform active:scale-95">
+            <button 
+              onClick={() => setIsAddExpenseOpen(true)}
+              className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white font-bold shadow-lg shadow-primary-500/20 hover:scale-105 transition-transform active:scale-95"
+            >
               <Plus size={20} />
               Add Expense
             </button>
@@ -235,9 +241,22 @@ export default function DashboardLayout({
       </AnimatePresence>
 
       {/* Floating Add Button for Mobile */}
-      <button className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform">
+      <button 
+        onClick={() => setIsAddExpenseOpen(true)}
+        className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"
+      >
         <Plus size={28} />
       </button>
+
+      {/* Add Expense Modal */}
+      <AddExpenseModal
+        isOpen={isAddExpenseOpen}
+        onClose={() => setIsAddExpenseOpen(false)}
+        onSuccess={() => {
+          // You could trigger a global re-fetch or event here. For now, a router.refresh() handles most Server Component updates.
+          router.refresh();
+        }}
+      />
     </div>
   );
 }
