@@ -37,14 +37,14 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const firstName = session?.user?.name?.split(" ")[0] || "there";
-  const expenseMode = (session?.user as any)?.expenseMode;
-  const monthlyLimit = (session?.user as any)?.monthlyLimit || 0;
+  const expenseMode = (session?.user as { expenseMode?: string })?.expenseMode;
+  const monthlyLimit = (session?.user as { monthlyLimit?: number })?.monthlyLimit || 0;
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => setMounted(true), 100);
     const fetchDashboardData = async () => {
       try {
         const currentDate = new Date();
@@ -249,7 +249,7 @@ export default function DashboardPage() {
             ) : (
               <>
                 <div className="h-64 w-full">
-                  {mounted && !loading && (
+                  {mounted && !loading && stats.chartData.length > 0 && (
                     <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                       <PieChart>
                         <Pie

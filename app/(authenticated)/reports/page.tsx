@@ -51,12 +51,27 @@ interface Expense {
 const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#06b6d4", "#f59e0b", "#10b981", "#f43f5e", "#84cc16"];
 const CATEGORY_FILTERS = ["All", "Needs", "Wants"];
 
-const CustomAreaTooltip = ({ active, payload, label }: any) => {
+interface ChartPayload {
+  name: string;
+  value: number;
+  color?: string;
+  stroke?: string;
+  fill?: string;
+  payload: any;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: ChartPayload[];
+  label?: string;
+}
+
+const CustomAreaTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-surface border border-border-subtle p-4 rounded-xl shadow-xl z-50">
         <p className="text-muted text-xs font-bold uppercase mb-1">{label}</p>
-        {payload.map((p: any, i: number) => (
+        {payload.map((p, i) => (
           <div key={i} className="flex items-center gap-2 mt-1">
              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.stroke || p.color }} />
              <span className="font-bold text-sm text-secondary truncate max-w-[120px]">{p.name}:</span>
@@ -69,12 +84,12 @@ const CustomAreaTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-const CustomBarTooltip = ({ active, payload, label }: any) => {
+const CustomBarTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-surface border border-border-subtle p-3 rounded-xl shadow-xl z-50">
         <p className="text-muted text-xs font-bold mb-2">{label}</p>
-        {payload.map((p: any, i: number) => (
+        {payload.map((p, i) => (
           <div key={i} className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.fill || p.color }} />
             <span className="font-bold text-sm text-secondary">{p.name}:</span>
@@ -87,7 +102,7 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-const CustomPieTooltip = ({ active, payload }: any) => {
+const CustomPieTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-surface border border-border-subtle p-3 rounded-xl shadow-xl flex items-center gap-2 z-50">
@@ -118,10 +133,11 @@ export default function ReportsPage() {
   const [trendMode, setTrendMode] = useState<"daily" | "cumulative" | "stacked">("daily");
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
 
-  const monthlyLimit = (session?.user as any)?.monthlyLimit || 0;
+  const monthlyLimit = (session?.user as { monthlyLimit?: number })?.monthlyLimit || 0;
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => setMounted(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
@@ -790,7 +806,7 @@ export default function ReportsPage() {
                   </div>
                   <p className="text-secondary font-bold text-lg leading-snug">
                     {stats.topCat ? (
-                      <>Your biggest spend is <span className="text-foreground">{stats.topCat}</span>. If you could reduce this by just 10% next month, you'd save <span className="text-primary-500 font-black">₹{(stats.topCatAmt * 0.1).toLocaleString("en-IN")}</span>.</>
+                      <>Your biggest spend is <span className="text-foreground">{stats.topCat}</span>. If you could reduce this by just 10% next month, you&apos;d save <span className="text-primary-500 font-black">₹{(stats.topCatAmt * 0.1).toLocaleString("en-IN")}</span>.</>
                     ) : (
                       "Start tracking categories to get personalized optimization tips!"
                     )}
