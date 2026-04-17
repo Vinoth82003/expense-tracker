@@ -112,13 +112,6 @@ export default function DashboardLayout({
           <span className="font-extrabold text-2xl tracking-tight">
             Spend<span className="text-primary-600">Wise</span>
           </span>
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-xl bg-surface-variant text-secondary hover:bg-surface hover:text-foreground transition-all"
-          >
-            {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
         </div>
 
         <nav className="flex-1 space-y-2">
@@ -180,7 +173,16 @@ export default function DashboardLayout({
               <Plus size={20} />
               Add Expense
             </button>
-            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 border-border-subtle overflow-hidden bg-surface-variant flex items-center justify-center font-bold text-secondary">
+            
+            <button
+              onClick={toggleTheme}
+              className="p-2.5 lg:p-3 rounded-xl bg-surface border border-border-subtle text-secondary hover:text-foreground transition-all active:scale-95 shadow-sm"
+              title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
+            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 border-border-subtle overflow-hidden bg-surface-variant flex items-center justify-center font-bold text-secondary shadow-sm">
               {session.user?.image ? (
                 <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
               ) : (
@@ -245,7 +247,10 @@ export default function DashboardLayout({
                 })}
               </nav>
 
-              <button className="flex items-center gap-3 px-4 py-3 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold mt-auto">
+              <button 
+                onClick={() => router.push("/api/auth/signout")}
+                className="flex items-center gap-3 px-4 py-3 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold mt-auto"
+              >
                 <LogOut size={20} />
                 <span>Logout</span>
               </button>

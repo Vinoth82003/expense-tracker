@@ -15,12 +15,10 @@ export function ThemeToggle() {
       {theme === "light" ? (
         <>
           <Moon size={20} />
-          <span className="md:hidden">Dark Mode</span>
         </>
       ) : (
         <>
           <Sun size={20} />
-          <span className="md:hidden">Light Mode</span>
         </>
       )}
     </button>
