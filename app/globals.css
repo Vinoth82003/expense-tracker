@@ -79,6 +79,72 @@
   --border-hover: #475569;
 }
 
+/* Custom prose color overrides */
+@layer utilities {
+  .prose-headings\:text-foreground {
+    --tw-prose-headings: var(--text-primary) !important;
+  }
+
+  .prose-p\:text-secondary {
+    --tw-prose-body: var(--text-secondary) !important;
+  }
+
+  .prose-strong\:text-foreground {
+    --tw-prose-bold: var(--text-primary) !important;
+  }
+
+  .prose-li\:text-secondary {
+    --tw-prose-lists: var(--text-secondary) !important;
+  }
+}
+
+/* Or use Tailwind's configuration approach */
+.prose {
+  --tw-prose-body: var(--text-secondary);
+  --tw-prose-headings: var(--text-primary);
+  --tw-prose-lead: var(--text-primary);
+  --tw-prose-links: var(--color-primary-600);
+  --tw-prose-bold: var(--text-primary);
+  --tw-prose-counters: var(--text-muted);
+  --tw-prose-bullets: var(--text-muted);
+  --tw-prose-hr: var(--border-color);
+  --tw-prose-quotes: var(--text-primary);
+  --tw-prose-quote-borders: var(--border-color);
+  --tw-prose-captions: var(--text-muted);
+  --tw-prose-code: var(--text-primary);
+  --tw-prose-pre-code: var(--text-secondary);
+  --tw-prose-pre-bg: var(--bg-surface-variant);
+  --tw-prose-th-borders: var(--border-color);
+  --tw-prose-td-borders: var(--border-color);
+}
+
+.dark .prose {
+  --tw-prose-body: var(--text-secondary);
+  --tw-prose-headings: var(--text-primary);
+  --tw-prose-lead: var(--text-primary);
+  --tw-prose-links: var(--color-primary-400);
+  --tw-prose-bold: var(--text-primary);
+  --tw-prose-counters: var(--text-muted);
+  --tw-prose-bullets: var(--text-muted);
+  --tw-prose-hr: var(--border-color);
+  --tw-prose-quotes: var(--text-primary);
+  --tw-prose-quote-borders: var(--border-color);
+  --tw-prose-captions: var(--text-muted);
+  --tw-prose-code: var(--text-primary);
+  --tw-prose-pre-code: var(--text-secondary);
+  --tw-prose-pre-bg: var(--bg-surface-variant);
+  --tw-prose-th-borders: var(--border-color);
+  --tw-prose-td-borders: var(--border-color);
+}
+
+/* For print media */
+@media print {
+  .prose {
+    --tw-prose-body: #1e293b;
+    --tw-prose-headings: #0f172a;
+  }
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
