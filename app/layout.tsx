@@ -20,6 +20,7 @@ const inter = Inter({
 
 import { PageLoader } from "@/components/ui/PageLoader";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import PWAInstallBanner from "@/components/layout/PWAInstallBanner";
 
 export const viewport = {
   width: "device-width",
@@ -141,6 +142,7 @@ export default function RootLayout({
         <AuthProvider>
           <ThemeProvider>{children}</ThemeProvider>
         </AuthProvider>
+        <PWAInstallBanner />
       </body>
     </html>
   );
