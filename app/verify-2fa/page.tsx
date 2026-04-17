@@ -37,7 +37,7 @@ function Verify2FAContent() {
     setIsSending(true);
     setError("");
     try {
-      const res = await fetch("/api/auth/2fa/send", { method: "POST" });
+      const res = await fetch("/api/2fa/send", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
         setIsSent(true);
@@ -90,7 +90,7 @@ function Verify2FAContent() {
     setIsVerifying(true);
     setError("");
     try {
-      const res = await fetch("/api/auth/2fa/verify", {
+      const res = await fetch("/api/2fa/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ otp: codeStr }),

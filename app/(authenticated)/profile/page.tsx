@@ -96,7 +96,7 @@ export default function ProfilePage() {
     setTwoFAError("");
     setShowConfirm2FA(false);
     try {
-      const res = await fetch("/api/auth/2fa/toggle", {
+      const res = await fetch("/api/2fa/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: pendingTwoFA }),
