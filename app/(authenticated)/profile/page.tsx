@@ -144,22 +144,22 @@ export default function ProfilePage() {
         {/* Gradient bar */}
         <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-transparent" />
 
-        <div className="relative p-8 sm:p-12 flex flex-col sm:flex-row items-center sm:items-end gap-8">
+        <div className="relative p-6 sm:p-12 flex flex-col sm:flex-row items-center sm:items-center gap-6 sm:gap-8 text-center sm:text-left">
           {/* Avatar */}
           <div className="shrink-0">
-            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full border-4 border-primary-500/30 p-1 shadow-xl">
+            <div className="w-24 h-24 sm:w-36 sm:h-36 rounded-full border-4 border-primary-500/30 p-1 shadow-xl">
               <div className="w-full h-full rounded-full overflow-hidden bg-surface-variant flex items-center justify-center">
                 {user?.image ? (
                   <img src={user.image} alt="User Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <User size={56} className="text-secondary" />
+                  <User size={48} className="text-secondary sm:w-14 sm:h-14" />
                 )}
               </div>
             </div>
           </div>
 
           {/* Name + Email */}
-          <div className="flex flex-col items-center sm:items-start gap-2 flex-1">
+          <div className="flex flex-col items-center sm:items-start gap-2 flex-1 min-w-0 w-full">
             {/* Editable Name */}
             {isEditingName ? (
               <div className="flex items-center gap-2 w-full max-w-sm">
@@ -224,11 +224,11 @@ export default function ProfilePage() {
             </div>
 
             {/* Badges */}
-            <div className="flex flex-wrap gap-3 mt-2">
-              <span className="flex items-center gap-1.5 bg-success/10 text-success border border-success/20 text-xs font-bold px-3 py-1.5 rounded-full">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-2 w-full">
+              <span className="flex items-center gap-1.5 bg-success/10 text-success border border-success/20 text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">
                 <ShieldCheck size={13} /> Verified Account
               </span>
-              <span className="flex items-center gap-1.5 bg-primary-500/10 text-primary-600 border border-primary-500/20 text-xs font-bold px-3 py-1.5 rounded-full">
+              <span className="flex items-center gap-1.5 bg-primary-500/10 text-primary-600 border border-primary-500/20 text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full whitespace-nowrap">
                 Google OAuth
               </span>
             </div>
@@ -261,20 +261,20 @@ export default function ProfilePage() {
               ].map((item) => (
                 <div
                   key={item.label}
-                  className={`px-8 py-5 flex items-center justify-between ${item.editable ? "cursor-pointer hover:bg-surface-variant/50 transition-colors" : ""}`}
+                  className={`px-6 sm:px-8 py-5 flex items-start sm:items-center justify-between gap-4 ${item.editable ? "cursor-pointer hover:bg-surface-variant/50 transition-colors" : ""}`}
                   onClick={item.onClick}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center shrink-0">
+                  <div className="flex items-start sm:items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
                       <item.icon size={16} className="text-secondary" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <span className="block text-[10px] font-black uppercase tracking-widest text-muted mb-0.5">{item.label}</span>
-                      <span className="font-bold text-sm">{item.value}</span>
+                      <span className="font-bold text-sm sm:text-base break-words line-clamp-2 sm:line-clamp-none leading-tight">{item.value}</span>
                     </div>
                   </div>
                   {item.editable && (
-                    <Pencil size={15} className="text-muted shrink-0" />
+                    <Pencil size={15} className="text-muted shrink-0 mt-1 sm:mt-0" />
                   )}
                 </div>
               ))}
@@ -294,7 +294,7 @@ export default function ProfilePage() {
             </div>
             <div className="px-8 py-6">
               <div className="flex items-start justify-between gap-6">
-                <div className="flex-1">
+                <div className="flex-1 w-full">
                   <p className="font-bold mb-1">
                     {twoFAEnabled ? "2FA is Enabled" : "2FA is Disabled"}
                   </p>
@@ -383,7 +383,7 @@ export default function ProfilePage() {
                 </div>
                 <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </button>
-              <button
+              {/* <button
                 disabled
                 className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-error text-white font-bold opacity-40 cursor-not-allowed"
                 title="Contact support to delete your account"
@@ -393,7 +393,7 @@ export default function ProfilePage() {
                   Delete Account
                 </div>
                 <ChevronRight size={16} />
-              </button>
+              </button> */}
             </div>
           </motion.div>
         </div>

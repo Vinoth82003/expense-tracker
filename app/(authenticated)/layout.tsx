@@ -273,7 +273,7 @@ export default function DashboardLayout({
       {/* Floating Add Button for Mobile */}
       <button 
         onClick={() => setIsAddExpenseOpen(true)}
-        className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"
+        className="sm:hidden fixed bottom-6 right-6 w-12 h-12 rounded-full bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"
       >
         <Plus size={28} />
       </button>

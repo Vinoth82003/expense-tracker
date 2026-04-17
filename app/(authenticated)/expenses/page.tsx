@@ -21,8 +21,9 @@ import {
   ArrowDown
 } from "lucide-react";
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
+import { TransactionDetailModal } from "@/components/ui/TransactionDetailModal";
 import { useUI } from "@/context/UIContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye } from "lucide-react";
 
 interface Expense {
   id: string;
@@ -54,6 +55,8 @@ export default function ExpensesPage() {
   const { toast, confirm } = useUI();
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailTransaction, setDetailTransaction] = useState<Expense | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -324,42 +327,26 @@ export default function ExpensesPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.02 }}
                 key={expense.id} 
-                className={`p-6 sm:p-8 hover:bg-surface-variant/20 transition-all flex items-center justify-between group ${
+                className={`p-5 sm:p-6 hover:bg-surface-variant/20 transition-all flex items-center gap-4 sm:gap-6 group ${
                   i === 0 ? "rounded-t-[2.5rem]" : ""
                 } ${
                   i === filteredExpenses.length - 1 ? "rounded-b-[2.5rem]" : ""
                 }`}
               >
-                <div className="flex items-center gap-5 min-w-0">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shrink-0 ${
-                    expense.category === "Needs" ? "bg-primary-500" : "bg-tertiary-500"
-                  }`}>
-                    {expense.subcategory.charAt(0).toUpperCase()}
-                  </div>
-                  
-                  <div className="min-w-0">
-                    <h3 className="font-black text-lg sm:text-xl truncate leading-tight group-hover:text-primary-600 transition-colors">{expense.subcategory}</h3>
-                    <div className="flex items-center gap-3 text-xs text-secondary font-bold mt-1.5 uppercase tracking-tight">
-                      <span className="flex items-center gap-1 shrink-0 font-black">
-                        <CalendarDays size={12} className="text-muted" />
-                        {new Date(expense.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                      </span>
-                      {expense.note && (
-                        <>
-                          <span className="w-1 h-1 rounded-full bg-border-subtle shrink-0" />
-                          <span className="truncate italic text-muted font-medium lowercase first-letter:uppercase">{expense.note}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                {/* 1. Icon Column */}
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white font-black text-lg sm:text-xl shadow-lg flex-shrink-0 ${
+                  expense.category === "Needs" ? "bg-primary-500" : "bg-tertiary-500"
+                }`}>
+                  {expense.subcategory.charAt(0).toUpperCase()}
                 </div>
-
-                <div className="flex items-center gap-6 shrink-0 relative">
-                  <div className="text-right">
-                    <span className="block text-xl sm:text-3xl font-black leading-none tracking-tighter">
-                      ₹{expense.amount.toLocaleString('en-IN')}
-                    </span>
-                    <span className={`text-[10px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded-md mt-1 inline-block ${
+                
+                {/* 2. Text Info Column (Flexible) */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1 mb-1">
+                    <h3 className="font-black text-base sm:text-xl leading-tight group-hover:text-primary-600 transition-colors truncate">
+                      {expense.subcategory}
+                    </h3>
+                    <span className={`w-fit text-[9px] font-black uppercase tracking-[0.1em] px-2 py-0.5 rounded-md ${
                       expense.category === "Needs" 
                         ? "bg-primary-50 text-primary-600" 
                         : "bg-tertiary-50 text-tertiary-600"
@@ -367,9 +354,33 @@ export default function ExpensesPage() {
                       {expense.category}
                     </span>
                   </div>
+
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-secondary">
+                    <span className="flex items-center gap-1 shrink-0 font-black text-[10px] sm:text-xs">
+                      <CalendarDays size={12} className="text-muted" />
+                      {new Date(expense.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </span>
+                    {expense.note && (
+                      <>
+                        <span className="hidden sm:block w-1 h-1 rounded-full bg-border-subtle shrink-0" />
+                        <p className="w-full sm:w-auto italic text-muted font-medium normal-case first-letter:uppercase text-[11px] sm:text-xs truncate sm:break-words leading-relaxed">
+                          {expense.note}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Amount + Menu Column (Fixed stability) */}
+                <div className="flex-shrink-0 flex items-center gap-2 sm:gap-4 min-w-[90px] sm:min-w-[120px] justify-end">
+                  <div className="text-right">
+                    <span className="block text-xl sm:text-3xl font-black leading-none tracking-tighter">
+                      ₹{expense.amount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
                   
                   {/* Actions Dropdown */}
-                  <div className="relative">
+                  <div className="relative flex-shrink-0">
                     <button 
                       disabled={deletingId === expense.id}
                       onClick={() => setActiveMenuId(activeMenuId === expense.id ? null : expense.id)}
@@ -402,6 +413,17 @@ export default function ExpensesPage() {
 
                             <button 
                               onClick={() => {
+                                setDetailTransaction(expense);
+                                setIsDetailModalOpen(true);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant transition-colors font-bold text-sm"
+                            >
+                              <Eye size={18} className="text-muted" />
+                              View Details
+                            </button>
+                            <button 
+                              onClick={() => {
                                 setSelectedExpense(expense);
                                 setIsModalOpen(true);
                                 setActiveMenuId(null);
@@ -432,12 +454,20 @@ export default function ExpensesPage() {
           </div>
         )}
       </div>
+      
+      <div className="w-full h-[50px]"></div>
 
       <AddExpenseModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchExpenses}
         editExpense={selectedExpense}
+      />
+      <TransactionDetailModal 
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        transaction={detailTransaction}
+        type="expense"
       />
     </div>
   );

@@ -141,7 +141,7 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: Add
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="relative w-full sm:max-w-lg bg-surface rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-border-subtle max-h-[92vh] overflow-y-auto"
+            className="relative w-full sm:max-w-lg bg-surface rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-border-subtle max-h-[80vh] sm:max-h-[90vh] overflow-y-auto"
           >
             {/* Drag Handle (mobile) */}
             <div className="sm:hidden flex justify-center pt-4 pb-1 sticky top-0 bg-surface z-10">
@@ -169,7 +169,7 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: Add
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="px-6 py-6 pb-12 sm:p-8 space-y-6">
               {/* Amount - The Hero Input */}
               <div className="text-center mb-8">
                 <label className="block text-xs font-bold text-muted uppercase tracking-widest mb-3">
@@ -185,7 +185,7 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: Add
                     value={form.amount}
                     onChange={(e) => setForm({ ...form, amount: e.target.value })}
                     placeholder="0.00"
-                    className="bg-transparent border-none text-5xl sm:text-6xl font-black tracking-tighter text-foreground p-0 focus:outline-none placeholder:text-muted max-w-[280px]"
+                    className="bg-transparent border-none text-5xl sm:text-6xl font-black tracking-tighter text-foreground p-0 focus:outline-none placeholder:text-muted max-w-[180px]"
                   />
                 </div>
                 {errors.amount && <p className="text-error text-xs mt-2 font-bold">{errors.amount}</p>}

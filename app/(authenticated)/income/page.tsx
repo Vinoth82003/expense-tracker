@@ -22,8 +22,9 @@ import {
   TrendingDown
 } from "lucide-react";
 import { AddIncomeModal } from "@/components/income/AddIncomeModal";
+import { TransactionDetailModal } from "@/components/ui/TransactionDetailModal";
 import { useUI } from "@/context/UIContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye } from "lucide-react";
 
 interface Income {
   id: string;
@@ -57,6 +58,8 @@ export default function IncomePage() {
   const { toast, confirm } = useUI();
   const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailTransaction, setDetailTransaction] = useState<Income | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -165,7 +168,7 @@ export default function IncomePage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Income Summary Header */}
-      <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 sm:p-10 shadow-sm relative overflow-hidden group">
+      <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-5 sm:p-8 shadow-sm relative overflow-hidden group">
          <div className="absolute top-0 right-0 w-96 h-96 bg-success/5 blur-[100px] -mr-48 -mt-48 rounded-full pointer-events-none" />
          
          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -174,7 +177,7 @@ export default function IncomePage() {
                   <Banknote size={16} />
                   Total Earnings
                </div>
-               <h2 className="text-5xl sm:text-7xl font-black tracking-tighter mb-2 text-success">
+               <h2 className="text-4xl sm:text-6xl font-black tracking-tighter mb-2 text-success">
                  ₹{stats.total.toLocaleString('en-IN')}
                </h2>
                <p className="text-secondary font-bold text-lg">
@@ -182,14 +185,14 @@ export default function IncomePage() {
                </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2">
               <div className="bg-surface-variant/50 p-6 rounded-[2rem] border border-border-subtle backdrop-blur-sm">
-                <span className="block text-[10px] font-black uppercase tracking-widest text-muted mb-2">Transactions</span>
-                <span className="text-3xl font-black">{stats.count}</span>
+                <span className="block text-[9px] font-black uppercase tracking-widest text-muted mb-2">Transactions</span>
+                <span className="text-2xl font-black">{stats.count}</span>
               </div>
               <div className="bg-surface-variant/50 p-6 rounded-[2rem] border border-border-subtle backdrop-blur-sm">
-                <span className="block text-[10px] font-black uppercase tracking-widest text-muted mb-2">Average Entry</span>
-                <span className="text-2xl font-black">₹{Math.round(stats.avg).toLocaleString('en-IN')}</span>
+                <span className="block text-[9px] font-black uppercase tracking-widest text-muted mb-2">Average Entry</span>
+                <span className="text-lg font-black">₹{Math.round(stats.avg).toLocaleString('en-IN')}</span>
               </div>
             </div>
          </div>
@@ -308,46 +311,54 @@ export default function IncomePage() {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.02 }}
                   key={income.id} 
-                  className={`p-6 sm:p-8 hover:bg-success/5 transition-all flex items-center justify-between group ${
+                  className={`p-5 sm:p-6 hover:bg-success/5 transition-all flex items-center gap-4 sm:gap-6 group ${
                     i === 0 ? "rounded-t-[2.5rem]" : ""
                   } ${
                     i === filteredIncomes.length - 1 ? "rounded-b-[2.5rem]" : ""
                   }`}
                 >
-                  <div className="flex items-center gap-5 min-w-0">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shrink-0 bg-success">
-                      <Icon size={24} />
+                  {/* 1. Icon Column */}
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg flex-shrink-0 bg-success">
+                    <Icon size={24} />
+                  </div>
+                  
+                  {/* 2. Text Info Column (Flexible) */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1 mb-1">
+                      <h3 className="font-black text-base sm:text-xl leading-tight group-hover:text-success transition-colors truncate">
+                        {income.source}
+                      </h3>
+                      <span className="w-fit text-[9px] font-black uppercase tracking-[0.1em] px-2 py-0.5 rounded-md bg-success/10 text-success">
+                         Deposited
+                      </span>
                     </div>
-                    
-                    <div className="min-w-0">
-                      <h3 className="font-black text-lg sm:text-xl truncate leading-tight group-hover:text-success transition-colors">{income.source}</h3>
-                      <div className="flex items-center gap-3 text-xs text-secondary font-bold mt-1.5 uppercase tracking-tight">
-                        <span className="flex items-center gap-1 shrink-0 font-black">
-                          <CalendarDays size={12} className="text-muted" />
-                          {new Date(income.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                        </span>
-                        {income.note && (
-                          <>
-                            <span className="w-1 h-1 rounded-full bg-border-subtle shrink-0" />
-                            <span className="truncate italic text-muted font-medium lowercase first-letter:uppercase">{income.note}</span>
-                          </>
-                        )}
-                      </div>
+
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-secondary">
+                      <span className="flex items-center gap-1 shrink-0 font-black text-[10px] sm:text-xs">
+                        <CalendarDays size={12} className="text-muted" />
+                        {new Date(income.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                      </span>
+                      {income.note && (
+                        <>
+                          <span className="hidden sm:block w-1 h-1 rounded-full bg-border-subtle shrink-0" />
+                          <p className="w-full sm:w-auto italic text-muted font-medium normal-case first-letter:uppercase text-[11px] sm:text-xs truncate sm:break-words leading-relaxed">
+                            {income.note}
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 shrink-0 relative">
+                  {/* 3. Amount + Menu Column (Fixed stability) */}
+                  <div className="flex-shrink-0 flex items-center gap-2 sm:gap-4 min-w-[90px] sm:min-w-[120px] justify-end">
                     <div className="text-right">
                       <span className="block text-xl sm:text-3xl font-black leading-none tracking-tighter text-success">
                         ₹{income.amount.toLocaleString('en-IN')}
                       </span>
-                      <span className="text-[10px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded-md mt-1 inline-block bg-success/10 text-success">
-                         Deposited
-                      </span>
                     </div>
                     
                     {/* Actions */}
-                    <div className="relative">
+                    <div className="relative flex-shrink-0">
                       <button 
                         disabled={deletingId === income.id}
                         onClick={() => setActiveMenuId(activeMenuId === income.id ? null : income.id)}
@@ -374,6 +385,17 @@ export default function IncomePage() {
                                   : "top-full mt-2"
                               }`}
                             >
+                              <button 
+                                onClick={() => {
+                                  setDetailTransaction(income);
+                                  setIsDetailModalOpen(true);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant transition-colors font-bold text-sm"
+                              >
+                                <Eye size={18} className="text-muted" />
+                                View Details
+                              </button>
                               <button 
                                 onClick={() => {
                                   setSelectedIncome(income);
@@ -408,11 +430,19 @@ export default function IncomePage() {
         )}
       </div>
 
+      <div className="w-full h-[50px]"></div>
+
       <AddIncomeModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchIncomes}
         editIncome={selectedIncome}
+      />
+      <TransactionDetailModal 
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        transaction={detailTransaction}
+        type="income"
       />
     </div>
   );

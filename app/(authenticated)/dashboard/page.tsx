@@ -118,10 +118,10 @@ export default function DashboardPage() {
               <Sparkles size={16} />
               Personal Finance Assistant
             </div>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-none mb-2">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-none mb-2 break-words max-w-[90vw]">
               Hey {firstName}! 👋
             </h1>
-            <p className="text-secondary font-bold text-lg">Your financial pulse for {new Date().toLocaleDateString('en-IN', { month: 'long' })}.</p>
+            <p className="text-secondary font-bold text-base sm:text-lg">Your financial pulse for {new Date().toLocaleDateString('en-IN', { month: 'long' })}.</p>
           </div>
           
           <div className="flex items-center gap-2 text-foreground font-black bg-surface border border-border-subtle px-5 py-3 rounded-2xl shadow-sm">
@@ -240,22 +240,20 @@ export default function DashboardPage() {
              ) : (
                <div className="divide-y divide-border-subtle">
                  {expenses.slice(0, 4).map((exp) => (
-                   <div key={exp.id} className="p-6 flex items-center justify-between hover:bg-surface-variant transition-colors group">
-                     <div className="flex items-center gap-5">
-                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black shadow-sm group-hover:scale-110 transition-transform ${
-                         exp.category === "Needs" ? "bg-primary-500" : "bg-tertiary-500"
-                       }`}>
-                         {exp.subcategory.charAt(0).toUpperCase()}
-                       </div>
-                       <div>
-                         <h4 className="font-black text-lg">{exp.subcategory}</h4>
-                         <div className="text-xs text-muted font-black uppercase tracking-widest mt-0.5">
-                           {new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {exp.category}
-                         </div>
+                   <div key={exp.id} className="p-4 sm:p-6 flex items-center gap-4 hover:bg-surface-variant transition-colors group">
+                     <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-white font-black shadow-sm group-hover:scale-110 transition-transform flex-shrink-0 ${
+                       exp.category === "Needs" ? "bg-primary-500" : "bg-tertiary-500"
+                     }`}>
+                       {exp.subcategory.charAt(0).toUpperCase()}
+                     </div>
+                     <div className="flex-1 min-w-0">
+                       <h4 className="font-black text-base sm:text-lg truncate">{exp.subcategory}</h4>
+                       <div className="text-[10px] text-muted font-black uppercase tracking-widest mt-0.5 truncate">
+                         {new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {exp.category}
                        </div>
                      </div>
-                     <div className="text-right">
-                       <span className="font-black text-xl">₹{exp.amount.toLocaleString('en-IN')}</span>
+                     <div className="flex-shrink-0 text-right">
+                       <span className="font-black text-lg sm:text-xl">₹{exp.amount.toLocaleString('en-IN')}</span>
                      </div>
                    </div>
                  ))}
@@ -315,13 +313,13 @@ export default function DashboardPage() {
                   )}
                 </div>
                 
-                <div className="w-full grid grid-cols-2 gap-4 mt-8">
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
                   {stats.chartData.map((entry, idx) => (
-                    <div key={entry.name} className="flex items-center gap-3 bg-surface-variant/30 p-3 rounded-2xl border border-border-subtle">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase text-muted truncate">{entry.name}</p>
-                        <p className="font-black">₹{entry.value.toLocaleString('en-IN')}</p>
+                    <div key={entry.name} className="flex items-center gap-3 bg-surface-variant/30 p-2.5 sm:p-3 rounded-2xl border border-border-subtle">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] sm:text-[10px] font-black uppercase text-muted truncate">{entry.name}</p>
+                        <p className="font-black text-sm sm:text-base">₹{entry.value.toLocaleString('en-IN')}</p>
                       </div>
                     </div>
                   ))}

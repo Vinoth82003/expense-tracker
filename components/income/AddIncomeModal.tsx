@@ -144,7 +144,7 @@ export function AddIncomeModal({ isOpen, onClose, onSuccess, editIncome }: AddIn
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="relative w-full sm:max-w-lg bg-surface rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-border-subtle max-h-[92vh] overflow-y-auto"
+            className="relative w-full sm:max-w-lg bg-surface rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-border-subtle max-h-[80vh] sm:max-h-[90vh] overflow-y-auto"
           >
             {/* Drag Handle (mobile) */}
             <div className="sm:hidden flex justify-center pt-4 pb-1 sticky top-0 bg-surface z-10">
@@ -172,7 +172,7 @@ export function AddIncomeModal({ isOpen, onClose, onSuccess, editIncome }: AddIn
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="px-6 py-6 pb-12 sm:p-8 space-y-6">
               {/* Amount Section */}
               <div className="text-center mb-8">
                 <label className="block text-xs font-bold text-muted uppercase tracking-widest mb-3">
@@ -188,7 +188,7 @@ export function AddIncomeModal({ isOpen, onClose, onSuccess, editIncome }: AddIn
                     value={form.amount}
                     onChange={(e) => setForm({ ...form, amount: e.target.value })}
                     placeholder="0.00"
-                    className="bg-transparent border-none text-5xl sm:text-6xl font-black tracking-tighter text-foreground p-0 focus:outline-none placeholder:text-muted max-w-[280px]"
+                    className="bg-transparent border-none text-5xl sm:text-6xl font-black tracking-tighter text-foreground p-0 focus:outline-none placeholder:text-muted max-w-[180px]"
                   />
                 </div>
                 {errors.amount && <p className="text-error text-xs mt-2 font-bold">{errors.amount}</p>}
@@ -205,16 +205,16 @@ export function AddIncomeModal({ isOpen, onClose, onSuccess, editIncome }: AddIn
                       key={source.name}
                       type="button"
                       onClick={() => setForm({ ...form, source: source.name })}
-                      className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all group ${
+                      className={`flex items-center gap-1 p-3.5 rounded-2xl border-2 transition-all group ${
                         form.source === source.name
                           ? "border-success bg-success/5 shadow-sm"
                           : "border-border-subtle bg-surface-variant/30 hover:border-secondary/50"
                       }`}
                     >
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform ${
+                      <div className={`w-6 h-6 md:w-8 md:h-8 rounded-xl flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform ${
                         form.source === source.name ? source.color : "bg-secondary opacity-50"
                       }`}>
-                        <source.icon size={18} />
+                        <source.icon size={14} />
                       </div>
                       <span className={`font-bold text-sm ${form.source === source.name ? "text-foreground" : "text-secondary"}`}>
                         {source.name}

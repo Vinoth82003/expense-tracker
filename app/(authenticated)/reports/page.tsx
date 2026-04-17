@@ -522,22 +522,22 @@ export default function ReportsPage() {
       </section>
 
       {/* ═══════════ KPI CARDS ═══════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {kpiCards.map((card, i) => (
           <motion.div
             key={card.label}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07 }}
-            className="bg-surface border border-border-subtle rounded-[2rem] p-5 sm:p-6 shadow-sm"
+            className="bg-surface border border-border-subtle rounded-[2rem] p-4 sm:p-6 shadow-sm min-w-0"
           >
-            <div className={`w-10 h-10 rounded-xl ${card.bg} ${card.color} flex items-center justify-center mb-4`}>
-              <card.icon size={20} />
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl ${card.bg} ${card.color} flex items-center justify-center mb-3 sm:mb-4`}>
+              <card.icon size={18} className="sm:w-5 sm:h-5" />
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-1">{card.label}</p>
-            <p className="text-xl sm:text-2xl font-black tracking-tight leading-tight truncate">{card.value}</p>
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted mb-1 truncate">{card.label}</p>
+            <p className="text-base sm:text-xl md:text-2xl font-black tracking-tight leading-tight truncate">{card.value}</p>
             {"sub" in card && card.sub && (
-              <p className="text-xs text-secondary font-bold mt-0.5">{card.sub}</p>
+              <p className="text-[10px] sm:text-xs text-secondary font-bold mt-1 truncate">{card.sub}</p>
             )}
           </motion.div>
         ))}
@@ -678,15 +678,15 @@ export default function ReportsPage() {
 
             {/* Radar Chart (Budget Profile) */}
             <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm flex flex-col">
-               <h3 className="text-xl font-black mb-1 flex items-center gap-3">
+              <h3 className="text-lg sm:text-xl font-black mb-1 flex items-center gap-3">
                 <Target size={22} className="text-primary-500" />
                 50/30/20 Alignment
               </h3>
-              <p className="text-muted text-xs font-bold uppercase tracking-widest mb-4">Actual vs Recommended Profile</p>
-              <div className="flex-1 flex items-center justify-center">
+              <p className="text-muted text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-4">Actual vs Recommended Profile</p>
+              <div className="flex-1 flex items-center justify-center min-h-[250px] w-full">
                 {mounted && !loading && stats.total > 0 ? (
-                  <ResponsiveContainer width={300} height={250} minWidth={100} minHeight={100}>
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                  <ResponsiveContainer width="100%" height={250} minWidth={100} minHeight={100}>
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
                       <PolarGrid stroke="#6366f120" />
                       <PolarAngleAxis dataKey="subject" tick={{ fill: "currentColor", fontSize: 10, fontWeight: 800 }} className="text-secondary" />
                       <PolarRadiusAxis angle={30} domain={[0, 100]} axisLine={false} tick={false} />
@@ -765,8 +765,8 @@ export default function ReportsPage() {
                             data={subcategoryData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={55}
-                            outerRadius={78}
+                            innerRadius={50}
+                            outerRadius={75}
                             paddingAngle={4}
                             dataKey="value"
                             stroke="none"
@@ -788,7 +788,7 @@ export default function ReportsPage() {
                         </RePieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="w-full grid grid-cols-2 gap-2 mt-4 max-h-32 overflow-y-auto custom-scrollbar pr-1">
+                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 max-h-32 overflow-y-auto custom-scrollbar pr-1">
                       {subcategoryData.map((entry, idx) => (
                         <button
                           key={entry.name}
@@ -816,18 +816,18 @@ export default function ReportsPage() {
           </div>
 
           {/* ═══════════ ROW 4: SMART INSIGHT ═══════════ */}
-          <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 sm:p-10 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform pointer-events-none">
+          <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-10 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform pointer-events-none hidden sm:block">
               <Target size={180} />
             </div>
-            <div className="relative z-10 max-w-2xl">
-              <h3 className="text-3xl font-black mb-6">Master Your Money</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="relative z-10 max-w-2xl text-center sm:text-left">
+              <h3 className="text-2xl sm:text-3xl font-black mb-6">Master Your Money</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                 <div className="space-y-4">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 text-primary-500 font-black text-[10px] uppercase tracking-widest border border-primary-500/20">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 text-primary-500 font-black text-[9px] sm:text-[10px] uppercase tracking-widest border border-primary-500/20">
                     Strategy Insight
                   </div>
-                  <p className="text-secondary font-bold text-lg leading-snug">
+                  <p className="text-secondary font-bold text-base sm:text-lg leading-snug">
                     {needsPercentage > 70
                       ? "Your 'Needs' are consuming over 70% of your budget. This is often due to high fixed costs like rent or EMIs. Aim to lower this to 50% for financial freedom."
                       : needsPercentage > 50
@@ -836,10 +836,10 @@ export default function ReportsPage() {
                   </p>
                 </div>
                 <div className="space-y-4">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-tertiary-500/10 text-tertiary-500 font-black text-[10px] uppercase tracking-widest border border-tertiary-500/20">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-tertiary-500/10 text-tertiary-500 font-black text-[9px] sm:text-[10px] uppercase tracking-widest border border-tertiary-500/20">
                     Optimization Tip
                   </div>
-                  <p className="text-secondary font-bold text-lg leading-snug">
+                  <p className="text-secondary font-bold text-base sm:text-lg leading-snug">
                     {stats.topCat ? (
                       <>Your biggest spend is <span className="text-foreground">{stats.topCat}</span>. If you could reduce this by just 10% next month, you&apos;d save <span className="text-primary-500 font-black">₹{(stats.topCatAmt * 0.1).toLocaleString("en-IN")}</span>.</>
                     ) : (
