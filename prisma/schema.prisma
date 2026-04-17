@@ -16,6 +16,10 @@ model User {
   monthlyLimit Float?
   expenseMode  String?    // "limit" or "no-limit"
   onboarded    Boolean    @default(false)
+
+  twoFactorEnabled    Boolean   @default(false)
+  twoFactorOTP        String?
+  twoFactorOTPExpires DateTime?
   
   expenses     Expense[]
   categories   Category[]

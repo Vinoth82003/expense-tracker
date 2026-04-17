@@ -49,10 +49,21 @@ export default function DashboardLayout({
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-    } else if (session?.user && !(session.user as any).onboarded) {
-      router.push("/onboarding");
+      return;
     }
-  }, [session, status, router]);
+    if (session?.user && !(session.user as any).onboarded) {
+      router.push("/onboarding");
+      return;
+    }
+    // If 2FA is enabled, check if the session is already 2FA-verified via cookie
+    if (status === "authenticated" && (session?.user as any)?.twoFactorEnabled) {
+      const cookies = document.cookie.split(";").map((c) => c.trim());
+      const is2faVerified = cookies.some((c) => c.startsWith("2fa_verified="));
+      if (!is2faVerified) {
+        router.push(`/verify-2fa?callbackUrl=${encodeURIComponent(pathname)}`);
+      }
+    }
+  }, [session, status, router, pathname]);
 
   if (status === "loading" || !session) {
     return (

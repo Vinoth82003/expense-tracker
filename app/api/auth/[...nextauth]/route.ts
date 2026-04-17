@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
+import { sendWelcomeEmail } from "@/lib/mail";
 
 const DEFAULT_CATEGORIES = [
   { name: "Food", type: "Needs", isDefault: true },
@@ -65,6 +66,9 @@ export const authOptions = {
               })),
             });
             console.log("Default categories seeded successfully.");
+
+            // Send welcome email
+            await sendWelcomeEmail(newUser.email, newUser.name || "");
           } catch (seedError) {
             console.error("Warning: Failed to seed default categories:", seedError);
           }
@@ -82,14 +86,16 @@ export const authOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: session.user.email! },
-            select: { id: true, onboarded: true, expenseMode: true, monthlyLimit: true },
+            select: { id: true, name: true, onboarded: true, expenseMode: true, monthlyLimit: true, twoFactorEnabled: true },
           });
 
           if (dbUser) {
             (session.user as any).id = dbUser.id;
+            (session.user as any).name = dbUser.name;
             (session.user as any).onboarded = dbUser.onboarded;
             (session.user as any).expenseMode = dbUser.expenseMode;
             (session.user as any).monthlyLimit = dbUser.monthlyLimit;
+            (session.user as any).twoFactorEnabled = (dbUser as any).twoFactorEnabled;
           }
         } catch (error) {
           console.error("Error fetching session user from Prisma:", error);
