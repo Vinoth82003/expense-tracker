@@ -2,6 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
@@ -23,6 +24,7 @@ import {
 
 export default function ProfilePage() {
   const { data: session, update: updateSession } = useSession();
+  const router = useRouter();
   const user = session?.user as any;
 
   // Name edit state
@@ -31,6 +33,8 @@ export default function ProfilePage() {
   const [nameSaving, setNameSaving] = useState(false);
   const [nameError, setNameError] = useState("");
   const [nameSuccess, setNameSuccess] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   // 2FA state
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
@@ -113,6 +117,23 @@ export default function ProfilePage() {
     } finally {
       setTwoFALoading(false);
       setPendingTwoFA(null);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      const res = await fetch("/api/user/delete", { method: "DELETE" });
+      if (res.ok) {
+        signOut({ callbackUrl: "/login" });
+      } else {
+        alert("Failed to delete account. Please try again.");
+      }
+    } catch {
+      alert("Network error.");
+    } finally {
+      setIsDeletingAccount(false);
+      setShowConfirmDelete(false);
     }
   };
 
@@ -256,7 +277,7 @@ export default function ProfilePage() {
                 { label: "Full Name", value: user?.name || "—", icon: User, editable: true, onClick: () => setIsEditingName(true) },
                 { label: "Email Address", value: user?.email || "—", icon: Mail, editable: false },
                 { label: "Auth Provider", value: "Google OAuth", icon: ShieldCheck, editable: false },
-                { label: "Expense Mode", value: user?.expenseMode === "limit" ? `Budget Mode (₹${user?.monthlyLimit?.toLocaleString("en-IN") || "0"}/mo)` : "No Limit Mode", icon: CreditCard, editable: false },
+                { label: "Expense Mode", value: user?.expenseMode === "limit" ? `Budget Mode (₹${user?.monthlyLimit?.toLocaleString("en-IN") || "0"}/mo)` : "No Limit Mode", icon: CreditCard, editable: true, onClick: () => router.push("/settings") },
                 { label: "Member Since", value: memberSince, icon: Calendar, editable: false },
               ].map((item) => (
                 <div
@@ -383,17 +404,16 @@ export default function ProfilePage() {
                 </div>
                 <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </button>
-              {/* <button
-                disabled
-                className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-error text-white font-bold opacity-40 cursor-not-allowed"
-                title="Contact support to delete your account"
+              <button
+                onClick={() => setShowConfirmDelete(true)}
+                className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-error text-white font-bold hover:shadow-lg hover:shadow-error/20 transition-all group"
               >
                 <div className="flex items-center gap-3">
                   <Trash2 size={18} />
                   Delete Account
                 </div>
-                <ChevronRight size={16} />
-              </button> */}
+                <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+              </button>
             </div>
           </motion.div>
         </div>
@@ -444,6 +464,50 @@ export default function ProfilePage() {
                     ${pendingTwoFA ? "bg-primary-500 hover:bg-primary-600" : "bg-error hover:bg-error/80"}`}
                 >
                   {pendingTwoFA ? "Enable" : "Disable"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Account Confirm Dialog */}
+      <AnimatePresence>
+        {showConfirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-surface border border-border-subtle rounded-3xl p-8 shadow-2xl max-w-sm w-full"
+            >
+              <div className="flex justify-center mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-error/10 flex items-center justify-center">
+                  <Trash2 size={28} className="text-error" />
+                </div>
+              </div>
+              <h3 className="text-xl font-black text-center mb-2">Delete Account?</h3>
+              <p className="text-secondary text-center text-sm mb-8 leading-relaxed">
+                This action is <span className="text-error font-black uppercase">permanent</span>. All your data, including expenses, incomes, and settings, will be erased forever.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmDelete(false)}
+                  className="flex-1 py-3 rounded-xl bg-surface-variant font-bold text-secondary hover:bg-surface-variant/80 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount}
+                  className="flex-1 py-3 rounded-xl bg-error hover:bg-error/80 font-bold text-white transition-colors disabled:opacity-50"
+                >
+                  {isDeletingAccount ? "Deleting..." : "Delete Permanently"}
                 </button>
               </div>
             </motion.div>
