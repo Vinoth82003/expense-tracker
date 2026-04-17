@@ -53,8 +53,18 @@ export async function POST(req: NextRequest) {
     }));
 
     // 3. Initialize Gemini SDK
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      console.error("CRITICAL: GEMINI_API_KEY is not set in environment variables.");
+      return NextResponse.json(
+        { error: "AI configuration error. Please check your environment variables." },
+        { status: 500 }
+      );
+    }
+
     const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
+      apiKey: apiKey,
     });
 
     const prompt = `
@@ -85,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Make request with JSON Schema
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
@@ -127,8 +137,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Specific handling for authentication/credentials issues
+    if (error.message?.includes("credentials") || error.message?.includes("API key")) {
+      return NextResponse.json(
+        { error: "AI authentication failed. Please verify the API key." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: "Something went wrong during financial analysis" },
       { status: 500 }
     );
   }
