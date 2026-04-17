@@ -1,6 +1,6 @@
 {
-  "name": "SpenWise",
-  "short_name": "SpenWise",
+  "name": "SpendWise",
+  "short_name": "SpendWise",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -15,7 +15,10 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
-  "display": "standalone"
+  "theme_color": "#0f0f1a",
+  "background_color": "#0f0f1a",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/dashboard"
 }

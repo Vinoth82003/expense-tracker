@@ -30,6 +30,8 @@ export const viewport = {
     { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
     { media: "(prefers-color-scheme: dark)", color: "#0f0f1a" },
   ],
+  appleMobileWebAppCapable: "yes",
+  appleMobileWebAppStatusBarStyle: "default",
 };
 
 export const metadata: Metadata = {
@@ -58,6 +60,15 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "SpendWise — Expense Tracker",
     description: "Smart rupee-first expense tracking for every Indian.",
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SpendWise",
+  },
+  icons: {
+    apple: "/web-app-manifest-192x192.png",
   },
   other: {
     "google-site-verification": "your-verification-code", // Add if you have Google Search Console
