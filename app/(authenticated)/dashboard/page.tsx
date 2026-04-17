@@ -286,9 +286,9 @@ export default function DashboardPage() {
               </div>
             ) : (
               <>
-                <div className="h-64 w-full">
+                <div className="h-64 sm:h-72 w-full mt-4 relative">
                   {mounted && !loading && stats.chartData.length > 0 && (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
+                    <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={stats.chartData}

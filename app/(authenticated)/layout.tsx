@@ -18,7 +18,8 @@ import {
   X,
   Sun,
   Moon,
-  Banknote
+  Banknote,
+  Sparkles
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
@@ -30,6 +31,7 @@ const navItems = [
   { name: "Expenses", href: "/expenses", icon: ReceiptIndianRupee },
   { name: "Income", href: "/income", icon: Banknote },
   { name: "Reports", href: "/reports", icon: PieChart },
+  { name: "Analyze", href: "/analyze", icon: Sparkles },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Profile", href: "/profile", icon: User },
 ];

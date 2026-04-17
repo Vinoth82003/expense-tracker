@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@google/genai": "^1.50.1",
     "@prisma/client": "^5.22.0",
+    "@tailwindcss/typography": "^0.5.19",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
@@ -19,8 +21,10 @@
     "next-auth": "^4.24.14",
     "next-themes": "^0.4.6",
     "nodemailer": "^7.0.13",
+    "openai": "^6.34.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",
     "tailwind-merge": "^3.5.0"
   },
