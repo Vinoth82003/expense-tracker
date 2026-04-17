@@ -41,7 +41,7 @@ export async function GET() {
         e.subcategory,
         e.date.toISOString(),
         e.note || "",
-        e.createdAt.toISOString()
+        e.createdAt?.toISOString() || ""
       ]);
     });
 
@@ -54,7 +54,7 @@ export async function GET() {
         i.source,
         i.date.toISOString(),
         i.note || "",
-        i.createdAt.toISOString()
+        i.createdAt?.toISOString() || ""
       ]);
     });
 
