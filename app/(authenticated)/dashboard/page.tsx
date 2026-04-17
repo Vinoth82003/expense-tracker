@@ -227,7 +227,7 @@ export default function DashboardPage() {
           <div className="p-8 flex items-center justify-between border-b border-border-subtle">
             <h3 className="text-2xl font-black">Recent Activity</h3>
             <Link href="/expenses" className="text-sm font-black text-primary-500 hover:text-primary-600 flex items-center gap-1.5 px-4 py-2 bg-primary-500/5 rounded-full transition-colors">
-              View All <ArrowRight size={16} />
+              More <ArrowRight size={16} />
             </Link>
           </div>
           <div className="flex-1">

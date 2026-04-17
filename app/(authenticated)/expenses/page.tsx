@@ -166,7 +166,7 @@ export default function ExpensesPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Summary Header - Pure Premium UX */}
-      <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 sm:p-10 shadow-sm relative overflow-hidden group">
+      <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-5 sm:p-8 shadow-sm relative overflow-hidden group">
          <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 blur-[100px] -mr-48 -mt-48 rounded-full pointer-events-none" />
          
          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -215,11 +215,11 @@ export default function ExpensesPage() {
 
       {/* Advanced Filters Bar */}
       <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
-         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle/50 pb-4">
-            <div className="flex p-1 bg-surface-variant rounded-xl gap-1">
+         <div className="w-full flex flex-wrap md:flex-nowrap items-center justify-between gap-4 border-b border-border-subtle/50 pb-4">
+            <div className="w-full flex p-1 bg-surface-variant rounded-xl gap-1">
                <button 
                 onClick={() => setViewMode("month")}
-                className={`px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
+                className={`w-full px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
                   viewMode === "month" ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" : "text-secondary hover:text-foreground"
                 }`}
                >
@@ -227,7 +227,7 @@ export default function ExpensesPage() {
                </button>
                <button 
                 onClick={() => setViewMode("range")}
-                className={`px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
+                className={`w-full px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
                   viewMode === "range" ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" : "text-secondary hover:text-foreground"
                 }`}
                >
@@ -235,10 +235,10 @@ export default function ExpensesPage() {
                </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="w-full flex items-center gap-2">
                <button 
                 onClick={exportToCSV}
-                className="flex items-center gap-2 px-5 py-2.5 bg-surface-variant rounded-xl text-secondary hover:text-foreground font-black text-xs uppercase tracking-widest transition-all border border-transparent hover:border-border-subtle active:scale-95"
+                className="w-full flex items-center gap-2 px-5 py-2.5 bg-surface-variant rounded-xl text-secondary hover:text-foreground font-black text-xs uppercase tracking-widest transition-all border border-transparent hover:border-border-subtle active:scale-95"
                >
                  <Download size={16} />
                  Export
@@ -248,7 +248,7 @@ export default function ExpensesPage() {
                   setSelectedExpense(null);
                   setIsModalOpen(true);
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-foreground text-background rounded-xl font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all active:scale-95"
+                className="w-full flex items-center gap-2 px-5 py-2.5 bg-foreground text-background rounded-xl font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all active:scale-95"
                >
                  <Plus size={16} />
                  Add entry

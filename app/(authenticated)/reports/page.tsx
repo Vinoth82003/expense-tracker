@@ -557,12 +557,12 @@ export default function ReportsPage() {
                 <TrendingUp size={22} className="text-primary-500" />
                 {trendMode === "daily" ? "Daily Trend" : trendMode === "cumulative" ? "Budget Burn" : "Category Stacked"}
               </h3>
-              <div className="flex p-1 bg-surface-variant rounded-xl gap-1">
+              <div className="flex w-full sm:w-auto p-1 bg-surface-variant rounded-xl gap-1 overflow-x-auto scrollbar-hide flex-nowrap">
                 {(["daily", "cumulative", "stacked", "cashflow"] as const).map(mode => (
                   <button
                     key={mode}
                     onClick={() => setTrendMode(mode as any)}
-                    className={`px-4 py-1.5 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
+                    className={`px-4 py-1.5 rounded-lg font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
                       trendMode === (mode as any)
                         ? "bg-primary-500 text-white shadow-md"
                         : "text-secondary hover:text-foreground"

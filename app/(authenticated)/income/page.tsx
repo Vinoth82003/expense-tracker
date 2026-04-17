@@ -197,11 +197,11 @@ export default function IncomePage() {
 
       {/* Filters Bar */}
       <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
-         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border-subtle/50 pb-4">
-            <div className="flex p-1 bg-surface-variant rounded-xl gap-1">
+         <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-4 border-b border-border-subtle/50 pb-4">
+            <div className="flex w-full p-1 bg-surface-variant rounded-xl gap-1">
                <button 
                 onClick={() => setViewMode("month")}
-                className={`px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
+                className={`w-full px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
                   viewMode === "month" ? "bg-success text-white shadow-lg shadow-success/20" : "text-secondary hover:text-foreground"
                 }`}
                >
@@ -209,7 +209,7 @@ export default function IncomePage() {
                </button>
                <button 
                 onClick={() => setViewMode("range")}
-                className={`px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
+                className={`w-full px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
                   viewMode === "range" ? "bg-success text-white shadow-lg shadow-success/20" : "text-secondary hover:text-foreground"
                 }`}
                >
@@ -217,10 +217,10 @@ export default function IncomePage() {
                </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center gap-2">
                <button 
                 onClick={exportToCSV}
-                className="flex items-center gap-2 px-5 py-2.5 bg-surface-variant rounded-xl text-secondary hover:text-foreground font-black text-xs uppercase tracking-widest transition-all border border-transparent hover:border-border-subtle active:scale-95"
+                className="w-full flex items-center gap-2 px-5 py-2.5 bg-surface-variant rounded-xl text-secondary hover:text-foreground font-black text-xs uppercase tracking-widest transition-all border border-transparent hover:border-border-subtle active:scale-95"
                >
                  <Download size={16} />
                  Export
@@ -230,7 +230,7 @@ export default function IncomePage() {
                   setSelectedIncome(null);
                   setIsModalOpen(true);
                 }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-success text-white rounded-xl font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all active:scale-95 shadow-lg shadow-success/10"
+                className="w-full flex items-center gap-2 px-5 py-2.5 bg-success text-white rounded-xl font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all active:scale-95 shadow-lg shadow-success/10"
                >
                  <Plus size={16} />
                  Add Income
