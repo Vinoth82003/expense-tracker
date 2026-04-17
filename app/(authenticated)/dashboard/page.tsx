@@ -12,6 +12,8 @@ import {
   PieChart as PieChartIcon,
   ArrowRight,
   TrendingUp,
+  Banknote,
+  Scale
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
@@ -31,6 +33,13 @@ interface Expense {
   date: string;
 }
 
+interface Income {
+  id: string;
+  amount: number;
+  source: string;
+  date: string;
+}
+
 const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#06b6d4", "#f59e0b", "#10b981"];
 
 export default function DashboardPage() {
@@ -41,6 +50,7 @@ export default function DashboardPage() {
   const monthlyLimit = (session?.user as { monthlyLimit?: number })?.monthlyLimit || 0;
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,9 +59,17 @@ export default function DashboardPage() {
       try {
         const currentDate = new Date();
         const monthFilter = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-        const res = await fetch(`/api/expenses?month=${monthFilter}`);
-        const data = await res.json();
-        setExpenses(data.expenses || []);
+        
+        const [expRes, incRes] = await Promise.all([
+          fetch(`/api/expenses?month=${monthFilter}`),
+          fetch(`/api/income?month=${monthFilter}`)
+        ]);
+
+        const expData = await expRes.json();
+        const incData = await incRes.json();
+
+        setExpenses(expData.expenses || []);
+        setIncomes(incData.incomes || []);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -70,6 +88,9 @@ export default function DashboardPage() {
 
   const stats = useMemo(() => {
     const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const totalIncome = incomes.reduce((sum, inc) => sum + inc.amount, 0);
+    const netBalance = totalIncome - totalSpent;
+
     const currentDate = new Date();
     const daysElapsed = currentDate.getDate() || 1;
     const dailyAverage = totalSpent / daysElapsed;
@@ -80,8 +101,8 @@ export default function DashboardPage() {
     expenses.forEach(e => catMap.set(e.category, (catMap.get(e.category) || 0) + e.amount));
     const chartData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value }));
 
-    return { totalSpent, dailyAverage, remaining, chartData };
-  }, [expenses, expenseMode, monthlyLimit]);
+    return { totalSpent, totalIncome, netBalance, dailyAverage, remaining, chartData };
+  }, [expenses, incomes, expenseMode, monthlyLimit]);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
@@ -111,69 +132,88 @@ export default function DashboardPage() {
       </section>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="p-8 rounded-[2.5rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
+          className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 blur-3xl -mr-16 -mt-16 rounded-full" />
-          <div className="w-12 h-12 rounded-2xl bg-primary-500/10 text-primary-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-            <Wallet size={24} />
+          <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <Wallet size={20} />
           </div>
-          <div className="text-xs font-black text-muted uppercase tracking-widest mb-1">Total Spent</div>
-          <div className="text-3xl font-black text-foreground">
+          <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Total Spent</div>
+          <div className="text-2xl font-black text-foreground">
             {loading ? "..." : `₹${stats.totalSpent.toLocaleString('en-IN')}`}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-success/5 blur-3xl -mr-16 -mt-16 rounded-full" />
+          <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+            <Banknote size={20} />
+          </div>
+          <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Total Income</div>
+          <div className="text-2xl font-black text-foreground">
+            {loading ? "..." : `₹${stats.totalIncome.toLocaleString('en-IN')}`}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+          className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
+        >
+          <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl -mr-16 -mt-16 rounded-full ${stats.netBalance >= 0 ? "bg-success/5" : "bg-error/5"}`} />
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${stats.netBalance >= 0 ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
+            <Scale size={20} />
+          </div>
+          <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Net Balance</div>
+          <div className="text-2xl font-black text-foreground">
+            {loading ? "..." : `₹${stats.netBalance.toLocaleString('en-IN')}`}
           </div>
         </motion.div>
 
         {expenseMode === "limit" ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="p-8 rounded-[2.5rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 }}
+            className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
           >
-            <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl -mr-16 -mt-16 rounded-full ${stats.remaining! >= 0 ? "bg-success/5" : "bg-error/5"}`} />
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform ${stats.remaining! >= 0 ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
-              <Activity size={24} />
+            <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl -mr-16 -mt-16 rounded-full ${stats.remaining! >= 0 ? "bg-primary-500/5" : "bg-error/5"}`} />
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${stats.remaining! >= 0 ? "bg-primary-500/10 text-primary-500" : "bg-error/10 text-error"}`}>
+              <Activity size={20} />
             </div>
-            <div className="text-xs font-black text-muted uppercase tracking-widest mb-1">Remaining</div>
-            <div className="text-3xl font-black text-foreground">
+            <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Budget Left</div>
+            <div className="text-2xl font-black text-foreground">
               {loading ? "..." : `₹${stats.remaining!.toLocaleString('en-IN')}`}
             </div>
           </motion.div>
         ) : (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="p-8 rounded-[2.5rem] bg-surface border border-border-subtle shadow-sm opacity-60 relative overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 }}
+            className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
           >
-            <div className="w-12 h-12 rounded-2xl bg-surface-variant text-secondary flex items-center justify-center mb-6">
-              <Activity size={24} />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-muted/5 blur-3xl -mr-16 -mt-16 rounded-full" />
+            <div className="w-10 h-10 rounded-xl bg-surface-variant text-secondary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <ShoppingCart size={20} />
             </div>
-            <div className="text-xs font-black text-muted uppercase tracking-widest mb-1">Budget Limit</div>
-            <div className="text-xl font-black text-muted">No Limit Active</div>
+            <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Daily Avg</div>
+            <div className="text-2xl font-black text-foreground">
+              {loading ? "..." : `₹${Math.round(stats.dailyAverage).toLocaleString('en-IN')}`}
+            </div>
           </motion.div>
         )}
-
-        <motion.div
-           initial={{ opacity: 0, y: 20 }}
-           animate={{ opacity: 1, y: 0 }}
-           transition={{ delay: 0.3 }}
-           className="p-8 rounded-[2.5rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group sm:col-span-2 lg:col-span-1 relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-tertiary-500/5 blur-3xl -mr-16 -mt-16 rounded-full" />
-          <div className="w-12 h-12 rounded-2xl bg-tertiary-500/10 text-tertiary-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-            <ShoppingCart size={24} />
-          </div>
-          <div className="text-xs font-black text-muted uppercase tracking-widest mb-1">Daily Average</div>
-          <div className="text-3xl font-black text-foreground">
-            {loading ? "..." : `₹${Math.round(stats.dailyAverage).toLocaleString('en-IN')}`}
-          </div>
-        </motion.div>
       </div>
 
       <motion.div

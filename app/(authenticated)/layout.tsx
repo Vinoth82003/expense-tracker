@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   Sun,
-  Moon
+  Moon,
+  Banknote
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
@@ -27,6 +28,7 @@ import { useTheme } from "@/components/providers/ThemeProvider";
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Expenses", href: "/expenses", icon: ReceiptIndianRupee },
+  { name: "Income", href: "/income", icon: Banknote },
   { name: "Reports", href: "/reports", icon: PieChart },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Profile", href: "/profile", icon: User },

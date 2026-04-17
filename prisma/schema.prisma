@@ -54,6 +54,7 @@ model Income {
   id      String   @id @default(auto()) @map("_id") @db.ObjectId
   amount  Float
   source  String
+  note    String?
   date    DateTime
 
   userId  String   @db.ObjectId

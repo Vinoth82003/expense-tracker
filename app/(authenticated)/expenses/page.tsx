@@ -302,7 +302,7 @@ export default function ExpensesPage() {
       </section>
 
       {/* Expenses Table/List */}
-      <div className="bg-surface border border-border-subtle rounded-[2.5rem] overflow-hidden shadow-sm">
+      <div className="bg-surface border border-border-subtle rounded-[2.5rem] shadow-sm">
         {loading ? (
           <div className="p-32 flex flex-col items-center gap-6">
             <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
@@ -324,7 +324,11 @@ export default function ExpensesPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.02 }}
                 key={expense.id} 
-                className="p-6 sm:p-8 hover:bg-surface-variant/20 transition-all flex items-center justify-between group"
+                className={`p-6 sm:p-8 hover:bg-surface-variant/20 transition-all flex items-center justify-between group ${
+                  i === 0 ? "rounded-t-[2.5rem]" : ""
+                } ${
+                  i === filteredExpenses.length - 1 ? "rounded-b-[2.5rem]" : ""
+                }`}
               >
                 <div className="flex items-center gap-5 min-w-0">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shrink-0 ${
@@ -390,7 +394,7 @@ export default function ExpensesPage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.9, y: viewMode === "month" ? -10 : 10 }}
                             className={`absolute right-0 w-48 bg-surface border border-border-subtle rounded-2xl shadow-2xl z-20 p-2 overflow-hidden ${
-                              i >= filteredExpenses.length - 2 && filteredExpenses.length > 2
+                              i >= filteredExpenses.length - 2
                                 ? "bottom-full mb-2" 
                                 : "top-full mt-2"
                             }`}

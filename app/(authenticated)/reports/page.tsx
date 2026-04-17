@@ -48,6 +48,13 @@ interface Expense {
   date: string;
 }
 
+interface Income {
+  id: string;
+  amount: number;
+  source: string;
+  date: string;
+}
+
 const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#06b6d4", "#f59e0b", "#10b981", "#f43f5e", "#84cc16"];
 const CATEGORY_FILTERS = ["All", "Needs", "Wants"];
 
@@ -119,6 +126,7 @@ export default function ReportsPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [rawExpenses, setRawExpenses] = useState<Expense[]>([]);
+  const [rawIncomes, setRawIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ── Filter state ──────────────────────────────────────────────────────────
@@ -153,9 +161,14 @@ export default function ReportsPage() {
         setLoading(false);
         return;
       }
-      const res = await fetch(`/api/expenses${query}`);
-      const data = await res.json();
-      setRawExpenses(data.expenses || []);
+      const [expRes, incRes] = await Promise.all([
+        fetch(`/api/expenses${query}`),
+        fetch(`/api/income${query}`)
+      ]);
+      const expData = await expRes.json();
+      const incData = await incRes.json();
+      setRawExpenses(expData.expenses || []);
+      setRawIncomes(incData.incomes || []);
     } catch (err) {
       console.error("Failed to fetch reports:", err);
     } finally {
@@ -210,18 +223,21 @@ export default function ReportsPage() {
       if (amt > heaviestAmount) { heaviestAmount = amt; heaviestDay = day; }
     });
 
+    const totalIncome = rawIncomes.reduce((s, inc) => s + inc.amount, 0);
+    const savings = totalIncome - total;
+
     const subMap = new Map<string, number>();
     filteredExpenses.forEach(e => subMap.set(e.subcategory, (subMap.get(e.subcategory) || 0) + e.amount));
     let topCat = "";
     let topCatAmt = 0;
     subMap.forEach((amt, cat) => { if (amt > topCatAmt) { topCatAmt = amt; topCat = cat; } });
 
-    return { total, needs, wants, avgDaily, heaviestDay, heaviestAmount, topCat, topCatAmt };
-  }, [filteredExpenses]);
+    return { total, totalIncome, savings, needs, wants, avgDaily, heaviestDay, heaviestAmount, topCat, topCatAmt };
+  }, [filteredExpenses, rawIncomes]);
 
-  const needsPercentage = stats.total > 0 ? (stats.needs / stats.total) * 100 : 0;
-  const wantsPercentage = stats.total > 0 ? (stats.wants / stats.total) * 100 : 0;
-  const savingsPercentage = 100 - (needsPercentage + wantsPercentage);
+  const needsPercentage = stats.totalIncome > 0 ? (stats.needs / stats.totalIncome) * 100 : (stats.total > 0 ? (stats.needs / stats.total) * 100 : 0);
+  const wantsPercentage = stats.totalIncome > 0 ? (stats.wants / stats.totalIncome) * 100 : (stats.total > 0 ? (stats.wants / stats.total) * 100 : 0);
+  const savingsPercentage = stats.totalIncome > 0 ? (stats.savings / stats.totalIncome) * 100 : 0;
 
   // ── Radar Data (50/30/20 Comparison) ──────────────────────────────────────
   const radarData = [
@@ -232,15 +248,26 @@ export default function ReportsPage() {
 
   // ── Trend Data (Daily, Cumulative, or Stacked) ─────────────────────────────
   const trendData = useMemo(() => {
-    const map = new Map<string, { total: number; Needs: number; Wants: number }>();
+    const map = new Map<string, { total: number; Needs: number; Wants: number; Income: number }>();
+    
+    // Process Expenses
     filteredExpenses.forEach(e => {
       const d = e.date.split("T")[0];
-      const cur = map.get(d) || { total: 0, Needs: 0, Wants: 0 };
+      const cur = map.get(d) || { total: 0, Needs: 0, Wants: 0, Income: 0 };
       cur.total += e.amount;
       if (e.category === "Needs") cur.Needs += e.amount;
       else cur.Wants += e.amount;
       map.set(d, cur);
     });
+
+    // Process Incomes
+    rawIncomes.forEach(inc => {
+      const d = inc.date.split("T")[0];
+      const cur = map.get(d) || { total: 0, Needs: 0, Wants: 0, Income: 0 };
+      cur.Income += inc.amount;
+      map.set(d, cur);
+    });
+
     const sorted = Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
     let running = 0;
     return sorted.map(([date, d]) => {
@@ -250,9 +277,10 @@ export default function ReportsPage() {
         amount: trendMode === "cumulative" ? running : d.total,
         Needs: d.Needs,
         Wants: d.Wants,
+        Income: d.Income
       };
     });
-  }, [filteredExpenses, trendMode]);
+  }, [filteredExpenses, rawIncomes, trendMode]);
 
   // ── Chart data: Weekly Bars ───────────────────────────────────────────────
   const weeklyData = useMemo(() => {
@@ -311,14 +339,12 @@ export default function ReportsPage() {
       bg: "bg-tertiary-500/10",
     },
     {
-      label: "Heaviest Day",
-      value: stats.heaviestDay
-        ? new Date(stats.heaviestDay).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
-        : "—",
-      sub: stats.heaviestDay ? `₹${stats.heaviestAmount.toLocaleString("en-IN")}` : "",
-      icon: Flame,
-      color: "text-error",
-      bg: "bg-error/10",
+      label: "Actual Savings",
+      value: `₹${Math.max(0, stats.savings).toLocaleString("en-IN")}`,
+      sub: stats.totalIncome > 0 ? `${((stats.savings / stats.totalIncome) * 100).toFixed(1)}% of income` : "No income recorded",
+      icon: TrendingUp,
+      color: "text-success",
+      bg: "bg-success/10",
     },
     {
       label: "Top Category",
@@ -532,12 +558,12 @@ export default function ReportsPage() {
                 {trendMode === "daily" ? "Daily Trend" : trendMode === "cumulative" ? "Budget Burn" : "Category Stacked"}
               </h3>
               <div className="flex p-1 bg-surface-variant rounded-xl gap-1">
-                {(["daily", "cumulative", "stacked"] as const).map(mode => (
+                {(["daily", "cumulative", "stacked", "cashflow"] as const).map(mode => (
                   <button
                     key={mode}
-                    onClick={() => setTrendMode(mode)}
+                    onClick={() => setTrendMode(mode as any)}
                     className={`px-4 py-1.5 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
-                      trendMode === mode
+                      trendMode === (mode as any)
                         ? "bg-primary-500 text-white shadow-md"
                         : "text-secondary hover:text-foreground"
                     }`}
@@ -560,6 +586,10 @@ export default function ReportsPage() {
                         <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
                         <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                       </linearGradient>
+                      <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#6366f110" />
                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600 }} dy={10} />
@@ -580,10 +610,15 @@ export default function ReportsPage() {
                         label={{ value: "Budget", fill: "#ef4444", fontSize: 11, fontWeight: 700, position: 'insideTopRight' }}
                       />
                     )}
-                    {trendMode === "stacked" ? (
+                    {(trendMode as any) === "stacked" ? (
                       <>
                         <Area type="monotone" dataKey="Needs" stackId="1" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
                         <Area type="monotone" dataKey="Wants" stackId="1" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorWants)" />
+                      </>
+                    ) : (trendMode as any) === "cashflow" ? (
+                      <>
+                        <Area type="monotone" dataKey="Income" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
+                        <Area type="monotone" dataKey="amount" name="Expenses" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
                       </>
                     ) : (
                       <Area
