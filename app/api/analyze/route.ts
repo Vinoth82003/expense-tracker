@@ -36,12 +36,12 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // 2. Prepare data (Sanitized)
+    // 2. Prepare data (Sanitized - NO CONFIDENTIAL DATA LIKE NAMES/EMAILS)
     const sanitizedIncomes = incomes.map(inc => ({
       amount: inc.amount,
       source: inc.source,
       date: inc.date.toISOString().split("T")[0],
-      note: inc.note || ""
+      note: inc.note || "" // Notes are allowed
     }));
 
     const sanitizedExpenses = expenses.map(exp => ({
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       category: exp.category,
       subcategory: exp.subcategory,
       date: exp.date.toISOString().split("T")[0],
-      note: exp.note || ""
+      note: exp.note || "" // Notes are allowed
     }));
 
     // 3. Initialize Gemini SDK
@@ -69,51 +69,118 @@ export async function POST(req: NextRequest) {
 
     const prompt = `
       Act as a professional and friendly Senior Financial Advisor. 
-      Analyze the provided financial data for a user named ${user?.name || "User"}.
+      Analyze the provided financial data for the user.
       
       User Context:
       - Monthly Budget Limit: ${user?.monthlyLimit ? `₹${user.monthlyLimit}` : "Not set"}
       - Expense Mode: ${user?.expenseMode || "Standard"}
 
-      Income Data:
+      Income Data (Last several months):
       ${JSON.stringify(sanitizedIncomes, null, 2)}
 
-      Expense Data:
+      Expense Data (Last several months):
       ${JSON.stringify(sanitizedExpenses, null, 2)}
 
       Tasks:
-      1. Provide a comprehensive summary of their financial health.
-      2. Analyze spending patterns by category and subcategory.
-      3. Identify at least 3-5 specific warnings or red flags.
-      4. identifying 5-7 actionable suggestions to improve their financial discipline.
-      5. Create a personalized savings plan based on their goal (or default to 20% savings).
+      1. Spending Analysis: Provide a forensic summary of spending patterns, identify anomalies, and create metrics (Total spend, Income, Savings, Savings Rate).
+      2. Budget Intelligence: Provide smart limit advice based on history, burn rate analysis (projected vs limit), and reallocation tips.
+      3. Income Insights: Track the savings rate trend over the months and analyze the income vs expense gap.
+      4. Finance Advice: Provide longitudinal advice based on the entire history. specifically focus on Emergency Fund status (suggesting 6 months of expenses if not already met).
+      5. Hypothetical Scenario: Include a "What If" analysis (e.g., response to a 25% income dip) with specific spending cuts.
 
       Output Requirements:
-      - Use professional but easy-to-understand language.
+      - Use professional language.
+      - DO NOT use the user's name or any identifying information.
       - Ensure the response is a valid JSON object matching the requested schema.
     `;
 
     // 4. Make request with JSON Schema
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.5-flash", // Using a stable model name
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
         responseJsonSchema: {
           type: "object",
           properties: {
-            summary: { type: "string" },
-            warnings: {
-              type: "array",
-              items: { type: "string" }
+            spendingAnalysis: {
+              type: "object",
+              properties: {
+                summary: { type: "string" },
+                metrics: {
+                   type: "array",
+                   items: {
+                      type: "object",
+                      properties: {
+                         label: { type: "string" },
+                         value: { type: "string" },
+                         type: { type: "string", enum: ["danger", "success", "neutral"] }
+                      },
+                      required: ["label", "value", "type"]
+                   }
+                },
+                anomalies: {
+                  type: "array",
+                  items: { type: "string" }
+                }
+              },
+              required: ["summary", "metrics", "anomalies"]
             },
-            suggestions: {
-              type: "array",
-              items: { type: "string" }
+            budgetIntelligence: {
+              type: "object",
+              properties: {
+                limitAdvice: { type: "string" },
+                burnRate: {
+                  type: "object",
+                  properties: {
+                    message: { type: "string" },
+                    status: { type: "string", enum: ["warning", "ok"] }
+                  },
+                  required: ["message", "status"]
+                },
+                reallocationTips: {
+                  type: "array",
+                  items: { type: "string" }
+                }
+              },
+              required: ["limitAdvice", "burnRate", "reallocationTips"]
             },
-            savingsPlan: { type: "string" }
+            incomeInsights: {
+              type: "object",
+              properties: {
+                savingsRateTrend: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      month: { type: "string" },
+                      rate: { type: "string" }
+                    },
+                    required: ["month", "rate"]
+                  }
+                },
+                gapAnalysis: { type: "string" }
+              },
+              required: ["savingsRateTrend", "gapAnalysis"]
+            },
+            financeAdvice: {
+              type: "object",
+              properties: {
+                longTermAdvice: { type: "string" },
+                emergencyFundStatus: { type: "string" },
+                hypotheticalScenario: {
+                   type: "object",
+                   properties: {
+                      title: { type: "string" },
+                      advice: { type: "string" }
+                   },
+                   required: ["title", "advice"]
+                }
+              },
+              required: ["longTermAdvice", "emergencyFundStatus", "hypotheticalScenario"]
+            }
           },
-          required: ["summary", "warnings", "suggestions", "savingsPlan"]
+          required: ["spendingAnalysis", "budgetIntelligence", "incomeInsights", "financeAdvice"]
         }
       }
     });
