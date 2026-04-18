@@ -16,6 +16,7 @@ model User {
   monthlyLimit Float?
   expenseMode  String?    // "limit" or "no-limit"
   onboarded    Boolean    @default(false)
+  isAdmin      Boolean    @default(false)
 
   twoFactorEnabled    Boolean   @default(false)
   twoFactorOTP        String?
@@ -50,7 +51,7 @@ model Category {
   type      String   // "Needs" or "Wants"
   isDefault Boolean  @default(false)
 
-  userId    String?  @db.ObjectId // Optional because default categories might be global, or we copy them correctly. Usually better to tie even defaults to a user for simpler queries if they can't delete them.
+  userId    String?  @db.ObjectId
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -65,4 +66,25 @@ model Income {
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime? @default(now())
+}
+
+model FAQ {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  question String
+  answer   String
+  category String
+  order    Int    @default(0)
+
+  updatedAt DateTime @updatedAt
+}
+
+model Doc {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  title    String
+  content  String // Markdown content
+  category String
+  slug     String @unique
+  order    Int    @default(0)
+
+  updatedAt DateTime @updatedAt
 }

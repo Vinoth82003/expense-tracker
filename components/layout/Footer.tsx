@@ -22,14 +22,14 @@ const footerLinks = {
     { label: "Mobile App", href: "/#cta" },
   ],
   Resources: [
-    { label: "Documentation", href: "#" },
+    { label: "Documentation", href: "/docs" },
     { label: "FAQ", href: "/faq" },
-    { label: "Status", href: "#" },
+    { label: "Status", href: "/status" },
     { label: "Open Source", href: "https://github.com/Vinoth82003" },
   ],
   Legal: [
-    { label: "Privacy Policy", href: "#" },
-    { label: "Terms of Service", href: "#" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Terms of Service", href: "/terms" },
     { label: "Contact Us", href: "/contact" },
   ],
 };
