@@ -20,7 +20,8 @@ import {
   CheckCircle,
   Star,
   Users,
-  TrendingDown
+  TrendingDown,
+  Brain
 } from "lucide-react";
 
 const testimonials = [
@@ -216,10 +217,12 @@ export function HomeClient() {
 
       <main className="overflow-x-hidden pt-20" id="main-content">
         {/* HERO SECTION */}
-        <section className="relative min-h-[90dvh] flex items-center justify-center py-20 px-5 overflow-hidden">
+        <section className="relative min-h-[95dvh] flex items-center justify-center py-20 px-5 overflow-hidden">
+          {/* Advanced Background Decorations */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none">
-            <div className="absolute top-[-5%] left-[10%] w-[45%] h-[45%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" />
-            <div className="absolute bottom-[20%] right-[10%] w-[35%] h-[35%] bg-violet-500/10 rounded-full blur-[120px] animate-pulse [animation-delay:2s]" />
+            <div className="absolute top-[-10%] left-[20%] w-[60%] h-[60%] bg-indigo-500/10 rounded-full blur-[160px] animate-pulse" />
+            <div className="absolute bottom-[10%] right-[10%] w-[40%] h-[40%] bg-violet-500/15 rounded-full blur-[140px] animate-pulse [animation-delay:2s]" />
+            <div className="absolute top-[30%] -left-20 w-[30%] h-[30%] bg-emerald-500/5 rounded-full blur-[100px]" />
           </div>
 
           <motion.div
@@ -230,59 +233,63 @@ export function HomeClient() {
           >
             <motion.div
               variants={itemVariants}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 text-primary-600 text-sm font-extrabold mb-8 tracking-wide uppercase shadow-sm"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface border border-border-subtle text-primary-600 text-[10px] font-black mb-10 tracking-[0.2em] uppercase shadow-xl"
             >
-              <Sparkles size={16} strokeWidth={3} className="text-indigo-600" />
-              India's #1 Personal Finance Tracker
+              <Sparkles size={14} strokeWidth={3} className="text-indigo-600 animate-pulse" />
+              India's #1 Personal AI Finance Tracker
             </motion.div>
  
             <motion.h1
               variants={itemVariants}
-              className="text-5xl md:text-7xl lg:text-8xl font-black text-foreground mb-8 leading-[0.95] tracking-tighter"
+              className="text-6xl md:text-8xl lg:text-9xl font-black text-foreground mb-8 leading-[0.85] tracking-tighter"
             >
               Master Your <br />
-              <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent italic">Spending Journey</span>
+              <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent italic bg-[length:200%_auto] animate-gradient">Spending.</span>
             </motion.h1>
 
             <motion.p
               variants={itemVariants}
-              className="text-lg md:text-2xl text-secondary mb-12 max-w-3xl mx-auto leading-relaxed font-medium"
+              className="text-xl md:text-2xl lg:text-3xl text-secondary mb-14 max-w-3xl mx-auto leading-tight font-medium tracking-tight"
             >
-              An effortless way to track daily costs, analyze habits, and save smarter every month.
-              Join 10,000+ Indians who are already saving ₹50 lakhs collectively.
+              A beautifully simple way to track daily costs, analyze habits with AI, and grow your wealth.
+              Join 10,000+ Indians saving smarter every day.
             </motion.p>
 
             <motion.div
               variants={itemVariants}
-              className="flex flex-col sm:flex-row items-center justify-center gap-5 mb-16"
+              className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-20"
             >
               <motion.div
-                whileHover={{ scale: 1.05, x: 5 }}
+                whileHover={{ scale: 1.05, y: -5 }}
                 whileTap={{ scale: 0.95 }}
                 className="w-full sm:w-auto"
               >
                 <Link
                   href="/login"
-                  className="flex items-center justify-center gap-3 px-10 py-5 rounded-2xl bg-gradient-to-r from-indigo-700 to-indigo-600 text-white font-black text-lg shadow-2xl shadow-indigo-600/30 hover:shadow-indigo-600/50 transition-all"
+                  className="flex items-center justify-center gap-3 px-12 py-6 rounded-[2rem] bg-indigo-600 text-white font-black text-xl shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all border-b-4 border-indigo-900"
                 >
                   Start Saving Today
-                  <ArrowRight size={20} strokeWidth={3} />
+                  <ArrowRight size={24} strokeWidth={3} />
                 </Link>
               </motion.div>
-              <motion.a
-                whileHover={{ scale: 1.05, backgroundColor: "var(--bg-surface-variant)" }}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
                 whileTap={{ scale: 0.95 }}
-                href="#features"
-                className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-5 rounded-2xl bg-surface border-2 border-border-subtle text-foreground font-black text-lg transition-all hover:border-primary-600/30"
+                className="w-full sm:w-auto"
               >
-                Explore Features
-              </motion.a>
+                <Link
+                  href="/how-it-works"
+                  className="w-full flex items-center justify-center gap-3 px-12 py-6 rounded-[2rem] bg-surface border-2 border-border-subtle text-foreground font-black text-xl transition-all hover:bg-surface-variant shadow-xl"
+                >
+                  See How It Works
+                </Link>
+              </motion.div>
             </motion.div>
 
-            {/* Stats Section */}
+            {/* Stats Section with Glassmorphism */}
             <motion.div
               variants={containerVariants}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-2xl mx-auto"
+              className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto backdrop-blur-sm p-4 rounded-[3rem]"
             >
               {stats.map((stat, i) => (
                 <StatCard key={i} stat={stat} />
@@ -292,13 +299,15 @@ export function HomeClient() {
         </section>
 
         {/* FEATURES GRID */}
-        <section id="features" className="py-24 px-5 md:px-10 max-w-7xl mx-auto">
-          <div className="text-center mb-20">
+        <section id="features" className="py-32 px-5 md:px-10 max-w-7xl mx-auto relative">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-64 h-64 bg-primary-600/5 blur-[100px] -z-10" />
+          
+          <div className="text-center mb-24">
             <motion.h2
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-4xl md:text-6xl font-black text-foreground mb-6 leading-tight tracking-tight"
+              className="text-5xl md:text-7xl font-black text-foreground mb-8 leading-[0.9] tracking-tighter"
             >
               Everything you need, <br />
               <span className="text-primary-600">nothing you don't.</span>
@@ -308,9 +317,9 @@ export function HomeClient() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="text-xl text-secondary max-w-2xl mx-auto"
+              className="text-2xl text-secondary max-w-2xl mx-auto font-medium"
             >
-              Built for Indians, by Indians. Experience the perfect blend of simplicity and power.
+              Built for the Indian economy. Experience the perfect blend of forensic power and effortless simplicity.
             </motion.p>
           </div>
 
@@ -319,7 +328,7 @@ export function HomeClient() {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={containerVariants}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
           >
             {features.map((feature, i) => (
               <FeatureCard key={i} feature={feature} />
@@ -328,93 +337,101 @@ export function HomeClient() {
         </section>
 
         {/* TESTIMONIALS */}
-        <section id="testimonials" className="py-24 px-5 md:px-10">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
-              <motion.h2
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="text-4xl md:text-5xl font-black text-foreground mb-4 leading-tight tracking-tight"
-              >
-                Loved by <span className="text-primary-600">10,000+</span> Indians
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2 }}
-                className="text-xl text-secondary max-w-2xl mx-auto"
-              >
-                See what our users say about transforming their financial habits.
-              </motion.p>
-            </div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              variants={containerVariants}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            >
-              {testimonials.map((testimonial, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+        <section id="testimonials" className="py-32 bg-surface-variant/30 relative">
+          <div className="max-w-7xl mx-auto px-5 md:px-10">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 items-center">
+              <div className="space-y-8">
+                <motion.h2
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="p-6 rounded-2xl bg-surface border border-border-subtle shadow-sm hover:shadow-xl transition-shadow"
+                  className="text-5xl md:text-6xl font-black text-foreground leading-[0.9] tracking-tighter"
                 >
-                  <div className="flex items-center gap-1 mb-4">
-                    {[...Array(testimonial.rating)].map((_, idx) => (
-                      <Star key={idx} size={16} className="text-yellow-400 fill-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-secondary mb-6 leading-relaxed italic">"{testimonial.content}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">
-                      {testimonial.avatar}
+                  Trusted by <br />
+                  <span className="text-primary-600 italic">Financial Leaders.</span>
+                </motion.h2>
+                <p className="text-xl text-secondary font-medium">
+                  Join 10,000+ users who have transformed their relationship with money through SpendWise.
+                </p>
+                <div className="flex -space-x-4 items-center">
+                   {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="w-12 h-12 rounded-full border-4 border-surface bg-primary-100 flex items-center justify-center font-black text-primary-700 text-sm">
+                      {String.fromCharCode(64 + i)}
                     </div>
-                    <div>
-                      <div className="font-semibold text-foreground">{testimonial.name}</div>
-                      <div className="text-sm text-secondary">{testimonial.role}</div>
+                  ))}
+                  <div className="ml-8 text-lg font-black text-foreground">10k+ Growing</div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
+                {testimonials.slice(0, 2).map((testimonial, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                    className="p-8 rounded-[2.5rem] bg-surface border border-border-subtle shadow-xl hover:translate-y-[-10px] transition-all"
+                  >
+                    <div className="flex items-center gap-1 mb-6">
+                      {[...Array(testimonial.rating)].map((_, idx) => (
+                        <Star key={idx} size={18} className="text-yellow-400 fill-yellow-400" />
+                      ))}
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
+                    <p className="text-xl text-foreground mb-8 leading-relaxed font-bold italic">"{testimonial.content}"</p>
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-lg">
+                        {testimonial.avatar}
+                      </div>
+                      <div>
+                        <div className="font-black text-lg text-foreground">{testimonial.name}</div>
+                        <div className="text-sm font-bold text-muted uppercase tracking-widest">{testimonial.role}</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* HOW IT WORKS */}
-        <section id="how-it-works" className="py-24 bg-surface-variant">
-          <div className="max-w-7xl mx-auto px-5 md:px-10">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-black text-foreground mb-4">Simplicity in Motion</h2>
-              <p className="text-lg text-secondary font-medium">Get set up in less than a minute.</p>
-            </div>
+        {/* HOW IT WORKS PREVIEW */}
+        <section id="how-it-works" className="py-32 px-5 md:px-10 max-w-7xl mx-auto">
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-[4rem] p-12 md:p-24 relative overflow-hidden text-center text-white">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20" />
+            
+            <div className="relative z-10 max-w-4xl mx-auto space-y-12">
+              <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">
+                Experience the <br />
+                <span className="text-indigo-400">Forensic Difference.</span>
+              </h2>
+              <p className="text-xl text-white/70 font-medium">
+                Our AI doesn't just track—it investigates. Find hidden leaks, predict future trends, and reach your goals 3x faster.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8">
+                 {[
+                   { icon: MousePointerClick, title: "Auth", desc: "Secure One-Tap" },
+                   { icon: Smartphone, title: "Log", desc: "Easy Record" },
+                   { icon: Brain, title: "Analyze", desc: "AI Forensic" },
+                 ].map((step, idx) => (
+                   <div key={idx} className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group">
+                     <step.icon size={32} className="text-indigo-400 mb-4 mx-auto group-hover:scale-110 transition-transform" />
+                     <h3 className="text-xl font-black mb-1">{step.title}</h3>
+                     <p className="text-sm font-bold opacity-60 uppercase tracking-widest">{step.desc}</p>
+                   </div>
+                 ))}
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
-              {/* Connector line on desktop */}
-              <div className="hidden md:block absolute top-[2.75rem] left-[15%] right-[15%] h-1 border-t-2 border-dashed border-border-hover -z-0" />
-
-              {steps.map((step, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.2 }}
-                  className="flex flex-col items-center text-center relative z-10"
+              <div className="pt-8">
+                <Link
+                  href="/how-it-works"
+                  className="inline-flex items-center gap-4 px-12 py-6 rounded-3xl bg-white text-indigo-950 font-black text-xl shadow-2xl hover:translate-y-[-5px] transition-all"
                 >
-                  <div className="w-20 h-20 rounded-full bg-surface border-4 border-primary-100 flex items-center justify-center text-primary-600 mb-6 shadow-sm">
-                    <step.icon size={32} strokeWidth={2.5} />
-                  </div>
-                  <h3 className="text-2xl font-black text-foreground mb-2">{step.title}</h3>
-                  <p className="text-secondary font-medium px-4">{step.desc}</p>
-                </motion.div>
-              ))}
+                  Explore Full Demo
+                  <ChevronRight size={24} strokeWidth={3} />
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -425,28 +442,28 @@ export function HomeClient() {
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="max-w-5xl mx-auto rounded-[3rem] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-12 md:p-20 text-center text-white relative overflow-hidden shadow-2xl shadow-indigo-900/40"
+            className="max-w-5xl mx-auto rounded-[4rem] bg-indigo-600 p-12 md:p-24 text-center text-white relative overflow-hidden shadow-2xl shadow-indigo-900/40 border-b-[8px] border-indigo-900"
           >
-            <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[100%] bg-white/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[100%] bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="relative z-10">
-              <h2 className="text-4xl md:text-6xl font-black mb-8 tracking-tighter leading-none">
+            <div className="relative z-10 space-y-10">
+              <h2 className="text-5xl md:text-8xl font-black tracking-tighter leading-none">
                 Ready to take <br />
                 the wheel?
               </h2>
-              <p className="text-xl text-white/80 mb-12 max-w-xl mx-auto font-medium">
-                SpendWise is free for everyone. Start tracking properly and unlock your full financial potential.
+              <p className="text-xl md:text-2xl text-white/80 max-w-xl mx-auto font-medium">
+                SpendWise is free for everyone. Start tracking properly and unlock your full financial potential today.
               </p>
               <motion.div
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.05, y: -5 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-4 px-12 py-6 rounded-3xl bg-white text-indigo-700 font-black text-xl shadow-xl hover:shadow-2xl transition-all"
+                  className="inline-flex items-center gap-4 px-14 py-7 rounded-[2.5rem] bg-white text-indigo-700 font-black text-2xl shadow-2xl hover:shadow-indigo-400/20 transition-all"
                 >
-                  Join Now
-                  <ChevronRight size={24} strokeWidth={3} />
+                  Join Today
+                  <ChevronRight size={28} strokeWidth={4} />
                 </Link>
               </motion.div>
             </div>
@@ -455,6 +472,18 @@ export function HomeClient() {
       </main>
 
       <Footer />
+      
+      <style jsx global>{`
+        @keyframes gradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .animate-gradient {
+          background-size: 200% auto;
+          animation: gradient 5s linear infinite;
+        }
+      `}</style>
     </>
   );
 }

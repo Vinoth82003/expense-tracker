@@ -8,8 +8,10 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
-  { label: "Features", href: "#features" },
-  { label: "How It Works", href: "#how-it-works" },
+  { label: "Features", href: "/#features" },
+  { label: "How It Works", href: "/how-it-works" },
+  { label: "FAQ", href: "/faq" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export function Navbar() {
@@ -23,10 +25,11 @@ export function Navbar() {
   }, []);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (href.startsWith("#")) {
-      e.preventDefault();
-      const el = document.querySelector(href);
+    if (href.includes("#")) {
+      const id = href.split("#")[1];
+      const el = document.getElementById(id);
       if (el) {
+        e.preventDefault();
         const offset = 80;
         const bodyRect = document.body.getBoundingClientRect().top;
         const elementRect = el.getBoundingClientRect().top;
@@ -84,14 +87,14 @@ export function Navbar() {
         {/* Desktop Nav Links */}
         <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               onClick={(e) => handleNavClick(e, link.href)}
               className="px-4 py-2 rounded-lg text-sm font-semibold text-secondary hover:text-primary-600 hover:bg-surface-variant transition-all duration-200"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </div>
 
@@ -137,17 +140,20 @@ export function Navbar() {
           >
             <div className="p-5 flex flex-col gap-2">
               {navLinks.map((link, i) => (
-                <motion.a
+                <motion.div
+                  key={link.href}
                   initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: i * 0.1 }}
-                  key={link.href}
-                  href={link.href}
-                  onClick={(e) => handleNavClick(e, link.href)}
-                  className="px-4 py-3 rounded-xl text-lg font-bold text-secondary hover:text-primary-600 hover:bg-surface-variant"
                 >
-                  {link.label}
-                </motion.a>
+                  <Link
+                    href={link.href}
+                    onClick={(e) => handleNavClick(e, link.href)}
+                    className="flex px-4 py-3 rounded-xl text-lg font-bold text-secondary hover:text-primary-600 hover:bg-surface-variant"
+                  >
+                    {link.label}
+                  </Link>
+                </motion.div>
               ))}
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
