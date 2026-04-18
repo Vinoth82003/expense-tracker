@@ -45,6 +45,10 @@
   --color-surface-variant: var(--bg-surface-variant);
   --color-border-subtle: var(--border-color);
   --color-border-hover: var(--border-hover);
+
+  /* Typography */
+  --font-heading: var(--font-outfit), var(--font-sans);
+  --font-body: var(--font-sans);
 }
 
 :root {
@@ -151,7 +155,11 @@ body {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
 }
 
 /* Glassmorphism utility */
@@ -200,4 +208,37 @@ input[type=number]::-webkit-inner-spin-button {
 /* Firefox */
 input[type=number] {
   -moz-appearance: textfield;
+}
+
+/* Premium Card Effects */
+.premium-card {
+  background: linear-gradient(135deg, rgba(var(--bg-surface-rgb), 0.9), rgba(var(--bg-surface-rgb), 0.5));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dark .premium-card {
+  background: linear-gradient(135deg, rgba(30, 30, 46, 0.8), rgba(15, 15, 26, 0.8));
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-auto-rows: minmax(200px, auto);
+  gap: 1.5rem;
+}
+
+.bento-item-large {
+  grid-row: span 2;
+  grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+  .bento-item-large {
+    grid-row: span 1;
+    grid-column: span 1;
+  }
 }

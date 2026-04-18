@@ -1,9 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import Link from "next/link";
+import Image from "next/image";
 import {
   IndianRupee,
   Target,
@@ -21,8 +22,16 @@ import {
   Star,
   Users,
   TrendingDown,
-  Brain
+  Brain,
+  Zap,
+  Lock,
+  Globe,
+  Bell
 } from "lucide-react";
+
+/* ──────────────────────────────────────────────
+   DATA
+────────────────────────────────────────────── */
 
 const testimonials = [
   {
@@ -48,164 +57,119 @@ const testimonials = [
   }
 ];
 
-const faqs = [
-  {
-    question: "Is SpendWise free to use?",
-    answer: "Yes, SpendWise is completely free for personal use. No hidden fees or premium subscriptions."
-  },
-  {
-    question: "How secure is my data?",
-    answer: "Your data is encrypted and stored securely. We use OAuth authentication and never store passwords."
-  },
-  {
-    question: "Can I export my expense data?",
-    answer: "Yes, you can export your expenses to CSV format for tax purposes or personal records."
-  },
-  {
-    question: "Does it work offline?",
-    answer: "Yes, SpendWise is a PWA that works offline. You can add expenses without internet and sync when online."
-  },
-  {
-    question: "What currencies does it support?",
-    answer: "SpendWise supports multiple currencies with Rupee (₹) as the primary currency for Indian users."
-  },
-  {
-    question: "Can I categorize my expenses?",
-    answer: "Yes, expenses are categorized into Needs and Wants with detailed subcategories for better tracking."
-  }
-];
-
-/* ──────────────────────────────────────────────
-   DATA & VARIANTS
-────────────────────────────────────────────── */
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2
-    }
-  }
-} as const;
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: { duration: 0.5, ease: "easeOut" }
-  }
-} as const;
-
 const features = [
   {
     icon: IndianRupee,
     title: "Rupee-Ready",
-    description: "Designed for India. Localized ₹ formatting and seamless currency management for global travelers.",
+    description: "Designed specifically for the Indian economy with localized ₹ formatting and GST tracking.",
     color: "from-blue-500 to-indigo-600",
-    benefits: ["Auto ₹ conversion", "Tax-ready exports", "Multi-currency support"]
+    size: "large",
+    benefits: ["Auto ₹ conversion", "Tax-ready exports", "GST categorizations"]
+  },
+  {
+    icon: Brain,
+    title: "AI Insights",
+    description: "Our forensic AI analyzes your spending habits to find hidden leaks.",
+    color: "from-violet-500 to-purple-600",
+    size: "small",
+    benefits: ["Pattern detection", "Savings advice"]
   },
   {
     icon: Target,
-    title: "Goal Oriented",
-    description: "Define your monthly targets and watch your progress unfold. No more financial guesswork.",
+    title: "Smart Goals",
+    description: "Define targets and watch your progress unfold in real-time.",
     color: "from-emerald-500 to-teal-600",
-    benefits: ["Smart budgeting", "Progress tracking", "Savings goals"]
+    size: "small",
+    benefits: ["Budget zones", "Goal tracking"]
   },
   {
     icon: PieChart,
-    title: "Instant Analytics",
-    description: "Visualize your spending patterns with beautifully categorized charts generated in real-time.",
-    color: "from-violet-500 to-purple-600",
-    benefits: ["Real-time charts", "Category insights", "Trend analysis"]
+    title: "Visual Wealth",
+    description: "Beautifully categorized charts that make complex data clear.",
+    color: "from-rose-500 to-red-600",
+    size: "large",
+    benefits: ["Interactive charts", "Category heatmaps", "Trend forecasting"]
   },
   {
     icon: Smartphone,
-    title: "Always With You",
-    description: "A fast, lightweight PWA experience that puts your finances in your pocket, even without internet.",
+    title: "PWA Power",
+    description: "Works offline, installs as a native app on your home screen.",
     color: "from-amber-500 to-orange-600",
-    benefits: ["Offline access", "Mobile optimized", "Quick sync"]
+    size: "small",
+    benefits: ["Zero lag", "Offline sync"]
   },
   {
     icon: ShieldCheck,
-    title: "Secure & Private",
-    description: "Your data stays yours. Secure Google Auth login without ever needing to manage another password.",
-    color: "from-rose-500 to-red-600",
-    benefits: ["OAuth security", "Data encryption", "Privacy first"]
-  },
-  {
-    icon: BarChart3,
-    title: "Data Freedom",
-    description: "Transparency is key. Export your transaction history to CSV whenever you need a deeper look.",
+    title: "Bank-Grade",
+    description: "Your data is encrypted and secure with Google OAuth.",
     color: "from-sky-500 to-blue-600",
-    benefits: ["CSV exports", "Data portability", "Tax reports"]
-  }
-];
-
-const steps = [
-  {
-    icon: MousePointerClick,
-    title: "Quick Sign-In",
-    desc: "Join in one click with Google. Secure and password-free access."
-  },
-  {
-    icon: Layers,
-    title: "Log Daily Spend",
-    desc: "Quickly enter expenses by category as they happen."
-  },
-  {
-    icon: Sparkles,
-    title: "Gain Clarity",
-    desc: "Review your insights and adjust your habits for long-term saving."
+    size: "small",
+    benefits: ["OAuth 2.0", "Privacy first"]
   }
 ];
 
 const stats = [
-  { icon: Users, value: "10K+", label: "Active Users" },
-  { icon: TrendingDown, value: "₹50L+", label: "Money Saved" },
-  { icon: Star, value: "4.8/5", label: "User Rating" }
+  { icon: Users, value: "10K+", label: "Active Indians" },
+  { icon: TrendingDown, value: "₹50L+", label: "Total Savings" },
+  { icon: Star, value: "4.8/5", label: "App Store Rating" }
 ];
+
+/* ──────────────────────────────────────────────
+   VARIANTS
+────────────────────────────────────────────── */
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.2 }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+  }
+};
 
 /* ──────────────────────────────────────────────
    COMPONENTS
 ────────────────────────────────────────────── */
 
 function FeatureCard({ feature }: { feature: any }) {
+  const isLarge = feature.size === "large";
+  
   return (
     <motion.div
       variants={itemVariants}
-      whileHover={{ y: -8, scale: 1.02 }}
-      className="p-8 rounded-3xl bg-surface border border-border-subtle hover:border-primary-600/20 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 group"
+      whileHover={{ y: -5 }}
+      className={`p-8 rounded-[2.5rem] bg-surface border border-border-subtle group transition-all duration-300 hover:shadow-2xl hover:shadow-primary-600/10 ${
+        isLarge ? "md:col-span-2 md:row-span-1" : "col-span-1"
+      }`}
     >
-      <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-lg shadow-primary-600/10 group-hover:scale-110 transition-transform duration-300`}>
-        <feature.icon className="text-white" size={28} strokeWidth={2.5} />
+      <div className="flex flex-col h-full">
+        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-6 shadow-lg shadow-primary-600/10 group-hover:scale-110 transition-transform`}>
+          <feature.icon className="text-white" size={28} strokeWidth={2.5} />
+        </div>
+        <h3 className="text-2xl font-black text-foreground mb-3 tracking-tight">{feature.title}</h3>
+        <p className="text-lg text-secondary leading-relaxed mb-6 font-medium">{feature.description}</p>
+        
+        {isLarge && (
+          <div className="mt-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {feature.benefits.map((benefit: string, idx: number) => (
+              <div key={idx} className="flex items-center gap-2 text-sm text-secondary font-bold">
+                <div className="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center">
+                   <CheckCircle size={12} className="text-primary-600" />
+                </div>
+                {benefit}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-      <h3 className="text-xl font-bold text-foreground mb-3">{feature.title}</h3>
-      <p className="text-secondary leading-relaxed mb-4">{feature.description}</p>
-      <ul className="space-y-2">
-        {feature.benefits.map((benefit: string, idx: number) => (
-          <li key={idx} className="flex items-center gap-2 text-sm text-secondary">
-            <CheckCircle size={16} className="text-accent-600 flex-shrink-0" />
-            {benefit}
-          </li>
-        ))}
-      </ul>
-    </motion.div>
-  );
-}
-
-function StatCard({ stat }: { stat: any }) {
-  return (
-    <motion.div
-      variants={itemVariants}
-      className="text-center p-6 rounded-2xl bg-surface border border-border-subtle shadow-sm"
-    >
-      <div className="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center mx-auto mb-4">
-        <stat.icon className="text-primary-600" size={24} />
-      </div>
-      <div className="text-3xl font-black text-foreground mb-2">{stat.value}</div>
-      <div className="text-sm font-medium text-secondary">{stat.label}</div>
     </motion.div>
   );
 }
@@ -217,110 +181,117 @@ export function HomeClient() {
 
       <main className="overflow-x-hidden pt-20" id="main-content">
         {/* HERO SECTION */}
-        <section className="relative min-h-[95dvh] flex items-center justify-center py-20 px-5 overflow-hidden">
-          {/* Advanced Background Decorations */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 pointer-events-none">
-            <div className="absolute top-[-10%] left-[20%] w-[60%] h-[60%] bg-indigo-500/10 rounded-full blur-[160px] animate-pulse" />
-            <div className="absolute bottom-[10%] right-[10%] w-[40%] h-[40%] bg-violet-500/15 rounded-full blur-[140px] animate-pulse [animation-delay:2s]" />
-            <div className="absolute top-[30%] -left-20 w-[30%] h-[30%] bg-emerald-500/5 rounded-full blur-[100px]" />
-          </div>
-
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="max-w-6xl mx-auto text-center relative z-10"
-          >
+        <section className="relative min-h-[90dvh] lg:min-h-[100dvh] flex items-center py-20 px-5 md:px-10 overflow-hidden">
+          {/* Ambient Lighting */}
+          <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[160px] pointer-events-none -z-10" />
+          <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-violet-500/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+          
+          <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <motion.div
-              variants={itemVariants}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface border border-border-subtle text-primary-600 text-[10px] font-black mb-10 tracking-[0.2em] uppercase shadow-xl"
-            >
-              <Sparkles size={14} strokeWidth={3} className="text-indigo-600 animate-pulse" />
-              India's #1 Personal AI Finance Tracker
-            </motion.div>
- 
-            <motion.h1
-              variants={itemVariants}
-              className="text-6xl md:text-8xl lg:text-9xl font-black text-foreground mb-8 leading-[0.85] tracking-tighter"
-            >
-              Master Your <br />
-              <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent italic bg-[length:200%_auto] animate-gradient">Spending.</span>
-            </motion.h1>
-
-            <motion.p
-              variants={itemVariants}
-              className="text-xl md:text-2xl lg:text-3xl text-secondary mb-14 max-w-3xl mx-auto leading-tight font-medium tracking-tight"
-            >
-              A beautifully simple way to track daily costs, analyze habits with AI, and grow your wealth.
-              Join 10,000+ Indians saving smarter every day.
-            </motion.p>
-
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-20"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="space-y-10 relative z-10"
             >
               <motion.div
-                whileHover={{ scale: 1.05, y: -5 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full sm:w-auto"
+                variants={itemVariants}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 border border-primary-100 text-primary-600 text-xs font-black tracking-widest uppercase"
+              >
+                <Sparkles size={14} className="animate-pulse" />
+                THE FUTURE OF FINANCE TRACKING
+              </motion.div>
+
+              <motion.h1
+                variants={itemVariants}
+                className="text-6xl md:text-8xl lg:text-9xl font-black text-foreground leading-[0.85] tracking-tightest"
+              >
+                Wealth <br />
+                <span className="bg-gradient-to-r from-primary-600 to-violet-600 bg-clip-text text-transparent italic">Simplified.</span>
+              </motion.h1>
+
+              <motion.p
+                variants={itemVariants}
+                className="text-xl md:text-2xl text-secondary max-w-xl font-medium leading-relaxed"
+              >
+                SpendWise blends forensic AI intelligence with effortless simplicity. 
+                Track every Rupee, discover hidden savings, and master your money.
+              </motion.p>
+
+              <motion.div
+                variants={itemVariants}
+                className="flex flex-col sm:flex-row items-center gap-6"
               >
                 <Link
                   href="/login"
-                  className="flex items-center justify-center gap-3 px-12 py-6 rounded-[2rem] bg-indigo-600 text-white font-black text-xl shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all border-b-4 border-indigo-900"
+                  className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-5 rounded-[2rem] bg-indigo-600 text-white font-black text-xl shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all active:scale-95"
                 >
-                  Start Saving Today
+                  Start For Free
                   <ArrowRight size={24} strokeWidth={3} />
                 </Link>
-              </motion.div>
-              <motion.div
-                whileHover={{ scale: 1.05, y: -5 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full sm:w-auto"
-              >
                 <Link
                   href="/how-it-works"
-                  className="w-full flex items-center justify-center gap-3 px-12 py-6 rounded-[2rem] bg-surface border-2 border-border-subtle text-foreground font-black text-xl transition-all hover:bg-surface-variant shadow-xl"
+                  className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-5 rounded-[2rem] bg-surface border-2 border-border-subtle text-foreground font-black text-xl hover:bg-surface-variant transition-all active:scale-95"
                 >
-                  See How It Works
+                  Live Demo
                 </Link>
+              </motion.div>
+
+              <motion.div
+                variants={itemVariants}
+                className="flex items-center gap-8 pt-6 border-t border-border-subtle"
+              >
+                {stats.map((stat, i) => (
+                  <div key={i} className="text-left">
+                    <div className="text-2xl font-black text-foreground">{stat.value}</div>
+                    <div className="text-xs font-bold text-muted uppercase tracking-wider">{stat.label}</div>
+                  </div>
+                ))}
               </motion.div>
             </motion.div>
 
-            {/* Stats Section with Glassmorphism */}
+            {/* Hero Image Container */}
             <motion.div
-              variants={containerVariants}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-4xl mx-auto backdrop-blur-sm p-4 rounded-[3rem]"
+              initial={{ opacity: 0, x: 50, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
+              className="relative lg:h-[800px] flex items-center justify-center"
             >
-              {stats.map((stat, i) => (
-                <StatCard key={i} stat={stat} />
-              ))}
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent blur-[120px] rounded-full -z-10 animate-pulse" />
+              <div className="relative w-full max-w-[600px] aspect-square lg:aspect-auto lg:h-full">
+                <Image
+                  src="/hero-mockup.png"
+                  alt="SpendWise Premium Dashboard Mockup"
+                  fill
+                  style={{ objectFit: 'contain' }}
+                  className="drop-shadow-[0_32px_64px_rgba(79,70,229,0.3)] hover:scale-[1.02] transition-transform duration-700 pointer-events-none"
+                  priority
+                />
+              </div>
             </motion.div>
-          </motion.div>
+          </div>
         </section>
 
-        {/* FEATURES GRID */}
-        <section id="features" className="py-32 px-5 md:px-10 max-w-7xl mx-auto relative">
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-64 h-64 bg-primary-600/5 blur-[100px] -z-10" />
-          
-          <div className="text-center mb-24">
-            <motion.h2
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-5xl md:text-7xl font-black text-foreground mb-8 leading-[0.9] tracking-tighter"
-            >
-              Everything you need, <br />
-              <span className="text-primary-600">nothing you don't.</span>
-            </motion.h2>
-            <motion.p
+        {/* BENTO FEATURES */}
+        <section id="features" className="py-32 px-5 md:px-10 max-w-7xl mx-auto">
+          <div className="text-center mb-24 space-y-6">
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="text-2xl text-secondary max-w-2xl mx-auto font-medium"
+              className="text-primary-600 font-black tracking-widest uppercase text-sm"
             >
-              Built for the Indian economy. Experience the perfect blend of forensic power and effortless simplicity.
-            </motion.p>
+              FORENSIC CAPABILITIES
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="text-5xl md:text-7xl lg:text-8xl font-black text-foreground leading-[0.9] tracking-tightest"
+            >
+              Master Your Money <br />
+              With <span className="text-primary-600">Forensic Precision.</span>
+            </motion.h2>
           </div>
 
           <motion.div
@@ -328,7 +299,7 @@ export function HomeClient() {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={containerVariants}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr"
           >
             {features.map((feature, i) => (
               <FeatureCard key={i} feature={feature} />
@@ -336,56 +307,53 @@ export function HomeClient() {
           </motion.div>
         </section>
 
-        {/* TESTIMONIALS */}
-        <section id="testimonials" className="py-32 bg-surface-variant/30 relative">
-          <div className="max-w-7xl mx-auto px-5 md:px-10">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 items-center">
+        {/* TESTIMONIALS - PREMIUM CARD STYLE */}
+        <section className="py-32 bg-surface-variant/20 relative overflow-hidden">
+          <div className="max-w-7xl mx-auto px-5 md:px-10 h-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center h-full">
               <div className="space-y-8">
-                <motion.h2
-                  initial={{ opacity: 0, x: -30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  className="text-5xl md:text-6xl font-black text-foreground leading-[0.9] tracking-tighter"
-                >
-                  Trusted by <br />
-                  <span className="text-primary-600 italic">Financial Leaders.</span>
-                </motion.h2>
-                <p className="text-xl text-secondary font-medium">
-                  Join 10,000+ users who have transformed their relationship with money through SpendWise.
-                </p>
-                <div className="flex -space-x-4 items-center">
-                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="w-12 h-12 rounded-full border-4 border-surface bg-primary-100 flex items-center justify-center font-black text-primary-700 text-sm">
+                <h2 className="text-5xl md:text-7xl font-black text-foreground leading-tight tracking-tightest">
+                  Indians saving <br /> 
+                  <span className="text-primary-600 italic underline decoration-indigo-200">smarter</span> every day.
+                </h2>
+                <div className="flex -space-x-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="w-14 h-14 rounded-full border-4 border-white bg-indigo-100 flex items-center justify-center font-black text-indigo-700 text-sm">
                       {String.fromCharCode(64 + i)}
                     </div>
                   ))}
-                  <div className="ml-8 text-lg font-black text-foreground">10k+ Growing</div>
+                  <div className="ml-8 self-center">
+                    <div className="text-xl font-black text-foreground">10,000+ Users</div>
+                    <div className="text-sm font-bold text-muted">Across 20+ Indian Cities</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
-                {testimonials.slice(0, 2).map((testimonial, i) => (
+              <div className="space-y-6">
+                {testimonials.map((testimonial, i) => (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: 30 }}
+                    whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.1 }}
-                    className="p-8 rounded-[2.5rem] bg-surface border border-border-subtle shadow-xl hover:translate-y-[-10px] transition-all"
+                    className="p-10 rounded-[3rem] premium-card border border-border-subtle"
                   >
-                    <div className="flex items-center gap-1 mb-6">
-                      {[...Array(testimonial.rating)].map((_, idx) => (
-                        <Star key={idx} size={18} className="text-yellow-400 fill-yellow-400" />
+                    <div className="flex items-center gap-1 mb-6 text-yellow-400">
+                      {[1, 2, 3, 4, 5].map((_, idx) => (
+                        <Star key={idx} size={18} fill="currentColor" />
                       ))}
                     </div>
-                    <p className="text-xl text-foreground mb-8 leading-relaxed font-bold italic">"{testimonial.content}"</p>
+                    <p className="text-xl md:text-2xl text-foreground font-bold italic leading-tight mb-8">
+                      "{testimonial.content}"
+                    </p>
                     <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-lg">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-violet-600 flex items-center justify-center text-white font-black text-xl">
                         {testimonial.avatar}
                       </div>
                       <div>
-                        <div className="font-black text-lg text-foreground">{testimonial.name}</div>
-                        <div className="text-sm font-bold text-muted uppercase tracking-widest">{testimonial.role}</div>
+                        <div className="text-lg font-black text-foreground">{testimonial.name}</div>
+                        <div className="text-xs font-bold text-muted uppercase tracking-widest">{testimonial.role}</div>
                       </div>
                     </div>
                   </motion.div>
@@ -395,77 +363,37 @@ export function HomeClient() {
           </div>
         </section>
 
-        {/* HOW IT WORKS PREVIEW */}
-        <section id="how-it-works" className="py-32 px-5 md:px-10 max-w-7xl mx-auto">
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-[4rem] p-12 md:p-24 relative overflow-hidden text-center text-white">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20" />
-            
-            <div className="relative z-10 max-w-4xl mx-auto space-y-12">
-              <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">
-                Experience the <br />
-                <span className="text-indigo-400">Forensic Difference.</span>
-              </h2>
-              <p className="text-xl text-white/70 font-medium">
-                Our AI doesn't just track—it investigates. Find hidden leaks, predict future trends, and reach your goals 3x faster.
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8">
-                 {[
-                   { icon: MousePointerClick, title: "Auth", desc: "Secure One-Tap" },
-                   { icon: Smartphone, title: "Log", desc: "Easy Record" },
-                   { icon: Brain, title: "Analyze", desc: "AI Forensic" },
-                 ].map((step, idx) => (
-                   <div key={idx} className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors group">
-                     <step.icon size={32} className="text-indigo-400 mb-4 mx-auto group-hover:scale-110 transition-transform" />
-                     <h3 className="text-xl font-black mb-1">{step.title}</h3>
-                     <p className="text-sm font-bold opacity-60 uppercase tracking-widest">{step.desc}</p>
-                   </div>
-                 ))}
-              </div>
-
-              <div className="pt-8">
-                <Link
-                  href="/how-it-works"
-                  className="inline-flex items-center gap-4 px-12 py-6 rounded-3xl bg-white text-indigo-950 font-black text-xl shadow-2xl hover:translate-y-[-5px] transition-all"
-                >
-                  Explore Full Demo
-                  <ChevronRight size={24} strokeWidth={3} />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA BANNER */}
-        <section id="cta" className="py-24 px-5 md:px-10">
+        {/* CTA SECTION */}
+        <section id="cta" className="py-32 px-5 md:px-10">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 100 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-5xl mx-auto rounded-[4rem] bg-indigo-600 p-12 md:p-24 text-center text-white relative overflow-hidden shadow-2xl shadow-indigo-900/40 border-b-[8px] border-indigo-900"
+            className="max-w-6xl mx-auto rounded-[5rem] bg-indigo-600 p-12 md:p-32 text-center text-white relative overflow-hidden shadow-[0_40px_100px_-20px_rgba(79,70,229,0.5)]"
           >
-            <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[100%] bg-white/10 rounded-full blur-3xl pointer-events-none" />
-
-            <div className="relative z-10 space-y-10">
-              <h2 className="text-5xl md:text-8xl font-black tracking-tighter leading-none">
-                Ready to take <br />
-                the wheel?
+            {/* Background elements */}
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)] pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
+            
+            <div className="relative z-10 max-w-3xl mx-auto space-y-12">
+              <h2 className="text-6xl md:text-8xl font-black tracking-tightest leading-[0.9]">
+                Are you ready to <br />
+                Take Command?
               </h2>
-              <p className="text-xl md:text-2xl text-white/80 max-w-xl mx-auto font-medium">
-                SpendWise is free for everyone. Start tracking properly and unlock your full financial potential today.
+              <p className="text-xl md:text-2xl text-indigo-100 font-medium">
+                Join thousands of smarter spenders. SpendWise is free, secure, and ready to help you thrive.
               </p>
-              <motion.div
-                whileHover={{ scale: 1.05, y: -5 }}
-                whileTap={{ scale: 0.95 }}
-              >
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <Link
                   href="/login"
-                  className="inline-flex items-center gap-4 px-14 py-7 rounded-[2.5rem] bg-white text-indigo-700 font-black text-2xl shadow-2xl hover:shadow-indigo-400/20 transition-all"
+                  className="w-full sm:w-auto px-16 py-7 rounded-[2.5rem] bg-white text-indigo-600 font-black text-2xl shadow-2xl hover:translate-y-[-5px] transition-all active:scale-95"
                 >
-                  Join Today
-                  <ChevronRight size={28} strokeWidth={4} />
+                  Join SpendWise
                 </Link>
-              </motion.div>
+                <div className="text-indigo-200 text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                   <Lock size={16} /> 100% Free & Secure
+                </div>
+              </div>
             </div>
           </motion.div>
         </section>
@@ -482,6 +410,9 @@ export function HomeClient() {
         .animate-gradient {
           background-size: 200% auto;
           animation: gradient 5s linear infinite;
+        }
+        .tracking-tightest {
+          letter-spacing: -0.05em;
         }
       `}</style>
     </>
