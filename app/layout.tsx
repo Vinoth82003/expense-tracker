@@ -21,6 +21,7 @@ const inter = Inter({
 import { PageLoader } from "@/components/ui/PageLoader";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import PWAInstallBanner from "@/components/layout/PWAInstallBanner";
+import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 
 export const viewport = {
   width: "device-width",
@@ -139,6 +140,7 @@ export default function RootLayout({
         </a>
 
         <PageLoader />
+        <OfflineIndicator />
         <AuthProvider>
           <ThemeProvider>{children}</ThemeProvider>
         </AuthProvider>
