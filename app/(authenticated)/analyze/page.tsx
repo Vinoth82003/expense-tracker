@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Sparkles, 
-  Brain, 
-  ChevronRight, 
-  Loader2, 
-  CheckCircle2, 
+import {
+  Sparkles,
+  Brain,
+  ChevronRight,
+  Loader2,
+  CheckCircle2,
   TrendingUp,
   AlertCircle,
   FileText,
@@ -70,7 +70,7 @@ export default function AnalyzePage() {
     if (isAnalyzing && stage < loadingStages.length - 1) {
       const timer = setTimeout(() => {
         setStage(prev => prev + 1);
-      }, 1500); 
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [isAnalyzing, stage]);
@@ -96,7 +96,7 @@ export default function AnalyzePage() {
         setReport(data);
         setIsAnalyzing(false);
       }, 1000);
-      
+
     } catch (err: any) {
       setError(err.message);
       setIsAnalyzing(false);
@@ -111,11 +111,11 @@ export default function AnalyzePage() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-32 px-4 sm:px-6">
+    <div className="max-w-6xl mx-auto space-y-8 pb-32 px-0 sm:px-4">
       {/* Header Section */}
-      {!report && (<section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-violet-800 rounded-[2.5rem] p-8 sm:p-12 text-white shadow-2xl">
+      {!report && (<section className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-violet-800 rounded-[2.5rem] p-6 sm:p-10 text-white shadow-2xl">
         <div className="relative z-10 max-w-2xl">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-3 mb-6"
@@ -125,8 +125,8 @@ export default function AnalyzePage() {
             </div>
             <span className="font-black text-xs uppercase tracking-[0.2em] text-white/80">SpendWise Forensic AI</span>
           </motion.div>
-          
-          <motion.h1 
+
+          <motion.h1
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -136,7 +136,7 @@ export default function AnalyzePage() {
             <span className="text-indigo-200">Financial Future.</span>
           </motion.h1>
 
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -149,11 +149,11 @@ export default function AnalyzePage() {
             whileTap={{ scale: 0.95 }}
             onClick={handleAnalyze}
             disabled={isAnalyzing}
-            className="group relative flex items-center gap-3 px-8 py-4 bg-white text-indigo-600 rounded-2xl font-black text-lg shadow-xl transition-all disabled:opacity-50"
+            className="w-full group relative flex items-center justify-center gap-3 px-6 py-4 bg-white text-indigo-600 rounded-2xl font-black text-md shadow-xl transition-all disabled:opacity-50"
           >
             <Sparkles size={22} className={isAnalyzing ? "animate-pulse" : "group-hover:rotate-12 transition-transform"} />
-            {isAnalyzing ? "Analyzing Patterns..." : "Run AI Forensic Analysis"}
-            {!isAnalyzing && <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />}
+            {isAnalyzing ? "Analyzing Patterns..." : "Run AI Analysis"}
+            {/* {!isAnalyzing && <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />} */}
           </motion.button>
         </div>
 
@@ -165,16 +165,15 @@ export default function AnalyzePage() {
 
       {/* Tab Navigation */}
       {report && (
-        <div className="sticky top-20 z-[60] flex bg-surface/80 backdrop-blur-xl border border-border-subtle p-1.5 rounded-[2rem] shadow-sm overflow-x-auto no-scrollbar mb-8">
+        <div className="sticky top-20 z-[40] flex bg-surface/80 backdrop-blur-xl border border-border-subtle p-1.5 rounded-[2rem] shadow-sm overflow-x-auto no-scrollbar mb-8">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex items-center gap-3 px-6 py-3.5 rounded-2xl font-black text-sm transition-all shrink-0 ${
-                  isActive ? "text-white" : "text-secondary hover:text-foreground"
-                }`}
+                className={`relative flex items-center gap-3 px-6 py-3.5 rounded-2xl font-black text-sm transition-all shrink-0 ${isActive ? "text-white" : "text-secondary hover:text-foreground"
+                  }`}
               >
                 {isActive && (
                   <motion.div
@@ -206,37 +205,36 @@ export default function AnalyzePage() {
             {activeTab === "Spending" && (
               <div className="space-y-8">
                 {/* Summary Card */}
-                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 sm:p-12 shadow-sm relative overflow-hidden">
+                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-8 py-6 shadow-sm relative overflow-hidden">
                   <div className="relative z-10">
                     <h3 className="text-xs font-black text-primary-500 uppercase tracking-widest mb-6 border-b border-border-subtle pb-4">Monthly Summary & Insight</h3>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                       {report.spendingAnalysis.metrics.map((metric, i) => (
                         <div key={i} className="p-5 bg-surface-variant/50 rounded-3xl border border-border-subtle">
                           <p className="text-[10px] font-black text-muted uppercase tracking-wider mb-2">{metric.label}</p>
-                          <p className={`text-2xl font-black ${
-                            metric.type === 'danger' ? 'text-error' : 
-                            metric.type === 'success' ? 'text-success' : 
-                            'text-foreground'
-                          }`}>
+                          <p className={`text-xl sm:text-2xl font-black ${metric.type === 'danger' ? 'text-error' :
+                              metric.type === 'success' ? 'text-success' :
+                                'text-foreground'
+                            }`}>
                             {metric.value}
                           </p>
                         </div>
                       ))}
                     </div>
                     <div className="bg-primary-500/5 border border-primary-500/10 rounded-3xl p-6 mb-8">
-                        <div className="flex items-center gap-2 mb-3 text-primary-600">
-                            <Sparkles size={18} />
-                            <span className="text-xs font-black uppercase tracking-widest">AI Forensic Insight</span>
-                        </div>
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ThemedMarkdown content={report.spendingAnalysis.summary} />
-                        </div>
+                      <div className="flex items-center gap-2 mb-3 text-primary-600">
+                        <Sparkles size={18} />
+                        <span className="text-xs font-black uppercase tracking-widest">AI Forensic Insight</span>
+                      </div>
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <ThemedMarkdown content={report.spendingAnalysis.summary} />
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Anomalies Card */}
-                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-sm group hover:border-error/30 transition-colors">
+                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-8 py-6  shadow-sm group hover:border-error/30 transition-colors">
                   <h3 className="text-xl font-black text-foreground mb-6 flex items-center gap-2">
                     <AlertCircle size={24} className="text-error" />
                     Anomaly Detection
@@ -257,39 +255,37 @@ export default function AnalyzePage() {
             {activeTab === "Budget" && (
               <div className="space-y-8">
                 {/* Advisor Card */}
-                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-sm">
+                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-8 py-6 shadow-sm">
                   <h3 className="text-xl font-black text-foreground mb-8 flex items-center gap-2">
                     <Target size={24} className="text-primary-500" />
                     Smart Limit Advisor
                   </h3>
                   <div className="bg-primary-500/5 border border-primary-500/10 rounded-3xl p-6 mb-8">
                     <div className="flex items-center gap-2 mb-3 text-primary-600">
-                        <Brain size={18} />
-                        <span className="text-xs font-black uppercase tracking-widest">Budget Recommendation</span>
+                      <Brain size={18} />
+                      <span className="text-xs font-black uppercase tracking-widest">Budget Recommendation</span>
                     </div>
                     <p className="text-secondary font-medium italic">{report.budgetIntelligence.limitAdvice}</p>
                   </div>
                 </div>
 
                 {/* Burn Rate Card */}
-                <div className={`rounded-[2.5rem] p-8 shadow-sm border transition-all ${
-                  report.budgetIntelligence.burnRate.status === 'warning' 
-                    ? 'bg-error/5 border-error/20' 
+                <div className={`rounded-[2.5rem] p-4 sm:p-8 py-6 shadow-sm border transition-all ${report.budgetIntelligence.burnRate.status === 'warning'
+                    ? 'bg-error/5 border-error/20'
                     : 'bg-success/5 border-success/20'
-                }`}>
-                  <h3 className={`text-xl font-black mb-6 flex items-center gap-2 ${
-                    report.budgetIntelligence.burnRate.status === 'warning' ? 'text-error' : 'text-success'
                   }`}>
+                  <h3 className={`text-xl font-black mb-6 flex items-center gap-2 ${report.budgetIntelligence.burnRate.status === 'warning' ? 'text-error' : 'text-success'
+                    }`}>
                     <Zap size={24} />
                     Burn Rate Intelligence
                   </h3>
                   <div className="flex items-start gap-4">
-                     <p className="text-foreground font-bold">{report.budgetIntelligence.burnRate.message}</p>
+                    <p className="text-foreground font-bold">{report.budgetIntelligence.burnRate.message}</p>
                   </div>
                 </div>
 
                 {/* Reallocation Tips */}
-                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-sm">
+                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-8 py-6 shadow-sm">
                   <h3 className="text-xl font-black text-foreground mb-6 flex items-center gap-2">
                     <ArrowRightLeft size={24} className="text-indigo-500" />
                     Smart Reallocation Tips
@@ -297,10 +293,10 @@ export default function AnalyzePage() {
                   <ul className="space-y-4">
                     {report.budgetIntelligence.reallocationTips.map((tip, i) => (
                       <li key={i} className="flex gap-4 items-start bg-surface-variant/50 p-5 rounded-2xl border border-border-subtle">
-                         <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
-                            <Zap size={16} />
-                         </div>
-                         <p className="text-secondary font-bold text-sm leading-relaxed">{tip}</p>
+                        <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
+                          <Zap size={16} />
+                        </div>
+                        <p className="text-secondary font-bold text-sm leading-relaxed">{tip}</p>
                       </li>
                     ))}
                   </ul>
@@ -315,21 +311,21 @@ export default function AnalyzePage() {
                 <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-sm">
                   <h3 className="text-xl font-black text-foreground mb-8 flex items-center gap-2">
                     <History size={24} className="text-success" />
-                    Savings Rate Tracker
+                    Savings Tracker
                   </h3>
                   <div className="space-y-6">
                     {report.incomeInsights.savingsRateTrend.map((item, i) => (
                       <div key={i} className="group">
                         <div className="flex justify-between items-center mb-2">
-                           <span className="text-sm font-black text-muted uppercase tracking-widest">{item.month}</span>
-                           <span className="text-sm font-black text-success">{item.rate}</span>
+                          <span className="text-sm font-black text-muted uppercase tracking-widest">{item.month}</span>
+                          <span className="text-sm font-black text-success">{item.rate}</span>
                         </div>
                         <div className="h-4 bg-surface-variant rounded-full overflow-hidden border border-border-subtle">
-                           <motion.div 
-                              initial={{ width: 0 }}
-                              animate={{ width: item.rate }}
-                              className="h-full bg-success shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-                           />
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: item.rate }}
+                            className="h-full bg-success shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                          />
                         </div>
                       </div>
                     ))}
@@ -337,16 +333,16 @@ export default function AnalyzePage() {
                 </div>
 
                 {/* Gap Analysis */}
-                <div className="bg-gradient-to-br from-indigo-500/5 to-violet-500/5 border border-border-subtle rounded-[2.5rem] p-10 relative overflow-hidden group">
-                   <div className="relative z-10">
-                      <h3 className="text-xl font-black text-foreground mb-6 flex items-center gap-2">
-                        <TrendingUp size={24} className="text-primary-500" />
-                        Income vs Expense Gap
-                      </h3>
-                      <div className="prose prose-indigo dark:prose-invert max-w-none">
-                        <ThemedMarkdown content={report.incomeInsights.gapAnalysis} />
-                      </div>
-                   </div>
+                <div className="bg-gradient-to-br from-indigo-500/5 to-violet-500/5 border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 relative overflow-hidden group">
+                  <div className="relative z-10">
+                    <h3 className="text-xl font-black text-foreground mb-6 flex items-center gap-2">
+                      <TrendingUp size={24} className="text-primary-500" />
+                      Income vs Expense Gap
+                    </h3>
+                    <div className="prose prose-indigo dark:prose-invert max-w-none">
+                      <ThemedMarkdown content={report.incomeInsights.gapAnalysis} />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -355,42 +351,42 @@ export default function AnalyzePage() {
             {activeTab === "Advice" && (
               <div className="space-y-8">
                 {/* Longitudinal Analysis */}
-                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-10 shadow-sm relative overflow-hidden">
-                   <div className="absolute right-0 top-0 p-8 text-indigo-500/5 group-hover:scale-110 transition-transform">
-                      <Star size={120} />
-                   </div>
-                   <h3 className="text-2xl font-black mb-8 flex items-center gap-3">
-                      <Star className="text-yellow-500" fill="currentColor" />
-                      Strategic Financial Advice
-                   </h3>
-                   <div className="prose prose-indigo dark:prose-invert max-w-none mb-10">
-                      <ThemedMarkdown content={report.financeAdvice.longTermAdvice} />
-                   </div>
-                   
-                   <div className="p-6 bg-indigo-500/10 border border-indigo-500/20 rounded-3xl">
-                      <div className="flex items-center gap-3 mb-4 text-indigo-700 dark:text-indigo-400">
-                         <ShieldCheck size={24} />
-                         <span className="font-black text-lg">Emergency Fund Intelligence</span>
-                      </div>
-                      <p className="text-secondary font-bold text-sm leading-relaxed">{report.financeAdvice.emergencyFundStatus}</p>
-                   </div>
+                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-5 sm:p-8 py-6 shadow-sm relative overflow-hidden">
+                  <div className="absolute right-0 top-0 p-8 text-indigo-500/5 group-hover:scale-110 transition-transform">
+                    <Star size={120} />
+                  </div>
+                  <h3 className="text-2xl font-black mb-8 flex items-center gap-3">
+                    <Star className="text-yellow-500" fill="currentColor" />
+                    Strategic Financial Advice
+                  </h3>
+                  <div className="prose prose-indigo dark:prose-invert max-w-none mb-10">
+                    <ThemedMarkdown content={report.financeAdvice.longTermAdvice} />
+                  </div>
+
+                  <div className="p-4 sm:p-6 bg-indigo-500/10 border border-indigo-500/20 rounded-3xl">
+                    <div className="flex items-center gap-3 mb-4 text-indigo-700 dark:text-indigo-400">
+                      <ShieldCheck size={24} />
+                      <span className="font-black text-lg">Emergency Fund Intelligence</span>
+                    </div>
+                    <p className="text-secondary font-bold text-sm leading-relaxed">{report.financeAdvice.emergencyFundStatus}</p>
+                  </div>
                 </div>
 
                 {/* Hypothetical Scenario */}
-                <div className="bg-error/5 border-2 border-dashed border-error/20 rounded-[2.5rem] p-10 relative group">
-                   <div className="flex items-center gap-3 mb-8 text-error">
-                      <Briefcase size={28} />
-                      <h3 className="text-2xl font-black">Hypothetical: {report.financeAdvice.hypotheticalScenario.title}</h3>
-                   </div>
-                   <div className="bg-surface border border-border-subtle rounded-3xl p-8 shadow-sm">
-                      <div className="flex items-center gap-2 mb-4 text-muted">
-                         <Zap size={18} />
-                         <span className="text-xs font-black uppercase tracking-widest">AI Stress-Test Response</span>
-                      </div>
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                         <ThemedMarkdown content={report.financeAdvice.hypotheticalScenario.advice} />
-                      </div>
-                   </div>
+                <div className="bg-error/5 border-2 border-dashed border-error/20 rounded-[2.5rem] p-5 sm:p-8 py-6 relative group">
+                  <div className="flex items-center gap-3 mb-8 text-error">
+                    <Briefcase size={28} className="min-w-6" />
+                    <h3 className="text-lg sm:text-2xl font-black">Hypothetical: {report.financeAdvice.hypotheticalScenario.title}</h3>
+                  </div>
+                  <div className="bg-surface border border-border-subtle rounded-3xl p-8 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4 text-muted">
+                      <Zap size={18} />
+                      <span className="text-xs font-black uppercase tracking-widest">AI Stress-Test Response</span>
+                    </div>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ThemedMarkdown content={report.financeAdvice.hypotheticalScenario.advice} />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -415,23 +411,23 @@ export default function AnalyzePage() {
             {/* Feature cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                  { icon: TrendingUp, title: "Pattern recognition", desc: "AI identifies invisible spending habits before they drain your savings." },
-                  { icon: ShieldCheck, title: "Stress-testing", desc: "Foresee how your finances handle income dips or sudden expenses." },
-                  { icon: Zap, title: "Dynamic budget", desc: "Get real-time limit suggestions based on actual burn rate data." }
+                { icon: TrendingUp, title: "Pattern recognition", desc: "AI identifies invisible spending habits before they drain your savings." },
+                { icon: ShieldCheck, title: "Stress-testing", desc: "Foresee how your finances handle income dips or sudden expenses." },
+                { icon: Zap, title: "Dynamic budget", desc: "Get real-time limit suggestions based on actual burn rate data." }
               ].map((f, i) => (
-                  <motion.div 
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.3 + i * 0.1 }}
-                      className="p-8 bg-surface border border-border-subtle rounded-[2.5rem] hover:border-primary-500/30 transition-all group"
-                  >
-                      <div className="w-14 h-14 rounded-2xl bg-primary-500/10 flex items-center justify-center text-primary-500 mb-6 group-hover:scale-110 transition-transform">
-                          <f.icon size={28} />
-                      </div>
-                      <h3 className="font-black text-xl mb-3 tracking-tight">{f.title}</h3>
-                      <p className="text-secondary text-sm font-bold leading-relaxed">{f.desc}</p>
-                  </motion.div>
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 + i * 0.1 }}
+                  className="p-8 bg-surface border border-border-subtle rounded-[2.5rem] hover:border-primary-500/30 transition-all group"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-primary-500/10 flex items-center justify-center text-primary-500 mb-6 group-hover:scale-110 transition-transform">
+                    <f.icon size={28} />
+                  </div>
+                  <h3 className="font-black text-xl mb-3 tracking-tight">{f.title}</h3>
+                  <p className="text-secondary text-sm font-bold leading-relaxed">{f.desc}</p>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -447,49 +443,47 @@ export default function AnalyzePage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-background/60 backdrop-blur-2xl"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="w-full max-h-[90vh] max-w-lg bg-surface border border-border-subtle rounded-[3rem] p-10 sm:p-12 shadow-2xl text-center space-y-8"
             >
-              <div className="relative w-28 h-28 mx-auto mb-10">
-                <motion.div 
+              <div className="relative w-20 h-20 mx-auto mb-10">
+                <motion.div
                   initial={{ rotate: 0 }}
                   animate={{ rotate: 360 }}
                   transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                   className="absolute inset-0 rounded-full border-4 border-dashed border-primary-500/30"
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
-                   <div className="w-20 h-20 rounded-full bg-primary-600 flex items-center justify-center text-white shadow-xl animate-pulse">
-                      <Brain size={40} />
-                   </div>
+                  <div className="w-16 h-16 rounded-full bg-primary-600 flex items-center justify-center text-white shadow-xl animate-pulse">
+                    <Brain size={32} />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h2 className="text-2xl font-black tracking-tighter">AI Analysis in Progress</h2>
+              <div className="space-y-4  flex flex-col items-center justify-center">
+                <h2 className="text-xl font-black tracking-tighter">AI Analysis in Progress</h2>
                 <div className="space-y-6">
                   {loadingStages.map((text, i) => (
-                    <div key={i} className="flex items-center gap-4">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                        stage > i ? "bg-success text-white" : 
-                        stage === i ? "bg-primary-500 text-white animate-spin" : 
-                        "bg-surface-variant text-transparent"
-                      }`}>
-                        {stage > i ? <CheckCircle2 size={14} strokeWidth={3} /> : <Loader2 size={14} />}
+                    <div key={i} className="flex items-center justify-left gap-4">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${stage > i ? "bg-success text-white" :
+                          stage === i ? "bg-primary-500 text-white animate-spin" :
+                            "bg-surface-variant text-transparent"
+                        }`}>
+                        {stage > i ? <CheckCircle2 size={10} strokeWidth={3} /> : <Loader2 size={10} />}
                       </div>
-                      <span className={`text-sm font-black transition-all ${
-                        stage > i ? "text-secondary line-through opacity-50" : 
-                        stage === i ? "text-foreground scale-105" : 
-                        "text-muted opacity-30"
-                      }`}>
+                      <span className={`text-xs font-black transition-all ${stage > i ? "text-secondary line-through opacity-50" :
+                          stage === i ? "text-foreground scale-105" :
+                            "text-muted opacity-30"
+                        }`}>
                         {text}
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
-              
+
               <p className="text-xs font-black text-muted uppercase bg-surface-variant py-3 px-6 rounded-2xl inline-block mt-4">
                 Processing Forensic Data Points
               </p>
