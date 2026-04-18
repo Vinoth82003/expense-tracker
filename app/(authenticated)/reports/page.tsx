@@ -130,10 +130,21 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
 
   // ── Filter state ──────────────────────────────────────────────────────────
-  const [viewMode, setViewMode] = useState<"month" | "range">("month");
+  const [viewMode, setViewMode] = useState<"day" | "week" | "month" | "range">("month");
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [currentDay, setCurrentDay] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    const start = new Date(d.setDate(diff));
+    return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
   });
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [categoryFilter, setCategoryFilter] = useState<"All" | "Needs" | "Wants">("All");
@@ -155,7 +166,15 @@ export default function ReportsPage() {
       let query = "";
       if (viewMode === "month") {
         query = `?month=${currentMonth}`;
-      } else if (dateRange.from && dateRange.to) {
+      } else if (viewMode === "day") {
+        query = `?fromDate=${currentDay}&toDate=${currentDay}`;
+      } else if (viewMode === "week") {
+        const start = new Date(currentWeekStart);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+        query = `?fromDate=${currentWeekStart}&toDate=${endStr}`;
+      } else if (viewMode === "range" && dateRange.from && dateRange.to) {
         query = `?fromDate=${dateRange.from}&toDate=${dateRange.to}`;
       } else {
         setLoading(false);
@@ -178,11 +197,11 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (!session) return;
-    if (viewMode === "month" || (viewMode === "range" && dateRange.from && dateRange.to)) {
+    if (viewMode === "month" || viewMode === "day" || viewMode === "week" || (viewMode === "range" && dateRange.from && dateRange.to)) {
       fetchExpenses();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, viewMode, currentMonth, dateRange]);
+  }, [session, viewMode, currentMonth, currentDay, currentWeekStart, dateRange]);
 
   const changeMonth = (offset: number) => {
     const [year, month] = currentMonth.split("-").map(Number);
@@ -191,10 +210,35 @@ export default function ReportsPage() {
     setSelectedPieSlice(null);
   };
 
+  const changeDay = (offset: number) => {
+    const d = new Date(currentDay);
+    d.setDate(d.getDate() + offset);
+    setCurrentDay(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    setSelectedPieSlice(null);
+  };
+
+  const changeWeek = (offset: number) => {
+    const start = new Date(currentWeekStart);
+    start.setDate(start.getDate() + (offset * 7));
+    setCurrentWeekStart(`${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`);
+    setSelectedPieSlice(null);
+  };
+
   const monthName = new Date(currentMonth + "-01").toLocaleDateString("en-IN", {
     month: "long",
     year: "numeric",
   });
+  
+  const dayName = new Date(currentDay).toLocaleDateString("en-IN", {
+    weekday: "long", month: "short", day: "numeric", year: "numeric"
+  });
+
+  const getWeekName = () => {
+    const start = new Date(currentWeekStart);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return `${start.toLocaleDateString("en-IN", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}`;
+  };
 
   // ── Client-side filtering ─────────────────────────────────────────────────
   const filteredExpenses = useMemo(() => {
@@ -363,7 +407,7 @@ export default function ReportsPage() {
       <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex p-1 bg-surface-variant rounded-xl gap-1">
-            {(["month", "range"] as const).map(mode => (
+            {(["day", "week", "month", "range"] as const).map(mode => (
               <button
                 key={mode}
                 onClick={() => { setViewMode(mode); setSelectedPieSlice(null); }}
@@ -373,7 +417,7 @@ export default function ReportsPage() {
                     : "text-secondary hover:text-foreground"
                 }`}
               >
-                {mode === "month" ? "By Month" : "Date Range"}
+                {mode === "range" ? "Range" : `By ${mode.charAt(0).toUpperCase() + mode.slice(1)}`}
               </button>
             ))}
           </div>
@@ -470,6 +514,26 @@ export default function ReportsPage() {
             </button>
             <span className="font-black tracking-tight text-lg">{monthName}</span>
             <button onClick={() => changeMonth(1)} className="p-3 text-secondary hover:text-foreground transition-colors">
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        ) : viewMode === "day" ? (
+          <div className="flex items-center justify-between bg-surface-variant/30 border border-border-subtle p-1.5 rounded-2xl">
+            <button onClick={() => changeDay(-1)} className="p-3 text-secondary hover:text-foreground transition-colors">
+              <ChevronLeft size={20} />
+            </button>
+            <span className="font-black tracking-tight text-lg">{dayName}</span>
+            <button onClick={() => changeDay(1)} className="p-3 text-secondary hover:text-foreground transition-colors">
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        ) : viewMode === "week" ? (
+          <div className="flex items-center justify-between bg-surface-variant/30 border border-border-subtle p-1.5 rounded-2xl">
+            <button onClick={() => changeWeek(-1)} className="p-3 text-secondary hover:text-foreground transition-colors">
+              <ChevronLeft size={20} />
+            </button>
+            <span className="font-black tracking-tight text-lg">{getWeekName()}</span>
+            <button onClick={() => changeWeek(1)} className="p-3 text-secondary hover:text-foreground transition-colors">
               <ChevronRight size={20} />
             </button>
           </div>
