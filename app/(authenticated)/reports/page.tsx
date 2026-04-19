@@ -55,7 +55,7 @@ interface Income {
   date: string;
 }
 
-const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#06b6d4", "#f59e0b", "#10b981", "#f43f5e", "#84cc16"];
+const COLORS = ["#6366f1", "#06b6d4", "#ec4899", "#f59e0b", "#10b981", "#f43f5e", "#84cc16", "#a855f7"];
 const CATEGORY_FILTERS = ["All", "Needs", "Wants"];
 
 interface ChartPayload {
@@ -647,8 +647,8 @@ export default function ReportsPage() {
                         <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="colorWants" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
@@ -677,7 +677,7 @@ export default function ReportsPage() {
                     {(trendMode as any) === "stacked" ? (
                       <>
                         <Area type="monotone" dataKey="Needs" stackId="1" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
-                        <Area type="monotone" dataKey="Wants" stackId="1" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorWants)" />
+                        <Area type="monotone" dataKey="Wants" stackId="1" stroke="#06b6d4" strokeWidth={3} fillOpacity={1} fill="url(#colorWants)" />
                       </>
                     ) : (trendMode as any) === "cashflow" ? (
                       <>
@@ -729,7 +729,7 @@ export default function ReportsPage() {
                       />
                       <Tooltip content={<CustomBarTooltip />} cursor={{ fill: "#6366f108" }} />
                       <Bar dataKey="Needs" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={44} name="Needs" />
-                      <Bar dataKey="Wants" fill="#8b5cf6" radius={[6, 6, 0, 0]} maxBarSize={44} name="Wants" />
+                      <Bar dataKey="Wants" fill="#06b6d4" radius={[6, 6, 0, 0]} maxBarSize={44} name="Wants" />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -764,8 +764,8 @@ export default function ReportsPage() {
                       <Radar
                         name="Suggested"
                         dataKey="B"
-                        stroke="#8b5cf6"
-                        fill="#8b5cf6"
+                        stroke="#06b6d4"
+                        fill="#06b6d4"
                         fillOpacity={0.3}
                         strokeDasharray="4 4"
                       />
