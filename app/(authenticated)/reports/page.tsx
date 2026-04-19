@@ -406,7 +406,7 @@ export default function ReportsPage() {
       {/* ═══════════ FILTER BAR ═══════════ */}
       <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex p-1 bg-surface-variant rounded-xl gap-1">
+          <div className="flex p-1 bg-surface-variant rounded-xl gap-1 overflow-x-auto no-scrollbar">
             {(["day", "week", "month", "range"] as const).map(mode => (
               <button
                 key={mode}
