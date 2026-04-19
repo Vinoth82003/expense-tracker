@@ -2,20 +2,6 @@ import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import { sendWelcomeEmail } from "@/lib/mail";
 
-const DEFAULT_CATEGORIES = [
-  { name: "Food", type: "Needs", isDefault: true },
-  { name: "Rent", type: "Needs", isDefault: true },
-  { name: "Transport", type: "Needs", isDefault: true },
-  { name: "Utilities", type: "Needs", isDefault: true },
-  { name: "Health", type: "Needs", isDefault: true },
-  { name: "Education", type: "Needs", isDefault: true },
-  { name: "Other", type: "Needs", isDefault: true },
-  { name: "Entertainment", type: "Wants", isDefault: true },
-  { name: "Shopping", type: "Wants", isDefault: true },
-  { name: "Travel", type: "Wants", isDefault: true },
-  { name: "Other", type: "Wants", isDefault: true },
-];
-
 export const authOptions = {
   providers: [
     GoogleProvider({
@@ -54,22 +40,12 @@ export const authOptions = {
             },
           });
 
-          console.log(`User created (ID: ${newUser.id}). Seeding default categories...`);
-
-          // Seed default categories for the new user
+          console.log(`User created (ID: ${newUser.id}). Sending welcome email...`);
           try {
-            await prisma.category.createMany({
-              data: DEFAULT_CATEGORIES.map((cat) => ({
-                ...cat,
-                userId: newUser.id,
-              })),
-            });
-            console.log("Default categories seeded successfully.");
-
             // Send welcome email
             await sendWelcomeEmail(newUser.email, newUser.name || "");
-          } catch (seedError) {
-            console.error("Warning: Failed to seed default categories:", seedError);
+          } catch (emailError) {
+            console.error("Warning: Failed to send welcome email:", emailError);
           }
         }
       } catch (error) {

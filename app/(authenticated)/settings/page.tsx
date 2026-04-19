@@ -20,7 +20,8 @@ import {
   Trash2,
   Monitor,
   Moon as MoonIcon,
-  Sun as SunIcon
+  Sun as SunIcon,
+  LayoutGrid
 } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 
@@ -224,6 +225,27 @@ export default function SettingsPage() {
                           </label>
                         </motion.div>
                       )}
+                    </div>
+                  </div>
+
+                  {/* Category Management Link */}
+                  <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-sm space-y-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-cyan-50 text-cyan-600">
+                          <LayoutGrid size={24} />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-black">Categories</h2>
+                          <p className="text-xs text-secondary font-medium">Manage your custom needs and wants labels.</p>
+                        </div>
+                      </div>
+                      <Link 
+                        href="/settings/categories"
+                        className="px-6 py-3 bg-surface-variant text-foreground font-bold rounded-xl hover:bg-border-subtle transition-all flex items-center gap-2 text-sm"
+                      >
+                        Manage <ChevronRight size={16} />
+                      </Link>
                     </div>
                   </div>
 

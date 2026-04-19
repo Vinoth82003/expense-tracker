@@ -19,7 +19,8 @@ import {
   Sun,
   Moon,
   Banknote,
-  Sparkles
+  Sparkles,
+  LayoutGrid
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
@@ -32,6 +33,7 @@ const navItems = [
   { name: "Income", href: "/income", icon: Banknote },
   { name: "Reports", href: "/reports", icon: PieChart },
   { name: "Analyze", href: "/analyze", icon: Sparkles },
+  { name: "Categories", href: "/settings/categories", icon: LayoutGrid },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Profile", href: "/profile", icon: User },
 ];

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, IndianRupee, Tag, FileText, Calendar, ChevronDown, Loader2, Plus, ShoppingCart, Sparkles, Pencil } from "lucide-react";
+import { X, IndianRupee, Tag, FileText, Calendar, ChevronDown, Loader2, Plus, ShoppingCart, Sparkles, Pencil, Check } from "lucide-react";
 import { useUI } from "@/context/UIContext";
 
 interface Category {
@@ -41,11 +41,19 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: Add
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState("");
+  const [savingCustom, setSavingCustom] = useState(false);
+
+  const fetchCategories = () => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => setCategories(data.categories || []));
+  };
+
   useEffect(() => {
     if (isOpen) {
-      fetch("/api/categories")
-        .then((res) => res.json())
-        .then((data) => setCategories(data.categories || []));
+      if (categories.length === 0) fetchCategories();
       
       if (editExpense) {
         setForm({
@@ -66,6 +74,14 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: Add
       }
     }
   }, [isOpen, editExpense]);
+
+  // When form.category changes, we want to reset adding custom state if it was open
+  useEffect(() => {
+    if (isAddingCustom) {
+      setIsAddingCustom(false);
+      setCustomCategoryName("");
+    }
+  }, [form.category]);
 
   const filteredSubcategories = categories.filter((c) => c.type === form.category);
 
@@ -214,22 +230,85 @@ export function AddExpenseModal({ isOpen, onClose, onSuccess, editExpense }: Add
               <div className="space-y-4">
                 {/* Subcategory */}
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-secondary">
+                  <div className="absolute inset-y-0 left-4 top-4 pointer-events-none text-secondary">
                     <Tag size={18} />
                   </div>
-                  <select
-                    value={form.subcategory}
-                    onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
-                    className={`w-full bg-background border-2 rounded-2xl py-4 pl-12 pr-10 font-bold text-foreground appearance-none focus:outline-none transition-all ${
-                      errors.subcategory ? "border-error" : "border-border-subtle focus:border-primary-500"
-                    }`}
-                  >
-                    <option value="">Select subcategory…</option>
-                    {filteredSubcategories.map((cat) => (
-                      <option key={cat.id} value={cat.name}>{cat.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={18} className="absolute inset-y-0 right-4 my-auto text-secondary pointer-events-none" />
+                  {isAddingCustom ? (
+                    <div className="flex w-full items-center gap-2">
+                       <input
+                          autoFocus
+                          type="text"
+                          placeholder="New category..."
+                          value={customCategoryName}
+                          onChange={(e) => setCustomCategoryName(e.target.value)}
+                          className={`w-full bg-background border-2 rounded-2xl py-4 pl-12 pr-4 font-bold text-foreground focus:outline-none transition-all ${
+                            errors.subcategory ? "border-error" : "border-border-subtle focus:border-primary-500"
+                          }`}
+                       />
+                       <button
+                         type="button"
+                         disabled={savingCustom || !customCategoryName.trim()}
+                         onClick={async () => {
+                            setSavingCustom(true);
+                            try {
+                              const res = await fetch("/api/categories", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ name: customCategoryName.trim(), type: form.category }),
+                              });
+                              if (res.ok) {
+                                const data = await res.json();
+                                setCategories(prev => {
+                                  const updated = [...prev, data.category];
+                                  return updated.sort((a, b) => a.name.localeCompare(b.name));
+                                });
+                                setForm({ ...form, subcategory: data.category.name });
+                                setIsAddingCustom(false);
+                                setCustomCategoryName("");
+                              } else {
+                                const err = await res.json();
+                                toast.error(err.error || "Failed to create category");
+                              }
+                            } finally {
+                              setSavingCustom(false);
+                            }
+                         }}
+                         className="p-4 rounded-2xl bg-primary-500 text-white disabled:opacity-50 active:scale-95 transition-transform shrink-0"
+                       >
+                          {savingCustom ? <Loader2 size={20} className="animate-spin" /> : <Check size={20} />}
+                       </button>
+                       <button
+                         type="button"
+                         onClick={() => { setIsAddingCustom(false); setCustomCategoryName(""); }}
+                         className="p-4 rounded-2xl bg-surface-variant text-secondary hover:text-foreground active:scale-95 transition-transform shrink-0"
+                       >
+                         <X size={20} />
+                       </button>
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={form.subcategory}
+                        onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+                        className={`w-full bg-background border-2 rounded-2xl py-4 pl-12 pr-10 font-bold text-foreground appearance-none focus:outline-none transition-all ${
+                          errors.subcategory ? "border-error" : "border-border-subtle focus:border-primary-500"
+                        }`}
+                      >
+                        <option value="">Select subcategory…</option>
+                        {filteredSubcategories.map((cat) => (
+                          <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={18} className="absolute inset-y-0 right-4 top-4 text-secondary pointer-events-none" />
+                      <button 
+                        type="button"
+                        onClick={() => setIsAddingCustom(true)}
+                        className="mt-2 text-xs font-bold text-primary-500 tracking-widest uppercase items-center gap-1 inline-flex hover:text-primary-600 transition-colors ml-2"
+                      >
+                         <Plus size={12} strokeWidth={3} /> Add custom
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* Date & Note in row for desktop, column for mobile */}

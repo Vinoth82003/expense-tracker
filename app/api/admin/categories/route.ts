@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { cookies } from "next/headers";
+import { revalidateTag } from "next/cache";
 
 const prisma = new PrismaClient();
 
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
       }
     });
     
+    revalidateTag('global-categories');
     return NextResponse.json({ category: newCategory }, { status: 201 });
   } catch (error) {
     console.error("Failed to create category", error);
@@ -63,6 +65,7 @@ export async function PATCH(req: Request) {
       data: { name, type }
     });
 
+    revalidateTag('global-categories');
     return NextResponse.json({ category: updatedCategory }, { status: 200 });
   } catch (error) {
     console.error("Failed to update category", error);
@@ -81,6 +84,7 @@ export async function DELETE(req: Request) {
       where: { id }
     });
 
+    revalidateTag('global-categories');
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error("Failed to delete category", error);
