@@ -26,7 +26,9 @@ import {
   Zap,
   Lock,
   Globe,
-  Bell
+  Bell,
+  TrendingUp,
+  Download,
 } from "lucide-react";
 
 /* ──────────────────────────────────────────────
@@ -181,40 +183,40 @@ export function HomeClient() {
 
       <main className="overflow-x-hidden pt-20" id="main-content">
         {/* HERO SECTION */}
-        <section className="relative min-h-[90dvh] lg:min-h-[100dvh] flex items-center py-20 px-5 md:px-10 overflow-hidden">
+        <section className="relative min-h-[95dvh] flex items-center pt-24 pb-20 px-5 md:px-10 overflow-hidden">
           {/* Ambient Lighting */}
-          <div className="absolute top-0 right-0 w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[160px] pointer-events-none -z-10" />
-          <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-violet-500/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+          <div className="absolute top-0 right-0 w-[60%] h-[60%] bg-primary-500/10 rounded-full blur-[160px] pointer-events-none -z-10 animate-pulse" />
+          <div className="absolute bottom-0 left-0 w-[50%] h-[50%] bg-violet-500/10 rounded-full blur-[140px] pointer-events-none -z-10 animate-pulse [animation-delay:2s]" />
           
           <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <motion.div
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="space-y-10 relative z-10"
+              className="space-y-12 relative z-10 text-left"
             >
               <motion.div
                 variants={itemVariants}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 border border-primary-100 text-primary-600 text-xs font-black tracking-widest uppercase"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary-50 border border-primary-100 text-primary-600 text-[10px] font-black tracking-[0.2em] uppercase"
               >
                 <Sparkles size={14} className="animate-pulse" />
-                THE FUTURE OF FINANCE TRACKING
+                Next-Gen Personal Finance
               </motion.div>
 
               <motion.h1
                 variants={itemVariants}
-                className="text-6xl md:text-8xl lg:text-9xl font-black text-foreground leading-[0.85] tracking-tightest"
+                className="text-5xl md:text-7xl lg:text-8xl font-black text-foreground leading-[0.85] tracking-tightest"
               >
-                Wealth <br />
-                <span className="bg-gradient-to-r from-primary-600 to-violet-600 bg-clip-text text-transparent italic">Simplified.</span>
+                Your Wealth <br />
+                <span className="bg-gradient-to-r from-primary-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent italic">Under Control.</span>
               </motion.h1>
 
               <motion.p
                 variants={itemVariants}
                 className="text-xl md:text-2xl text-secondary max-w-xl font-medium leading-relaxed"
               >
-                SpendWise blends forensic AI intelligence with effortless simplicity. 
-                Track every Rupee, discover hidden savings, and master your money.
+                SpendWise transforms complex financial data into effortless insights. 
+                Built for India, designed for simplicity, powered by intelligence.
               </motion.p>
 
               <motion.div
@@ -223,27 +225,28 @@ export function HomeClient() {
               >
                 <Link
                   href="/login"
-                  className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-5 rounded-[2rem] bg-indigo-600 text-white font-black text-xl shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all active:scale-95"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-[2.5rem] bg-foreground text-background font-black text-xl shadow-2xl hover:translate-y-[-4px] transition-all active:scale-95 group overflow-hidden"
                 >
-                  Start For Free
-                  <ArrowRight size={24} strokeWidth={3} />
+                  Start Your Journey
+                  <ArrowRight size={20} strokeWidth={2} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link
-                  href="/how-it-works"
-                  className="w-full sm:w-auto flex items-center justify-center gap-3 px-10 py-5 rounded-[2rem] bg-surface border-2 border-border-subtle text-foreground font-black text-xl hover:bg-surface-variant transition-all active:scale-95"
+                <button
+                  onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-[2.5rem] bg-surface border-2 border-border-subtle text-foreground font-black text-xl hover:bg-surface-variant transition-all active:scale-95"
                 >
-                  Live Demo
-                </Link>
+                  <Download size={20} strokeWidth={2} />
+                  Install App
+                </button>
               </motion.div>
 
               <motion.div
                 variants={itemVariants}
-                className="flex items-center gap-8 pt-6 border-t border-border-subtle"
+                className="flex items-center gap-8 pt-10 border-t border-border-subtle"
               >
                 {stats.map((stat, i) => (
                   <div key={i} className="text-left">
-                    <div className="text-2xl font-black text-foreground">{stat.value}</div>
-                    <div className="text-xs font-bold text-muted uppercase tracking-wider">{stat.label}</div>
+                    <div className="text-3xl font-black text-foreground tabular-nums">{stat.value}</div>
+                    <div className="text-[10px] font-black text-muted uppercase tracking-widest mt-1">{stat.label}</div>
                   </div>
                 ))}
               </motion.div>
@@ -254,16 +257,16 @@ export function HomeClient() {
               initial={{ opacity: 0, x: 50, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
-              className="relative lg:h-[800px] flex items-center justify-center"
+              className="relative lg:h-[700px] flex items-center justify-center"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent blur-[120px] rounded-full -z-10 animate-pulse" />
-              <div className="relative w-full max-w-[600px] aspect-square lg:aspect-auto lg:h-full">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary-500/20 to-transparent blur-[120px] rounded-full -z-10 animate-pulse" />
+              <div className="relative w-full max-w-[650px]">
                 <Image
                   src="/hero-mockup.png"
                   alt="SpendWise Premium Dashboard Mockup"
-                  fill
-                  style={{ objectFit: 'contain' }}
-                  className="drop-shadow-[0_32px_64px_rgba(79,70,229,0.3)] hover:scale-[1.02] transition-transform duration-700 pointer-events-none"
+                  width={650}
+                  height={650}
+                  className="drop-shadow-[0_40px_80px_rgba(79,70,229,0.25)] hover:scale-[1.02] transition-transform duration-1000 pointer-events-none"
                   priority
                 />
               </div>
@@ -271,7 +274,61 @@ export function HomeClient() {
           </div>
         </section>
 
-        {/* BENTO FEATURES */}
+        {/* QUICK INSIGHTS SECTION */}
+        <section className="py-24 bg-surface-variant/10">
+          <div className="max-w-7xl mx-auto px-5 md:px-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+              <div className="lg:col-span-5 space-y-8">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-success/10 text-success text-[10px] font-black tracking-widest uppercase">
+                  <Zap size={14} /> Real-Time Analytics
+                </div>
+                <h2 className="text-5xl md:text-6xl font-black text-foreground leading-[0.9] tracking-tightest">
+                  Financial Clarity <br />
+                  <span className="text-primary-600">In Seconds.</span>
+                </h2>
+                <p className="text-lg text-secondary font-medium leading-relaxed">
+                  No more spreadsheets. No more guessing. SpendWise automatically categorizes your expenses and gives you a real-time pulse of your financial health.
+                </p>
+                <div className="space-y-4">
+                  {[
+                    "Auto-categorization of Rupee transactions",
+                    "Daily, weekly, and monthly spending trends",
+                    "Budget leak detection with AI insights"
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 text-foreground font-bold">
+                      <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-white">
+                        <CheckCircle size={14} />
+                      </div>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="p-8 rounded-[2.5rem] bg-surface border border-border-subtle shadow-xl space-y-6">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                    <PieChart size={24} />
+                  </div>
+                  <h3 className="text-xl font-black">Visual Breakdown</h3>
+                  <p className="text-sm text-secondary font-medium italic">"You spent 15% more on Dining this week than your average."</p>
+                  <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500 w-[65%] rounded-full" />
+                  </div>
+                </div>
+                <div className="p-8 rounded-[2.5rem] bg-surface border border-border-subtle shadow-xl space-y-6 mt-6 sm:mt-12">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                    <TrendingDown size={24} />
+                  </div>
+                  <h3 className="text-xl font-black">Smart Savings</h3>
+                  <p className="text-sm text-secondary font-medium italic">"Detected an unused OTT subscription. Save ₹499/mo."</p>
+                  <div className="flex items-center gap-2 text-emerald-600 font-black text-sm">
+                    <Sparkles size={16} /> Insight Generated
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
         <section id="features" className="py-32 px-5 md:px-10 max-w-7xl mx-auto">
           <div className="text-center mb-24 space-y-6">
             <motion.div
@@ -363,34 +420,38 @@ export function HomeClient() {
           </div>
         </section>
 
-        {/* CTA SECTION */}
+        {/* DOWNLOAD CTA SECTION */}
         <section id="cta" className="py-32 px-5 md:px-10">
           <motion.div
             initial={{ opacity: 0, y: 100 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-6xl mx-auto rounded-[5rem] bg-indigo-600 p-12 md:p-32 text-center text-white relative overflow-hidden shadow-[0_40px_100px_-20px_rgba(79,70,229,0.5)]"
+            className="max-w-6xl mx-auto rounded-[5rem] bg-foreground p-12 md:p-32 text-center text-background relative overflow-hidden shadow-2xl"
           >
             {/* Background elements */}
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)] pointer-events-none" />
-            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl" />
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.05),transparent)] pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-primary-500/20 rounded-full blur-[100px]" />
             
             <div className="relative z-10 max-w-3xl mx-auto space-y-12">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-background/10 text-background/80 text-[10px] font-black tracking-widest uppercase">
+                 <Smartphone size={14} /> Available as PWA
+              </div>
               <h2 className="text-6xl md:text-8xl font-black tracking-tightest leading-[0.9]">
-                Are you ready to <br />
-                Take Command?
+                Your Wallet, <br />
+                <span className="text-primary-500 italic underline decoration-primary-500/30">Everywhere.</span>
               </h2>
-              <p className="text-xl md:text-2xl text-indigo-100 font-medium">
-                Join thousands of smarter spenders. SpendWise is free, secure, and ready to help you thrive.
+              <p className="text-xl md:text-2xl text-background/70 font-medium leading-relaxed">
+                Install SpendWise on your home screen for instant access, offline tracking, and a premium full-screen experience. No App Store needed.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                <Link
-                  href="/login"
-                  className="w-full sm:w-auto px-16 py-7 rounded-[2.5rem] bg-white text-indigo-600 font-black text-2xl shadow-2xl hover:translate-y-[-5px] transition-all active:scale-95"
+                <button
+                  onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
+                  className="w-full sm:w-auto px-16 py-7 rounded-[2.5rem] bg-background text-foreground font-black text-2xl shadow-2xl hover:translate-y-[-5px] transition-all active:scale-95 flex items-center justify-center gap-4"
                 >
-                  Join SpendWise
-                </Link>
-                <div className="text-indigo-200 text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                  <Download size={28} strokeWidth={3} />
+                  Download App
+                </button>
+                <div className="text-background/50 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
                    <Lock size={16} /> 100% Free & Secure
                 </div>
               </div>

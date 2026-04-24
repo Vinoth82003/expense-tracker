@@ -32,14 +32,9 @@ const PWAInstallBanner = () => {
       setPlatform('other');
     }
 
-    // 2. Check if user already dismissed it today
-    const dismissedAt = localStorage.getItem('pwa-banner-dismissed');
-    if (dismissedAt) {
-      const lastDismissed = new Date(dismissedAt).getTime();
-      const now = new Date().getTime();
-      const oneDay = 24 * 60 * 60 * 1000;
-      if (now - lastDismissed < oneDay) return;
-    }
+    // 2. Check if user already dismissed it
+    const dismissed = localStorage.getItem('pwa-banner-dismissed-permanent');
+    if (dismissed === 'true') return;
 
     // 3. Listen for beforeinstallprompt
     const handler = (e: any) => {
@@ -60,7 +55,14 @@ const PWAInstallBanner = () => {
       return () => clearTimeout(timer);
     }
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    // 5. Custom event listener to trigger banner
+    const showHandler = () => setShowBanner(true);
+    window.addEventListener('showPwaInstall', showHandler);
+    
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('showPwaInstall', showHandler);
+    };
   }, []);
 
   const handleInstall = async () => {
@@ -75,7 +77,7 @@ const PWAInstallBanner = () => {
 
   const handleDismiss = () => {
     setShowBanner(false);
-    localStorage.setItem('pwa-banner-dismissed', new Date().toISOString());
+    localStorage.setItem('pwa-banner-dismissed-permanent', 'true');
   };
 
   return (

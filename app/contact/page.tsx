@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import Link from "next/link";
 import {
   Mail,
   MessageSquare,
@@ -14,6 +15,7 @@ import {
   Loader2,
   Phone,
   ArrowRight,
+  Download,
 } from "lucide-react";
 
 export default function ContactPage() {
@@ -67,53 +69,61 @@ export default function ContactPage() {
               animate={{ opacity: 1, x: 0 }}
               className="space-y-12"
             >
-              <div className="space-y-6 text-left">
+              <div className="space-y-8 text-left">
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 text-primary-600 text-sm font-black tracking-widest uppercase border border-primary-100"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 text-primary-600 text-[10px] font-black tracking-widest uppercase border border-primary-100"
                 >
-                  Contact Us
+                  Get In Touch
                 </motion.div>
-                <h1 className="text-5xl md:text-7xl font-black text-foreground tracking-tighter leading-none">
-                  Let's start a <br />
-                  <span className="text-primary-600 italic">conversation.</span>
+                <h1 className="text-6xl md:text-8xl font-black text-foreground tracking-tightest leading-[0.85]">
+                  Let's Start a <br />
+                  <span className="text-primary-600 italic">Conversation.</span>
                 </h1>
-                <p className="text-xl text-secondary max-w-lg font-medium">
-                  Have a feature request, found a bug, or just want to say hi? We'd love to hear from you.
+                <p className="text-xl text-secondary max-w-lg font-medium leading-relaxed">
+                  Have a feature request, found a bug, or just want to say hi? Our team is always ready to listen and help.
                 </p>
               </div>
 
               <div className="space-y-8">
                 <div className="flex items-start gap-6 group">
-                  <div className="w-14 h-14 rounded-2xl bg-surface border border-border-subtle flex items-center justify-center text-primary-600 shadow-sm group-hover:border-primary-500/30 transition-all">
-                    <Mail size={24} />
+                  <div className="w-16 h-16 rounded-[1.5rem] bg-surface border border-border-subtle flex items-center justify-center text-primary-600 shadow-sm group-hover:border-primary-500/30 transition-all">
+                    <Mail size={28} strokeWidth={2.5} />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Email Us</p>
-                    <p className="text-xl font-black text-foreground">support@spendwise.app</p>
-                    <p className="text-sm text-secondary font-medium">Expected response: within 24 hours</p>
+                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Global Support</p>
+                    <p className="text-2xl font-black text-foreground">support@spendwise.app</p>
+                    <p className="text-sm text-secondary font-medium italic">Estimated response: within 24 hours</p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-6 group">
-                  <div className="w-14 h-14 rounded-2xl bg-surface border border-border-subtle flex items-center justify-center text-primary-600 shadow-sm group-hover:border-primary-500/30 transition-all">
-                    <Phone size={24} />
+                  <div className="w-16 h-16 rounded-[1.5rem] bg-surface border border-border-subtle flex items-center justify-center text-primary-600 shadow-sm group-hover:border-primary-500/30 transition-all">
+                    <Phone size={28} strokeWidth={2.5} />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Call Support</p>
-                    <p className="text-xl font-black text-foreground">+91 93844 60843</p>
-                    <p className="text-sm text-secondary font-medium">Available 10 AM - 6 PM IST</p>
+                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Indian Helpline</p>
+                    <p className="text-2xl font-black text-foreground">+91 93844 60843</p>
+                    <p className="text-sm text-secondary font-medium italic">Available 10 AM - 6 PM IST</p>
                   </div>
                 </div>
               </div>
 
-              {/* Tag logic reminder for me - will be in admin email bottom */}
-              <div className="p-6 bg-surface-variant/50 rounded-3xl border border-border-subtle inline-block">
-                <p className="text-xs font-bold text-muted uppercase tracking-wide flex items-center gap-2">
-                  <CheckCircle2 size={14} className="text-success" />
-                  Premium Support Enabled
-                </p>
+              <div className="pt-8 border-t border-border-subtle flex flex-col gap-6">
+                <p className="text-xs font-black text-muted uppercase tracking-widest">Experience on the go</p>
+                <button
+                  onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
+                  className="flex items-center gap-4 group w-fit"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-foreground text-background flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Download size={20} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-black">Download SpendWise App</p>
+                    <p className="text-[10px] text-muted font-bold uppercase tracking-tight">Available as PWA</p>
+                  </div>
+                </button>
               </div>
             </motion.div>
 

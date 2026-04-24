@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, TrendingUp, ChevronRight } from "lucide-react";
+import { Menu, X, TrendingUp, ChevronRight, Download } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
@@ -101,6 +101,15 @@ export function Navbar() {
         {/* Desktop Right Side */}
         <div className="hidden md:flex items-center gap-4">
           <ThemeToggle />
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-surface-variant border border-border-subtle text-foreground font-bold text-sm hover:bg-border-subtle transition-all"
+          >
+            <Download size={16} />
+            Download App
+          </motion.button>
           <motion.div
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -159,8 +168,18 @@ export function Navbar() {
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="mt-4 pt-4 border-t border-border-subtle"
+                className="mt-4 pt-4 border-t border-border-subtle flex flex-col gap-3"
               >
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    window.dispatchEvent(new Event('showPwaInstall'));
+                  }}
+                  className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-surface-variant border border-border-subtle text-foreground font-bold text-lg"
+                >
+                  <Download size={20} />
+                  Download App
+                </button>
                 <Link
                   href="/login"
                   onClick={() => setIsMenuOpen(false)}

@@ -14,12 +14,18 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-const footerLinks = {
+interface FooterLink {
+  label: string;
+  href: string;
+  isAction?: boolean;
+}
+
+const footerLinks: Record<string, FooterLink[]> = {
   Product: [
     { label: "Features", href: "/#features" },
     { label: "How It Works", href: "/how-it-works" },
+    { label: "Download App", href: "#", isAction: true },
     { label: "AI Analysis", href: "/login" },
-    { label: "Mobile App", href: "/#cta" },
   ],
   Resources: [
     { label: "Documentation", href: "/docs" },
@@ -120,16 +126,25 @@ export function Footer() {
               <ul className="space-y-4">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      onClick={(e) => handleNavClick(e, link.href as string)}
-                      className="text-secondary hover:text-primary-600 font-bold text-sm flex items-center gap-2 group transition-all"
-                    >
-                      <span>{link.label}</span>
-                      {link.href.startsWith("http") && (
-                        <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                      )}
-                    </Link>
+                    {link.isAction ? (
+                      <button
+                        onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
+                        className="text-secondary hover:text-primary-600 font-bold text-sm flex items-center gap-2 group transition-all text-left"
+                      >
+                        {link.label}
+                      </button>
+                    ) : (
+                      <Link
+                        href={link.href as string}
+                        onClick={(e) => handleNavClick(e, link.href as string)}
+                        className="text-secondary hover:text-primary-600 font-bold text-sm flex items-center gap-2 group transition-all"
+                      >
+                        <span>{link.label}</span>
+                        {link.href.startsWith("http") && (
+                          <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        )}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -175,7 +190,7 @@ export function Footer() {
               <span>© {currentYear} SpendWise</span>
               <span className="w-1 h-1 rounded-full bg-border-subtle" />
               <span className="flex items-center gap-1.5">
-                Built with <Heart size={14} className="text-rose-500 fill-rose-500 animate-pulse" /> by Vinoth
+                Built with <Heart size={14} className="text-rose-500 fill-rose-500 animate-pulse" /> by <a href="https://vinoths.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary-600 transition-colors">Vinoth S</a>
               </span>
             </div>
             <p className="text-[10px] font-bold text-muted/60 uppercase tracking-tighter">
