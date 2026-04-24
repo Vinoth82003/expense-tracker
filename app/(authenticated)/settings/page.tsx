@@ -230,7 +230,7 @@ export default function SettingsPage() {
 
                   {/* Category Management Link */}
                   <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-sm space-y-6">
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
                         <div className="p-2.5 rounded-xl bg-cyan-50 text-cyan-600">
                           <LayoutGrid size={24} />
@@ -242,7 +242,7 @@ export default function SettingsPage() {
                       </div>
                       <Link 
                         href="/settings/categories"
-                        className="px-6 py-3 bg-surface-variant text-foreground font-bold rounded-xl hover:bg-border-subtle transition-all flex items-center gap-2 text-sm"
+                        className="w-full md:w-auto px-6 py-3 bg-surface-variant text-foreground text-center font-bold rounded-xl hover:bg-border-subtle transition-all flex items-center justify-center gap-2 text-sm"
                       >
                         Manage <ChevronRight size={16} />
                       </Link>
@@ -264,15 +264,15 @@ export default function SettingsPage() {
                   )}
 
                   {/* Submit */}
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 text-muted max-w-[280px]">
+                  <div className="mt-8 mb-8 flex flex-wrap md:flex-nowrap items-center justify-center gap-4">
+                    <div className="flex items-center gap-2 text-muted">
                       <Info size={16} className="shrink-0" />
                       <p className="text-[10px] font-bold uppercase tracking-wider">Changes are synced across your devices instantly.</p>
                     </div>
                     <button
                       type="submit"
                       disabled={loading}
-                      className="px-10 py-4 bg-foreground text-background font-black rounded-2xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 active:scale-95 flex items-center gap-2"
+                      className=" px-10 py-4 bg-foreground text-background font-black rounded-2xl shadow-xl hover:shadow-2xl transition-all disabled:opacity-50 active:scale-95 flex items-center gap-2"
                     >
                       {loading ? <Loader2 size={20} className="animate-spin" /> : "Save Changes"}
                     </button>

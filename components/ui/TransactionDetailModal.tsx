@@ -34,7 +34,7 @@ export function TransactionDetailModal({ isOpen, onClose, transaction, type }: T
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed top-10 inset-0 z-[100] max-h-[90vh] overflow-y-auto flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed top-0 inset-0 z-[100] max-h-[100dvh] overflow-y-auto flex items-center justify-center p-4 sm:p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

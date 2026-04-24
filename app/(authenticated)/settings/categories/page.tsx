@@ -128,7 +128,7 @@ export default function MyCategoriesPage() {
             animate={{ opacity: 1, height: "auto", marginBottom: 40 }}
             exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: "hidden" }}
           >
-            <div className="p-10 rounded-[3rem] bg-surface-variant border border-border-subtle relative">
+            <div className="p-5 md:p-10 rounded-[3rem] bg-surface-variant border border-border-subtle relative">
               <button 
                 onClick={() => { setIsAdding(false); setEditingId(null); }}
                 className="absolute top-8 right-8 p-2 rounded-full bg-surface text-secondary hover:text-rose-500 transition-colors"
@@ -171,20 +171,20 @@ export default function MyCategoriesPage() {
                   </select>
                 </div>
                 
-                <div className="md:col-span-2 flex justify-end gap-3 pt-4">
+                <div className="md:col-span-2 flex flex-wrap justify-between gap-3 pt-4">
                   <button 
                     type="button"
                     onClick={() => { setIsAdding(false); setEditingId(null); }}
-                    className="px-8 py-4 bg-surface text-secondary border border-border-subtle rounded-2xl font-black transition-all hover:bg-surface-variant hover:text-foreground"
+                    className="w-full md:w-auto px-8 py-4 bg-surface text-secondary border border-border-subtle rounded-2xl font-black transition-all hover:bg-surface-variant hover:text-foreground"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
-                    className="px-10 py-4 bg-primary-600 text-white rounded-2xl font-black shadow-xl shadow-primary-600/20 transition-all flex items-center gap-2 hover:bg-primary-700"
+                    className="w-full md:w-auto px-10 py-4 bg-primary-600 text-white rounded-2xl font-black shadow-xl shadow-primary-600/20 transition-all flex items-center gap-2 hover:bg-primary-700"
                   >
                     <Save size={18} />
-                    {editingId ? 'Save Changes' : 'Create Custom Category'}
+                    {editingId ? 'Save Changes' : 'Create Category'}
                   </button>
                 </div>
               </form>
