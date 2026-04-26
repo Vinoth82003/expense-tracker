@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Make request with JSON Schema
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash", // Using gemini-1.5-flash for stability
+      model: "gemini-2.5-flash", // Using gemini-1.5-flash for stability
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
