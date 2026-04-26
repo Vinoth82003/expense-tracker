@@ -61,12 +61,62 @@ export async function GET() {
     // Calculate a naive avg savings rate for demonstration based on system totals (in real app, this would be per user or historical DB cache)
     const avgSavings = totalIncome > 0 ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100) : 0;
 
+    // --- Visualization Data (Last 6 Months) ---
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const [monthlyUsers, monthlyExpenses, monthlyIncomes] = await Promise.all([
+      prisma.user.findMany({
+        where: { createdAt: { gte: sixMonthsAgo } },
+        select: { createdAt: true }
+      }),
+      prisma.expense.findMany({
+        where: { date: { gte: sixMonthsAgo } },
+        select: { amount: true, date: true }
+      }),
+      prisma.income.findMany({
+        where: { date: { gte: sixMonthsAgo } },
+        select: { amount: true, date: true }
+      })
+    ]);
+
+    // Helper to group by month
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const chartDataMap: Record<string, { month: string, users: number, expenses: number, income: number }> = {};
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const monthKey = `${months[d.getMonth()]} ${d.getFullYear()}`;
+      chartDataMap[monthKey] = { month: monthKey, users: 0, expenses: 0, income: 0 };
+    }
+
+    monthlyUsers.forEach(u => {
+      if (u.createdAt) {
+        const key = `${months[u.createdAt.getMonth()]} ${u.createdAt.getFullYear()}`;
+        if (chartDataMap[key]) chartDataMap[key].users++;
+      }
+    });
+
+    monthlyExpenses.forEach(e => {
+      const key = `${months[e.date.getMonth()]} ${e.date.getFullYear()}`;
+      if (chartDataMap[key]) chartDataMap[key].expenses += e.amount;
+    });
+
+    monthlyIncomes.forEach(i => {
+      const key = `${months[i.date.getMonth()]} ${i.date.getFullYear()}`;
+      if (chartDataMap[key]) chartDataMap[key].income += i.amount;
+    });
+
+    const chartData = Object.values(chartDataMap);
+
     return NextResponse.json({
       totalUsers,
       totalExpenses,
       totalIncome,
       avgSavings,
-      recentActivity
+      recentActivity,
+      chartData
     }, { status: 200 });
 
   } catch (error) {
@@ -76,3 +126,4 @@ export async function GET() {
     await prisma.$disconnect();
   }
 }
+

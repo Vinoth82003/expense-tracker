@@ -26,6 +26,7 @@ import {
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
 import { UIProvider } from "@/context/UIContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { ActivityTracker } from "@/components/activity/ActivityTracker";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -296,6 +297,7 @@ export default function DashboardLayout({
 
   return (
     <UIProvider>
+      <ActivityTracker />
       {content}
     </UIProvider>
   );
