@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -64,6 +64,48 @@ export default function AnalyzePage() {
   const [report, setReport] = useState<AIReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("Spending");
+  const [canRunAnalysis, setCanRunAnalysis] = useState(true);
+  const [isLoadingReport, setIsLoadingReport] = useState(true);
+
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const tabs: { id: TabType; icon: any; label: string }[] = [
+    { id: "Spending", icon: Wallet, label: "Spending Analysis" },
+    { id: "Budget", icon: Target, label: "Budget Intelligence" },
+    { id: "Income", icon: History, label: "Income Insights" },
+    { id: "Advice", icon: ShieldCheck, label: "Finance Advice" },
+  ];
+
+  // Fetch latest report for today
+  useEffect(() => {
+    const fetchLatestReport = async () => {
+      try {
+        const res = await fetch("/api/analyze");
+        const data = await res.json();
+        if (data.report) {
+          setReport(data.report);
+          setCanRunAnalysis(false);
+        }
+      } catch (err) {
+        console.error("Failed to fetch latest report", err);
+      } finally {
+        setIsLoadingReport(false);
+      }
+    };
+    fetchLatestReport();
+  }, []);
+
+  // Tab auto-scroll
+  useEffect(() => {
+    const activeIndex = tabs.findIndex(t => t.id === activeTab);
+    if (tabRefs.current[activeIndex]) {
+      tabRefs.current[activeIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [activeTab]);
 
   // Loading sequence effect
   useEffect(() => {
@@ -76,6 +118,8 @@ export default function AnalyzePage() {
   }, [isAnalyzing, stage]);
 
   const handleAnalyze = async () => {
+    if (!canRunAnalysis) return;
+
     setIsAnalyzing(true);
     setStage(0);
     setReport(null);
@@ -95,6 +139,7 @@ export default function AnalyzePage() {
       setTimeout(() => {
         setReport(data);
         setIsAnalyzing(false);
+        setCanRunAnalysis(false);
       }, 1000);
 
     } catch (err: any) {
@@ -103,12 +148,14 @@ export default function AnalyzePage() {
     }
   };
 
-  const tabs: { id: TabType; icon: any; label: string }[] = [
-    { id: "Spending", icon: Wallet, label: "Spending Analysis" },
-    { id: "Budget", icon: Target, label: "Budget Intelligence" },
-    { id: "Income", icon: History, label: "Income Insights" },
-    { id: "Advice", icon: ShieldCheck, label: "Finance Advice" },
-  ];
+  if (isLoadingReport) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="animate-spin text-primary-500" size={40} />
+        <p className="text-muted font-black text-xs uppercase tracking-widest">Waking up Forensic AI...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-32 px-0 sm:px-4">
@@ -145,16 +192,24 @@ export default function AnalyzePage() {
             Our AI performs a deep-tissue analysis of your spending habits and financial health, providing actionable, data-driven intelligence.
           </motion.p>
 
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAnalyze}
-            disabled={isAnalyzing}
-            className="w-full group relative flex items-center justify-center gap-3 px-6 py-4 bg-white text-indigo-600 rounded-2xl font-black text-md shadow-xl transition-all disabled:opacity-50"
-          >
-            <Sparkles size={22} className={isAnalyzing ? "animate-pulse" : "group-hover:rotate-12 transition-transform"} />
-            {isAnalyzing ? "Analyzing Patterns..." : "Run AI Analysis"}
-            {/* {!isAnalyzing && <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />} */}
-          </motion.button>
+          <div className="space-y-4">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleAnalyze}
+              disabled={isAnalyzing || !canRunAnalysis}
+              className="w-full group relative flex items-center justify-center gap-3 px-6 py-4 bg-white text-indigo-600 rounded-2xl font-black text-md shadow-xl transition-all disabled:opacity-50"
+            >
+              <Sparkles size={22} className={isAnalyzing ? "animate-pulse" : "group-hover:rotate-12 transition-transform"} />
+              {isAnalyzing ? "Analyzing Patterns..." : canRunAnalysis ? "Run AI Analysis" : "Daily Limit Reached"}
+              {/* {!isAnalyzing && <ChevronRight size={22} className="group-hover:translate-x-1 transition-transform" />} */}
+            </motion.button>
+            
+            {!canRunAnalysis && (
+              <p className="text-center text-xs font-black text-indigo-200/60 uppercase tracking-widest">
+                Come back tomorrow for a fresh analysis
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Decorative elements */}
@@ -165,12 +220,13 @@ export default function AnalyzePage() {
 
       {/* Tab Navigation */}
       {report && (
-        <div className="sticky top-20 z-[40] flex bg-surface/80 backdrop-blur-xl border border-border-subtle p-1.5 rounded-[2rem] shadow-sm overflow-x-auto no-scrollbar mb-8">
-          {tabs.map((tab) => {
+        <div className="sticky top-20 z-[40] flex bg-surface/80 backdrop-blur-xl border border-border-subtle p-1.5 rounded-[2rem] shadow-sm overflow-x-auto no-scrollbar mb-8 scroll-smooth">
+          {tabs.map((tab, index) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                ref={(el) => { tabRefs.current[index] = el; }}
                 onClick={() => setActiveTab(tab.id)}
                 className={`relative flex items-center gap-3 px-6 py-3.5 rounded-2xl font-black text-sm transition-all shrink-0 ${isActive ? "text-white" : "text-secondary hover:text-foreground"
                   }`}
@@ -201,6 +257,25 @@ export default function AnalyzePage() {
             transition={{ duration: 0.3 }}
             className="space-y-8"
           >
+            {/* Header with New Analysis Button when report is displayed */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface border border-border-subtle p-6 rounded-[2rem] shadow-sm mb-4">
+              <div>
+                <h2 className="text-xl font-black text-foreground">Your Financial Report</h2>
+                <p className="text-xs font-black text-muted uppercase tracking-widest mt-1">Generated today • Forensic Analysis</p>
+              </div>
+              <button
+                onClick={() => {
+                  setReport(null);
+                  setError(null);
+                }}
+                disabled={!canRunAnalysis}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-500/10 text-primary-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Sparkles size={14} />
+                {canRunAnalysis ? "New Analysis" : "Daily Limit Reached"}
+              </button>
+            </div>
+
             {/* Spending Analysis Tab */}
             {activeTab === "Spending" && (
               <div className="space-y-8">

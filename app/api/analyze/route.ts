@@ -4,6 +4,42 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GoogleGenAI } from "@google/genai";
 
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = (session.user as any).id;
+
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const latestReport = await prisma.report.findFirst({
+      where: {
+        userId,
+        date: {
+          gte: today,
+        },
+      },
+      orderBy: {
+        date: "desc",
+      },
+    });
+
+    if (!latestReport) {
+      return NextResponse.json({ report: null });
+    }
+
+    return NextResponse.json({ report: JSON.parse(latestReport.content) });
+  } catch (error) {
+    console.error("Fetch latest report error:", error);
+    return NextResponse.json({ error: "Failed to fetch latest report" }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -14,6 +50,25 @@ export async function POST(req: NextRequest) {
   const userId = (session.user as any).id;
 
   try {
+    // 0. Check for today's access limit
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const existingReport = await prisma.report.findFirst({
+      where: {
+        userId,
+        date: {
+          gte: today,
+        },
+      },
+    });
+
+    if (existingReport) {
+      return NextResponse.json({ 
+        error: "Daily limit reached. You can only perform 1 analysis per day. Your report for today is already available." 
+      }, { status: 429 });
+    }
+
     // 1. Fetch user data (Expenses and Incomes)
     const [expenses, incomes, user] = await Promise.all([
       prisma.expense.findMany({
@@ -96,7 +151,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Make request with JSON Schema
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash", // Using a stable model name
+      model: "gemini-1.5-flash", // Using gemini-1.5-flash for stability
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
@@ -190,8 +245,19 @@ export async function POST(req: NextRequest) {
       throw new Error("Empty response from AI model.");
     }
 
+    const reportData = JSON.parse(result);
+
+    // 5. Store the report in database
+    await prisma.report.create({
+      data: {
+        userId,
+        content: result,
+      },
+    });
+
     // Parse and return the structured JSON
-    return NextResponse.json(JSON.parse(result));
+    return NextResponse.json(reportData);
+
 
   } catch (error: any) {
     console.error("AI Analysis Error (Structured Gemini):", error);
@@ -213,8 +279,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: "Something went wrong during financial analysis" },
+      { error: error.message || "Something went wrong during financial analysis" },
       { status: 500 }
     );
   }
 }
+
