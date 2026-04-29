@@ -553,7 +553,7 @@ export default function AnalyzePage() {
 
       {/* Loading Overlay */}
       <AnimatePresence>
-        {!isAnalyzing && (
+        {isAnalyzing && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
