@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   PieChart as ChartIcon,
@@ -151,6 +151,10 @@ export default function ReportsPage() {
   const [selectedPieSlice, setSelectedPieSlice] = useState<string | null>(null);
   const [trendMode, setTrendMode] = useState<"daily" | "cumulative" | "stacked">("daily");
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const modeRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const trendRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const modes = ["day", "week", "month", "range"] as const;
+  const trendModes = ["daily", "cumulative", "stacked", "cashflow"] as const;
 
   const monthlyLimit = (session?.user as { monthlyLimit?: number })?.monthlyLimit || 0;
 
@@ -202,6 +206,32 @@ export default function ReportsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, viewMode, currentMonth, currentDay, currentWeekStart, dateRange]);
+
+  // Auto-scroll for mode tabs
+  useEffect(() => {
+    const activeIndex = modes.indexOf(viewMode);
+    if (modeRefs.current[activeIndex]) {
+      modeRefs.current[activeIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+    // Also reset page scroll on view mode change
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [viewMode]);
+
+  // Auto-scroll for trend tabs
+  useEffect(() => {
+    const activeIndex = trendModes.indexOf(trendMode);
+    if (trendRefs.current[activeIndex]) {
+      trendRefs.current[activeIndex]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [trendMode]);
 
   const changeMonth = (offset: number) => {
     const [year, month] = currentMonth.split("-").map(Number);
@@ -407,9 +437,10 @@ export default function ReportsPage() {
       <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex p-1 bg-surface-variant rounded-xl gap-1 overflow-x-auto no-scrollbar">
-            {(["day", "week", "month", "range"] as const).map(mode => (
+            {modes.map((mode, index) => (
               <button
                 key={mode}
+                ref={el => { modeRefs.current[index] = el; }}
                 onClick={() => { setViewMode(mode); setSelectedPieSlice(null); }}
                 className={`px-5 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
                   viewMode === mode
@@ -622,9 +653,10 @@ export default function ReportsPage() {
                 {trendMode === "daily" ? "Daily Trend" : trendMode === "cumulative" ? "Budget Burn" : "Category Stacked"}
               </h3>
               <div className="flex w-full sm:w-auto p-1 bg-surface-variant rounded-xl gap-1 overflow-x-auto scrollbar-hide flex-nowrap">
-                {(["daily", "cumulative", "stacked", "cashflow"] as const).map(mode => (
+                {trendModes.map((mode, index) => (
                   <button
                     key={mode}
+                    ref={el => { trendRefs.current[index] = el; }}
                     onClick={() => setTrendMode(mode as any)}
                     className={`px-4 py-1.5 rounded-lg font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
                       trendMode === (mode as any)

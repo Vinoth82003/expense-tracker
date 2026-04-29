@@ -62,6 +62,7 @@ export default function AnalyzePage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [stage, setStage] = useState(0);
   const [report, setReport] = useState<AIReport | null>(null);
+  const [reportDate, setReportDate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("Spending");
   const [canRunAnalysis, setCanRunAnalysis] = useState(true);
@@ -76,7 +77,7 @@ export default function AnalyzePage() {
     { id: "Advice", icon: ShieldCheck, label: "Finance Advice" },
   ];
 
-  // Fetch latest report for today
+  // Fetch latest report
   useEffect(() => {
     const fetchLatestReport = async () => {
       try {
@@ -84,7 +85,18 @@ export default function AnalyzePage() {
         const data = await res.json();
         if (data.report) {
           setReport(data.report);
-          setCanRunAnalysis(false);
+          setReportDate(data.date);
+          
+          // Check if the report was generated today
+          const reportDateObj = new Date(data.date);
+          const today = new Date();
+          const isToday = reportDateObj.getDate() === today.getDate() &&
+                          reportDateObj.getMonth() === today.getMonth() &&
+                          reportDateObj.getFullYear() === today.getFullYear();
+          
+          if (isToday) {
+            setCanRunAnalysis(false);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch latest report", err);
@@ -105,6 +117,9 @@ export default function AnalyzePage() {
         inline: 'center'
       });
     }
+
+    // Reset scroll position when tab changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab]);
 
   // Loading sequence effect
@@ -138,6 +153,7 @@ export default function AnalyzePage() {
       // Ensure we stay on the final stage for at least a bit
       setTimeout(() => {
         setReport(data);
+        setReportDate(new Date().toISOString());
         setIsAnalyzing(false);
         setCanRunAnalysis(false);
       }, 1000);
@@ -257,22 +273,48 @@ export default function AnalyzePage() {
             transition={{ duration: 0.3 }}
             className="space-y-8"
           >
-            {/* Header with New Analysis Button when report is displayed */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface border border-border-subtle p-6 rounded-[2rem] shadow-sm mb-4">
-              <div>
-                <h2 className="text-xl font-black text-foreground">Your Financial Report</h2>
-                <p className="text-xs font-black text-muted uppercase tracking-widest mt-1">Generated today • Forensic Analysis</p>
+            {/* Status Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-surface border border-border-subtle p-4 sm:p-6 rounded-[2rem] shadow-sm mb-4">
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-2xl ${
+                  report.spendingAnalysis.metrics.some(m => m.type === 'danger') ? 'bg-error/10 text-error' :
+                  report.spendingAnalysis.metrics.some(m => m.type === 'neutral') ? 'bg-warning/10 text-warning' :
+                  'bg-success/10 text-success'
+                }`}>
+                  {report.spendingAnalysis.metrics.some(m => m.type === 'danger') ? <AlertCircle size={24} /> :
+                   report.spendingAnalysis.metrics.some(m => m.type === 'neutral') ? <TrendingUp size={24} /> :
+                   <CheckCircle2 size={24} />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-black text-foreground">
+                      {report.spendingAnalysis.metrics.some(m => m.type === 'danger') ? 'Action Required' :
+                       report.spendingAnalysis.metrics.some(m => m.type === 'neutral') ? 'Needs Attention' :
+                       'Smooth Sailing'}
+                    </h2>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter ${
+                      report.spendingAnalysis.metrics.some(m => m.type === 'danger') ? 'bg-error text-white' :
+                      report.spendingAnalysis.metrics.some(m => m.type === 'neutral') ? 'bg-warning text-white' :
+                      'bg-success text-white'
+                    }`}>
+                      {report.spendingAnalysis.metrics.some(m => m.type === 'danger') ? 'Danger' :
+                       report.spendingAnalysis.metrics.some(m => m.type === 'neutral') ? 'Cautious' :
+                       'Smooth'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-black text-muted uppercase tracking-widest mt-0.5">
+                    Last analyzed: {reportDate ? new Date(reportDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown'}
+                  </p>
+                </div>
               </div>
+              
               <button
-                onClick={() => {
-                  setReport(null);
-                  setError(null);
-                }}
-                disabled={!canRunAnalysis}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-500/10 text-primary-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                onClick={handleAnalyze}
+                disabled={isAnalyzing || !canRunAnalysis}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary-600/20"
               >
-                <Sparkles size={14} />
-                {canRunAnalysis ? "New Analysis" : "Daily Limit Reached"}
+                <Sparkles size={14} className={isAnalyzing ? "animate-pulse" : ""} />
+                {isAnalyzing ? "Analyzing..." : canRunAnalysis ? "Analyze Again" : "Limit Reached"}
               </button>
             </div>
 

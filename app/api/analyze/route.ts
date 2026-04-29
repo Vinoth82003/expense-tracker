@@ -14,15 +14,9 @@ export async function GET(req: NextRequest) {
   const userId = (session.user as any).id;
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     const latestReport = await prisma.report.findFirst({
       where: {
         userId,
-        date: {
-          gte: today,
-        },
       },
       orderBy: {
         date: "desc",
@@ -33,7 +27,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ report: null });
     }
 
-    return NextResponse.json({ report: JSON.parse(latestReport.content) });
+    return NextResponse.json({ 
+      report: JSON.parse(latestReport.content),
+      date: latestReport.date
+    });
   } catch (error) {
     console.error("Fetch latest report error:", error);
     return NextResponse.json({ error: "Failed to fetch latest report" }, { status: 500 });
