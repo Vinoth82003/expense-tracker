@@ -26,11 +26,11 @@ import { useSession } from "next-auth/react";
 import ThemedMarkdown from "@/components/markdown/ThemedMarkdown";
 
 const loadingStages = [
-  "Securing Environment...",
-  "Analyzing Spending Patterns",
-  "Evaluating Budget Efficiency",
-  "Income vs Expense Gap Analysis",
-  "Generating Longitudinal Advice"
+  "Decrypting Financial Ledger",
+  "Identifying Behavioral Anomalies",
+  "Calibrating Budget Intelligence",
+  "Simulating Economic Scenarios",
+  "Synthesizing Strategic Advice"
 ];
 
 interface AIReport {
@@ -553,57 +553,179 @@ export default function AnalyzePage() {
 
       {/* Loading Overlay */}
       <AnimatePresence>
-        {isAnalyzing && (
+        {!isAnalyzing && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-background/60 backdrop-blur-2xl"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-hidden"
           >
+            {/* Animated Background */}
+            <div className="absolute inset-0 bg-[#0a0a0c]">
+              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 via-transparent to-violet-500/10" />
+              <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+              
+              {/* Pulsing Orbs */}
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  opacity: [0.1, 0.2, 0.1],
+                  x: [-20, 20, -20]
+                }}
+                transition={{ duration: 10, repeat: Infinity }}
+                className="absolute top-1/4 left-1/4 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-primary-500/20 rounded-full blur-[80px] sm:blur-[120px]"
+              />
+              <motion.div 
+                animate={{ 
+                  scale: [1.2, 1, 1.2],
+                  opacity: [0.1, 0.15, 0.1],
+                  x: [20, -20, 20]
+                }}
+                transition={{ duration: 12, repeat: Infinity }}
+                className="absolute bottom-1/4 right-1/4 w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-violet-500/20 rounded-full blur-[60px] sm:blur-[100px]"
+              />
+            </div>
+
+            {/* Scanlines Effect */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]" />
+
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="w-full max-h-[90vh] max-w-lg bg-surface border border-border-subtle rounded-[3rem] p-10 sm:p-12 shadow-2xl text-center space-y-8"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ type: "spring", bounce: 0.3, duration: 0.6 }}
+              className="relative w-full max-w-sm sm:max-w-md bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[2.5rem] sm:rounded-[4rem] px-5 sm:px-10 py-8 sm:py-12 shadow-[0_0_100px_rgba(0,0,0,0.5)] text-center overflow-hidden"
             >
-              <div className="relative w-20 h-20 mx-auto mb-10">
-                <motion.div
-                  initial={{ rotate: 0 }}
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0 rounded-full border-4 border-dashed border-primary-500/30"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-full bg-primary-600 flex items-center justify-center text-white shadow-xl animate-pulse">
-                    <Brain size={32} />
+              {/* Inner Glow */}
+              <div className="absolute inset-0 bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col items-center">
+                {/* AI Visualization */}
+                <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-8 sm:mb-10">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 rounded-full border border-primary-500/20 border-t-primary-500 border-l-primary-500"
+                  />
+                  <motion.div
+                    animate={{ rotate: -360 }}
+                    transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-3 sm:inset-4 rounded-full border border-violet-500/20 border-b-violet-500 border-r-violet-500"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <motion.div
+                      animate={{ 
+                        scale: [1, 1.1, 1],
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-primary-600 to-violet-600 flex items-center justify-center text-white shadow-[0_0_40px_rgba(99,102,241,0.4)] relative"
+                    >
+                      <Brain size={32} className="relative z-10 sm:hidden" />
+                      <Brain size={40} className="relative z-10 hidden sm:block" />
+                      <div className="absolute inset-0 rounded-full bg-white/20 blur-xl animate-pulse" />
+                    </motion.div>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-4  flex flex-col items-center justify-center">
-                <h2 className="text-xl font-black tracking-tighter">AI Analysis in Progress</h2>
-                <div className="space-y-6">
-                  {loadingStages.map((text, i) => (
-                    <div key={i} className="flex items-center justify-left gap-4">
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${stage > i ? "bg-success text-white" :
-                          stage === i ? "bg-primary-500 text-white animate-spin" :
-                            "bg-surface-variant text-transparent"
-                        }`}>
-                        {stage > i ? <CheckCircle2 size={10} strokeWidth={3} /> : <Loader2 size={10} />}
+                <div className="space-y-1 sm:space-y-2 mb-8 sm:mb-10">
+                  <motion.h2 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-lg sm:text-2xl font-black tracking-tighter text-white uppercase"
+                  >
+                    Forensic AI <span className="text-primary-400">Processing</span>
+                  </motion.h2>
+                  <p className="text-[8px] sm:text-[10px] font-black text-muted uppercase tracking-[0.2em] sm:tracking-[0.3em]">Neural Network Active</p>
+                </div>
+
+                {/* Single Active Stage Display */}
+                <div className="w-full">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={stage}
+                      initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -14, scale: 0.96 }}
+                      transition={{ type: "spring", bounce: 0.25, duration: 0.45 }}
+                      className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-primary-500/10 border border-primary-500/30 shadow-[0_0_25px_rgba(99,102,241,0.12)] mb-4"
+                    >
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-primary-500/30">
+                        <Loader2 size={16} className="animate-spin sm:hidden" />
+                        <Loader2 size={20} className="animate-spin hidden sm:block" />
                       </div>
-                      <span className={`text-xs font-black transition-all ${stage > i ? "text-secondary line-through opacity-50" :
-                          stage === i ? "text-foreground scale-105" :
-                            "text-muted opacity-30"
-                        }`}>
-                        {text}
+                      <span className="text-[10px] sm:text-xs font-black text-white text-left tracking-wider uppercase leading-snug">
+                        {loadingStages[stage]}
                       </span>
-                    </div>
-                  ))}
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Progress Dots */}
+                  <div className="flex items-center justify-center gap-2 mb-4 sm:mb-6">
+                    {loadingStages.map((_, i) => (
+                      <motion.div
+                        key={i}
+                        animate={
+                          i < stage
+                            ? { backgroundColor: "rgb(34,197,94)", scale: 1, opacity: 1 }
+                            : i === stage
+                            ? { scale: [1, 1.5, 1], backgroundColor: "rgb(99,102,241)", opacity: 1 }
+                            : { backgroundColor: "rgba(255,255,255,0.1)", scale: 0.75, opacity: 0.4 }
+                        }
+                        transition={{ duration: 0.7, repeat: i === stage ? Infinity : 0, repeatType: "reverse" }}
+                        className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full"
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Step counter */}
+                  <p className="text-[8px] sm:text-[10px] font-black text-white/30 uppercase tracking-widest">
+                    Step {stage + 1} of {loadingStages.length}
+                  </p>
+                </div>
+
+                {/* Completed Stages (Compact) */}
+                {stage > 0 && (
+                  <div className="mt-5 sm:mt-8 w-full flex flex-col gap-1.5 border-t border-white/5 pt-4 sm:pt-6">
+                    {loadingStages.slice(0, stage).map((text, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-success/[0.05] border border-success/15"
+                      >
+                        <CheckCircle2 size={10} className="text-success shrink-0 sm:hidden" strokeWidth={3} />
+                        <CheckCircle2 size={12} className="text-success shrink-0 hidden sm:block" strokeWidth={3} />
+                        <span className="text-[8px] sm:text-[9px] font-black text-success/60 uppercase tracking-widest truncate">{text}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-6 sm:mt-10 flex items-center justify-center gap-3 sm:gap-4">
+                  <div className="h-[1px] w-6 sm:w-10 bg-white/10" />
+                  <motion.p 
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="text-[8px] sm:text-[9px] font-black text-primary-400 uppercase tracking-widest"
+                  >
+                    Processing Data Points
+                  </motion.p>
+                  <div className="h-[1px] w-6 sm:w-10 bg-white/10" />
                 </div>
               </div>
 
-              <p className="text-xs font-black text-muted uppercase bg-surface-variant py-3 px-6 rounded-2xl inline-block mt-4">
-                Processing Forensic Data Points
-              </p>
+              {/* Forensic Data Stream (Side) */}
+              <div className="absolute top-0 right-0 bottom-0 w-24 pointer-events-none opacity-[0.05] overflow-hidden text-[6px] font-mono text-white p-2 text-left hidden md:block">
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ y: [0, -100] }}
+                    transition={{ duration: 10 + i, repeat: Infinity, ease: "linear" }}
+                  >
+                    0x{Math.random().toString(16).slice(2, 10).toUpperCase()} ... PROC
+                  </motion.div>
+                ))}
+              </div>
             </motion.div>
           </motion.div>
         )}
