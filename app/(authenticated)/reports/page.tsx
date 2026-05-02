@@ -127,6 +127,7 @@ export default function ReportsPage() {
   const [mounted, setMounted] = useState(false);
   const [rawExpenses, setRawExpenses] = useState<Expense[]>([]);
   const [rawIncomes, setRawIncomes] = useState<Income[]>([]);
+  const [prevRawExpenses, setPrevRawExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ── Filter state ──────────────────────────────────────────────────────────
@@ -168,30 +169,64 @@ export default function ReportsPage() {
     setLoading(true);
     try {
       let query = "";
+      let prevQuery = "";
+
       if (viewMode === "month") {
         query = `?month=${currentMonth}`;
+        const [year, month] = currentMonth.split("-").map(Number);
+        const prevMonthDate = new Date(year, month - 2, 1);
+        prevQuery = `?month=${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}`;
       } else if (viewMode === "day") {
         query = `?fromDate=${currentDay}&toDate=${currentDay}`;
+        const d = new Date(currentDay);
+        d.setDate(d.getDate() - 1);
+        const prevDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        prevQuery = `?fromDate=${prevDay}&toDate=${prevDay}`;
       } else if (viewMode === "week") {
         const start = new Date(currentWeekStart);
         const end = new Date(start);
         end.setDate(end.getDate() + 6);
         const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
         query = `?fromDate=${currentWeekStart}&toDate=${endStr}`;
+
+        const prevStart = new Date(currentWeekStart);
+        prevStart.setDate(prevStart.getDate() - 7);
+        const prevEnd = new Date(prevStart);
+        prevEnd.setDate(prevEnd.getDate() + 6);
+        const prevStartStr = `${prevStart.getFullYear()}-${String(prevStart.getMonth() + 1).padStart(2, "0")}-${String(prevStart.getDate()).padStart(2, "0")}`;
+        const prevEndStr = `${prevEnd.getFullYear()}-${String(prevEnd.getMonth() + 1).padStart(2, "0")}-${String(prevEnd.getDate()).padStart(2, "0")}`;
+        prevQuery = `?fromDate=${prevStartStr}&toDate=${prevEndStr}`;
       } else if (viewMode === "range" && dateRange.from && dateRange.to) {
         query = `?fromDate=${dateRange.from}&toDate=${dateRange.to}`;
+        const start = new Date(dateRange.from);
+        const end = new Date(dateRange.to);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        const prevEnd = new Date(start);
+        prevEnd.setDate(prevEnd.getDate() - 1);
+        const prevStart = new Date(prevEnd);
+        prevStart.setDate(prevStart.getDate() - diffDays);
+        
+        const prevStartStr = `${prevStart.getFullYear()}-${String(prevStart.getMonth() + 1).padStart(2, "0")}-${String(prevStart.getDate()).padStart(2, "0")}`;
+        const prevEndStr = `${prevEnd.getFullYear()}-${String(prevEnd.getMonth() + 1).padStart(2, "0")}-${String(prevEnd.getDate()).padStart(2, "0")}`;
+        prevQuery = `?fromDate=${prevStartStr}&toDate=${prevEndStr}`;
       } else {
         setLoading(false);
         return;
       }
-      const [expRes, incRes] = await Promise.all([
+      const [expRes, incRes, prevExpRes] = await Promise.all([
         fetch(`/api/expenses${query}`),
-        fetch(`/api/income${query}`)
+        fetch(`/api/income${query}`),
+        fetch(`/api/expenses${prevQuery}`)
       ]);
       const expData = await expRes.json();
       const incData = await incRes.json();
+      const prevExpData = await prevExpRes.json();
+      
       setRawExpenses(expData.expenses || []);
       setRawIncomes(incData.incomes || []);
+      setPrevRawExpenses(prevExpData.expenses || []);
     } catch (err) {
       console.error("Failed to fetch reports:", err);
     } finally {
@@ -277,6 +312,13 @@ export default function ReportsPage() {
     if (selectedPieSlice) exps = exps.filter(e => e.subcategory === selectedPieSlice);
     return exps;
   }, [rawExpenses, categoryFilter, selectedPieSlice]);
+
+  const filteredPrevExpenses = useMemo(() => {
+    let exps = prevRawExpenses;
+    if (categoryFilter !== "All") exps = exps.filter(e => e.category === categoryFilter);
+    if (selectedPieSlice) exps = exps.filter(e => e.subcategory === selectedPieSlice);
+    return exps;
+  }, [prevRawExpenses, categoryFilter, selectedPieSlice]);
 
   // ── KPI Stats ─────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -372,6 +414,17 @@ export default function ReportsPage() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([week, data]) => ({ week, ...data }));
   }, [filteredExpenses]);
+
+  // ── Chart data: Comparison Data ───────────────────────────────────────────
+  const comparisonData = useMemo(() => {
+    const curTotal = filteredExpenses.reduce((s, e) => s + e.amount, 0);
+    const prevTotal = filteredPrevExpenses.reduce((s, e) => s + e.amount, 0);
+    
+    return [
+      { name: "Previous", amount: prevTotal, fill: "#cbd5e1" },
+      { name: "Current", amount: curTotal, fill: "#6366f1" }
+    ];
+  }, [filteredExpenses, filteredPrevExpenses]);
 
   // ── Chart data: Subcategory breakdown ─────────────────────────────────────
   const subcategoryData = useMemo(() => {
@@ -720,7 +773,7 @@ export default function ReportsPage() {
                       <Area
                         type="monotone"
                         dataKey="amount"
-                        name="Spent"
+                        name={selectedPieSlice ? `${selectedPieSlice} Spent` : "Spent"}
                         stroke="#6366f1"
                         strokeWidth={3}
                         fillOpacity={1}
@@ -738,20 +791,20 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* ═══════════ ROW 2: WEEKLY + RADAR (NEW) ═══════════ */}
+          {/* ═══════════ ROW 2: COMPARISON + RADAR (NEW) ═══════════ */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Weekly Grouped Bar Chart */}
+            {/* Comparison Chart */}
             <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
               <h3 className="text-xl font-black mb-6 flex items-center gap-3">
                 <BarChart2 size={22} className="text-tertiary-500" />
-                Weekly Breakdown
+                Period Comparison
               </h3>
               <div className="h-64 w-full">
-                {mounted && !loading && weeklyData.length > 0 ? (
+                {mounted && !loading ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                    <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }} barGap={4} barCategoryGap="30%">
+                    <BarChart data={comparisonData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }} barGap={4} barCategoryGap="40%">
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#6366f110" />
-                      <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700 }} dy={10} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700 }} dy={10} />
                       <YAxis
                         axisLine={false}
                         tickLine={false}
@@ -760,8 +813,11 @@ export default function ReportsPage() {
                         dx={-8}
                       />
                       <Tooltip content={<CustomBarTooltip />} cursor={{ fill: "#6366f108" }} />
-                      <Bar dataKey="Needs" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={44} name="Needs" />
-                      <Bar dataKey="Wants" fill="#06b6d4" radius={[6, 6, 0, 0]} maxBarSize={44} name="Wants" />
+                      <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={60} name="Total Spent">
+                        {comparisonData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (

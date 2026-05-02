@@ -26,6 +26,7 @@ model User {
   categories   Category[]
   incomes      Income[]
   reports      Report[]
+  budgets      Budget[]
 
   streak       Int        @default(0)
   lastActive   DateTime?  @default(now())
@@ -43,6 +44,17 @@ model Report {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+}
+
+model Budget {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  amount    Float
+  month     String   // "YYYY-MM" format
+  
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
 }
 
 model Expense {

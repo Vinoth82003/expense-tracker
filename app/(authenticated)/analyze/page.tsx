@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import ThemedMarkdown from "@/components/markdown/ThemedMarkdown";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const loadingStages = [
   "Decrypting Financial Ledger",
@@ -67,8 +69,11 @@ export default function AnalyzePage() {
   const [activeTab, setActiveTab] = useState<TabType>("Spending");
   const [canRunAnalysis, setCanRunAnalysis] = useState(true);
   const [isLoadingReport, setIsLoadingReport] = useState(true);
+  const [history, setHistory] = useState<{id: string, date: string}[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const tabs: { id: TabType; icon: any; label: string }[] = [
     { id: "Spending", icon: Wallet, label: "Spending Analysis" },
@@ -83,6 +88,7 @@ export default function AnalyzePage() {
       try {
         const res = await fetch("/api/analyze");
         const data = await res.json();
+        if (data.history) setHistory(data.history);
         if (data.report) {
           setReport(data.report);
           setReportDate(data.date);
@@ -106,6 +112,56 @@ export default function AnalyzePage() {
     };
     fetchLatestReport();
   }, []);
+
+  const fetchHistoricalReport = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    if (!id) return;
+    setIsLoadingReport(true);
+    try {
+      const res = await fetch(`/api/analyze?id=${id}`);
+      const data = await res.json();
+      if (data.report) {
+        setReport(data.report);
+        setReportDate(data.date);
+      }
+    } catch (err) {
+      console.error("Failed to fetch historical report", err);
+    } finally {
+      setIsLoadingReport(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: "#0a0a0c" }); // Add background if dark mode is default or use current
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      let position = 0;
+      let heightLeft = pdfHeight;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      pdf.save(`SpendWise_Analysis_${new Date(reportDate || "").toLocaleDateString('en-IN')}.pdf`);
+    } catch (error) {
+      console.error("Failed to export PDF", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Tab auto-scroll
   useEffect(() => {
@@ -273,6 +329,43 @@ export default function AnalyzePage() {
             transition={{ duration: 0.3 }}
             className="space-y-8"
           >
+            {/* Action Bar */}
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-surface border border-border-subtle p-4 sm:p-5 rounded-[2rem] shadow-sm mb-4">
+              <div className="flex items-center gap-3">
+                <select 
+                  onChange={fetchHistoricalReport}
+                  className="bg-surface-variant border border-border-subtle text-foreground text-sm font-bold rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all appearance-none cursor-pointer pr-10 relative"
+                  style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
+                >
+                  <option value="" disabled>Select past report...</option>
+                  {history.map(h => (
+                    <option key={h.id} value={h.id}>
+                      {new Date(h.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleExportPDF}
+                  disabled={isExporting}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-surface-variant text-secondary hover:text-foreground rounded-xl font-black text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+                >
+                  {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+                  Export PDF
+                </button>
+                <button
+                  onClick={handleAnalyze}
+                  disabled={isAnalyzing || !canRunAnalysis}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary-600/20"
+                >
+                  <Sparkles size={14} className={isAnalyzing ? "animate-pulse" : ""} />
+                  {isAnalyzing ? "Analyzing..." : canRunAnalysis ? "Analyze Now" : "Limit Reached"}
+                </button>
+              </div>
+            </div>
+
+            <div ref={reportRef} className="space-y-8 bg-background p-4 sm:p-0 rounded-[2.5rem]">
             {/* Status Header */}
             <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-surface border border-border-subtle p-4 sm:p-6 rounded-[2rem] shadow-sm mb-4">
               <div className="flex items-center gap-4">
@@ -307,15 +400,6 @@ export default function AnalyzePage() {
                   </p>
                 </div>
               </div>
-              
-              <button
-                onClick={handleAnalyze}
-                disabled={isAnalyzing || !canRunAnalysis}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary-600/20"
-              >
-                <Sparkles size={14} className={isAnalyzing ? "animate-pulse" : ""} />
-                {isAnalyzing ? "Analyzing..." : canRunAnalysis ? "Analyze Again" : "Limit Reached"}
-              </button>
             </div>
 
             {/* Spending Analysis Tab */}
@@ -507,6 +591,7 @@ export default function AnalyzePage() {
                 </div>
               </div>
             )}
+            </div>
           </motion.div>
         ) : !isAnalyzing && (
           <div className="space-y-6">

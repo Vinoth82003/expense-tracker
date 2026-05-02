@@ -12,28 +12,39 @@ export async function GET(req: NextRequest) {
   }
 
   const userId = (session.user as any).id;
+  const reportId = req.nextUrl.searchParams.get("id");
 
   try {
-    const latestReport = await prisma.report.findFirst({
-      where: {
-        userId,
-      },
-      orderBy: {
-        date: "desc",
-      },
+    const history = await prisma.report.findMany({
+      where: { userId },
+      select: { id: true, date: true },
+      orderBy: { date: "desc" }
     });
 
-    if (!latestReport) {
-      return NextResponse.json({ report: null });
+    let selectedReport = null;
+    if (reportId) {
+      selectedReport = await prisma.report.findUnique({
+        where: { id: reportId, userId }
+      });
+    } else {
+      selectedReport = await prisma.report.findFirst({
+        where: { userId },
+        orderBy: { date: "desc" },
+      });
+    }
+
+    if (!selectedReport) {
+      return NextResponse.json({ report: null, history });
     }
 
     return NextResponse.json({ 
-      report: JSON.parse(latestReport.content),
-      date: latestReport.date
+      report: JSON.parse(selectedReport.content),
+      date: selectedReport.date,
+      history
     });
   } catch (error) {
-    console.error("Fetch latest report error:", error);
-    return NextResponse.json({ error: "Failed to fetch latest report" }, { status: 500 });
+    console.error("Fetch report error:", error);
+    return NextResponse.json({ error: "Failed to fetch report" }, { status: 500 });
   }
 }
 

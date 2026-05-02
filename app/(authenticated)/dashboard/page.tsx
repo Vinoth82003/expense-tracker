@@ -13,7 +13,8 @@ import {
   ArrowRight,
   TrendingUp,
   Banknote,
-  Scale
+  Scale,
+  Settings2
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
@@ -46,8 +47,9 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const firstName = session?.user?.name?.split(" ")[0] || "there";
-  const expenseMode = (session?.user as { expenseMode?: string })?.expenseMode;
-  const monthlyLimit = (session?.user as { monthlyLimit?: number })?.monthlyLimit || 0;
+  const [expenseMode, setExpenseMode] = useState<string>("no-limit");
+  const [monthlyLimit, setMonthlyLimit] = useState<number>(0);
+  const [isTogglingMode, setIsTogglingMode] = useState(false);
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -60,16 +62,23 @@ export default function DashboardPage() {
         const currentDate = new Date();
         const monthFilter = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
         
-        const [expRes, incRes] = await Promise.all([
+        const [expRes, incRes, budgetRes] = await Promise.all([
           fetch(`/api/expenses?month=${monthFilter}`),
-          fetch(`/api/income?month=${monthFilter}`)
+          fetch(`/api/income?month=${monthFilter}`),
+          fetch(`/api/budget?month=${monthFilter}`)
         ]);
 
         const expData = await expRes.json();
         const incData = await incRes.json();
+        const budgetData = await budgetRes.json();
 
         setExpenses(expData.expenses || []);
         setIncomes(incData.incomes || []);
+        setMonthlyLimit(budgetData.limit || 0);
+        
+        if (session?.user) {
+          setExpenseMode((session.user as any).expenseMode || "no-limit");
+        }
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -104,6 +113,30 @@ export default function DashboardPage() {
     return { totalSpent, totalIncome, netBalance, dailyAverage, remaining, chartData };
   }, [expenses, incomes, expenseMode, monthlyLimit]);
 
+  const toggleExpenseMode = async () => {
+    if (isTogglingMode) return;
+    setIsTogglingMode(true);
+    const newMode = expenseMode === "limit" ? "no-limit" : "limit";
+    try {
+      const res = await fetch("/api/user/expense-mode", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expenseMode: newMode })
+      });
+      if (res.ok) {
+        setExpenseMode(newMode);
+        // Also update the session user object locally so it persists during navigation
+        if (session && session.user) {
+          (session.user as any).expenseMode = newMode;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to toggle expense mode:", error);
+    } finally {
+      setIsTogglingMode(false);
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       {/* Welcome Header */}
@@ -124,9 +157,19 @@ export default function DashboardPage() {
             <p className="text-secondary font-bold text-base sm:text-lg">Your financial pulse for {new Date().toLocaleDateString('en-IN', { month: 'long' })}.</p>
           </div>
           
-          <div className="flex items-center gap-2 text-foreground font-black bg-surface border border-border-subtle px-5 py-3 rounded-2xl shadow-sm">
-            <CalendarDays size={18} className="text-primary-500" />
-            {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <button
+              onClick={toggleExpenseMode}
+              disabled={isTogglingMode}
+              className="flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest bg-surface border border-border-subtle px-4 py-3 rounded-2xl shadow-sm hover:bg-surface-variant transition-colors disabled:opacity-50"
+            >
+              <Settings2 size={16} className={expenseMode === "limit" ? "text-primary-500" : "text-muted"} />
+              {expenseMode === "limit" ? "Limit Active" : "No Limit"}
+            </button>
+            <div className="flex items-center justify-center gap-2 text-foreground font-black bg-surface border border-border-subtle px-5 py-3 rounded-2xl shadow-sm">
+              <CalendarDays size={18} className="text-primary-500" />
+              {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+            </div>
           </div>
         </motion.div>
       </section>
