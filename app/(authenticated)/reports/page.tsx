@@ -488,8 +488,8 @@ export default function ReportsPage() {
 
       {/* ═══════════ FILTER BAR ═══════════ */}
       <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex p-1 bg-surface-variant rounded-xl gap-1 overflow-x-auto no-scrollbar">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex p-1 bg-surface-variant rounded-xl gap-1 overflow-x-auto no-scrollbar self-start md:self-auto max-w-full">
             {modes.map((mode, index) => (
               <button
                 key={mode}
@@ -506,7 +506,7 @@ export default function ReportsPage() {
             ))}
           </div>
 
-          <div className="relative">
+          <div className="relative self-start md:self-auto">
             <button
               onClick={() => setShowCategoryMenu(!showCategoryMenu)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all border ${
@@ -532,7 +532,7 @@ export default function ReportsPage() {
                     initial={{ opacity: 0, scale: 0.92, y: -8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.92, y: -8 }}
-                    className="absolute right-0 top-full mt-2 w-72 bg-surface border border-border-subtle rounded-2xl shadow-2xl z-20 p-5"
+                    className="absolute left-0 md:left-auto md:right-0 top-full mt-2 w-72 bg-surface border border-border-subtle rounded-2xl shadow-2xl z-20 p-5 origin-top-left md:origin-top-right"
                   >
                     <h4 className="font-black text-xs uppercase tracking-widest text-muted mb-3">Category Type</h4>
                     <div className="flex flex-wrap gap-2 mb-5">
