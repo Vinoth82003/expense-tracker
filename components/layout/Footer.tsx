@@ -22,7 +22,7 @@ interface FooterLink {
 
 const footerLinks: Record<string, FooterLink[]> = {
   Product: [
-    { label: "Features", href: "/#features" },
+    { label: "Features", href: "/features" },
     { label: "How It Works", href: "/how-it-works" },
     { label: "Download App", href: "#", isAction: true },
     { label: "AI Analysis", href: "/login" },
@@ -163,8 +163,8 @@ export function Footer() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-muted uppercase">Email Us</span>
-                  <a href="mailto:support@spendwise.app" className="text-sm font-bold text-secondary hover:text-primary-600 transition-colors">
-                    support@spendwise.app
+                  <a href={`mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@spendwise.app'}`} className="text-sm font-bold text-secondary hover:text-primary-600 transition-colors">
+                    {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@spendwise.app'}
                   </a>
                 </div>
               </li>
@@ -190,7 +190,7 @@ export function Footer() {
               <span>© {currentYear} SpendWise</span>
               <span className="w-1 h-1 rounded-full bg-border-subtle" />
               <span className="flex items-center gap-1.5">
-                Built with <Heart size={14} className="text-rose-500 fill-rose-500 animate-pulse" /> by <a href="https://vinoths.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary-600 transition-colors">Vinoth S</a>
+                Built with <Heart size={14} className="text-rose-500 fill-rose-500 animate-pulse" /> by <a href="https://vinoths.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-foreground text-primary-500 transition-colors">Vinoth S</a>
               </span>
             </div>
             <p className="text-[10px] font-bold text-muted/60 uppercase tracking-tighter">
@@ -205,7 +205,7 @@ export function Footer() {
                   {i === 1 ? "V" : i === 2 ? "S" : i === 3 ? "A" : "+"}
                 </div>
               ))}
-              <span className="ml-4 text-xs font-black text-secondary">Join 10k+ users</span>
+              <span className="ml-4 text-xs font-black text-secondary">Join 10+ users</span>
             </div>
           </div>
         </div>

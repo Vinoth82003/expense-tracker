@@ -32,31 +32,46 @@ const PWAInstallBanner = () => {
       setPlatform('other');
     }
 
-    // 2. Check if user already dismissed it
+    // 2. Check if user already dismissed it permanently
     const dismissed = localStorage.getItem('pwa-banner-dismissed-permanent');
     if (dismissed === 'true') return;
 
-    // 3. Listen for beforeinstallprompt
+    // 3. Logic for automatic showing (ONLY ON HOME PAGE)
+    const isHomePage = window.location.pathname === '/';
+    const shownThisSession = sessionStorage.getItem('pwa-banner-shown-session');
+
+    const triggerAutoShow = () => {
+      if (isHomePage && !shownThisSession) {
+        setShowBanner(true);
+        sessionStorage.setItem('pwa-banner-shown-session', 'true');
+      }
+    };
+
+    // 4. Listen for beforeinstallprompt
     const handler = (e: any) => {
       // Prevent the browser's automatic prompt
       e.preventDefault();
       // Stash the event so it can be triggered later
       setDeferredPrompt(e);
-      setShowBanner(true);
+      // Only show automatically if on home page and not shown this session
+      triggerAutoShow();
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    // 4. For iOS, we show the banner manually after a delay
-    if (isIOS) {
+    // 5. For iOS, we show the banner manually after a delay (ONLY ON HOME PAGE)
+    if (isIOS && isHomePage && !shownThisSession) {
       const timer = setTimeout(() => {
         setShowBanner(true);
-      }, 3000);
+        sessionStorage.setItem('pwa-banner-shown-session', 'true');
+      }, 5000); // Increased delay for better UX
       return () => clearTimeout(timer);
     }
 
-    // 5. Custom event listener to trigger banner
-    const showHandler = () => setShowBanner(true);
+    // 6. Custom event listener to trigger banner (ALWAYS SHOWS)
+    const showHandler = () => {
+      setShowBanner(true);
+    };
     window.addEventListener('showPwaInstall', showHandler);
     
     return () => {

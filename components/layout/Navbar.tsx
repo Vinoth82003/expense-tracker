@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, TrendingUp, ChevronRight, Download } from "lucide-react";
+import { Menu, X, TrendingUp, ChevronRight, Download, ArrowUp } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
-  { label: "Features", href: "/#features" },
+  { label: "Features", href: "/features" },
   { label: "How It Works", href: "/how-it-works" },
   { label: "FAQ", href: "/faq" },
   { label: "Contact", href: "/contact" },
@@ -17,10 +17,20 @@ const navLinks = [
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+      
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = height > 0 ? (winScroll / height) : 0;
+      setScrollProgress(scrolled);
+    };
     window.addEventListener("scroll", handleScroll, { passive: true });
+    // Initialize on mount
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -46,7 +56,13 @@ export function Navbar() {
   };
 
   return (
-    <motion.header
+    <>
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-500 to-violet-500 origin-left z-[60]"
+        style={{ scaleX: scrollProgress }}
+        initial={{ scaleX: 0 }}
+      />
+      <motion.header
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" } as const}
@@ -193,5 +209,21 @@ export function Navbar() {
         )}
       </AnimatePresence>
     </motion.header>
+
+      <AnimatePresence>
+        {isScrolled && (
+          <motion.button
+            initial={{ opacity: 0, y: 20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.8 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="fixed bottom-6 right-6 z-50 p-3 sm:p-4 rounded-full bg-primary-600 text-white shadow-xl shadow-primary-600/30 hover:bg-primary-700 hover:scale-110 active:scale-95 transition-all"
+            aria-label="Scroll to top"
+          >
+            <ArrowUp size={24} strokeWidth={2.5} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

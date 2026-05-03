@@ -93,7 +93,9 @@ export default function ContactPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-muted uppercase tracking-widest">Global Support</p>
-                    <p className="text-2xl font-black text-foreground">support@spendwise.app</p>
+                    <a href={`mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@spendwise.app'}`} className="text-2xl font-black text-foreground hover:text-primary-600 transition-colors block">
+                      {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@spendwise.app'}
+                    </a>
                     <p className="text-sm text-secondary font-medium italic">Estimated response: within 24 hours</p>
                   </div>
                 </div>
