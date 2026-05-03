@@ -14,9 +14,35 @@ import {
   AlertCircle,
   Loader2,
   Phone,
+  Clock,
   ArrowRight,
-  Download,
 } from "lucide-react";
+
+const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@spendwise.app";
+
+const contactChannels = [
+  {
+    icon: Mail,
+    label: "Email Support",
+    value: supportEmail,
+    href: `mailto:${supportEmail}`,
+    note: "Response within 24 hours",
+  },
+  {
+    icon: Phone,
+    label: "Indian Helpline",
+    value: "+91 93844 60843",
+    href: "tel:+919384460843",
+    note: "Available 10 AM – 6 PM IST",
+  },
+  {
+    icon: Clock,
+    label: "Response Time",
+    value: "< 24 Hours",
+    href: null,
+    note: "On all business days",
+  },
+];
 
 export default function ContactPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -59,214 +85,238 @@ export default function ContactPage() {
     <>
       <Navbar />
 
-      <main className="pt-32 pb-24 min-h-screen">
-        <section className="px-5 md:px-10 max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-            
-            {/* Left Side: Contact Info */}
-            <motion.div 
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-12"
-            >
-              <div className="space-y-8 text-left">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 text-primary-600 text-[10px] font-black tracking-widest uppercase border border-primary-100"
-                >
-                  Get In Touch
-                </motion.div>
-                <h1 className="text-6xl md:text-8xl font-black text-foreground tracking-tightest leading-[0.85]">
-                  Let's Start a <br />
-                  <span className="text-primary-600 italic">Conversation.</span>
-                </h1>
-                <p className="text-xl text-secondary max-w-lg font-medium leading-relaxed">
-                  Have a feature request, found a bug, or just want to say hi? Our team is always ready to listen and help.
-                </p>
-              </div>
+      <main className="min-h-screen bg-background">
+        {/* Hero Section */}
+        <section className="pt-36 pb-20 px-5 md:px-10 max-w-5xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-500/10 text-primary-600 text-[10px] font-black tracking-widest uppercase mb-6"
+          >
+            <Mail size={12} />
+            Get In Touch
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight mb-4 text-foreground"
+          >
+            We're here to help
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.14 }}
+            className="text-lg text-secondary font-medium max-w-xl mx-auto"
+          >
+            Have a question, found a bug, or just want to say hi? 
+            Send us a message and we'll get back to you quickly.
+          </motion.p>
+        </section>
 
-              <div className="space-y-8">
-                <div className="flex items-start gap-6 group">
-                  <div className="w-16 h-16 rounded-[1.5rem] bg-surface border border-border-subtle flex items-center justify-center text-primary-600 shadow-sm group-hover:border-primary-500/30 transition-all">
-                    <Mail size={28} strokeWidth={2.5} />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Global Support</p>
-                    <a href={`mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@spendwise.app'}`} className="text-2xl font-black text-foreground hover:text-primary-600 transition-colors block">
-                      {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@spendwise.app'}
-                    </a>
-                    <p className="text-sm text-secondary font-medium italic">Estimated response: within 24 hours</p>
-                  </div>
+        {/* Contact Cards + Form */}
+        <section className="pb-24 px-5 md:px-10 max-w-5xl mx-auto">
+          {/* Info Cards Row */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18 }}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12"
+          >
+            {contactChannels.map((ch, i) => (
+              <div
+                key={i}
+                className="p-6 rounded-2xl bg-surface border border-border-subtle flex items-start gap-4 group hover:border-primary-500/30 transition-all"
+              >
+                <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <ch.icon size={20} />
                 </div>
-
-                <div className="flex items-start gap-6 group">
-                  <div className="w-16 h-16 rounded-[1.5rem] bg-surface border border-border-subtle flex items-center justify-center text-primary-600 shadow-sm group-hover:border-primary-500/30 transition-all">
-                    <Phone size={28} strokeWidth={2.5} />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-muted uppercase tracking-widest">Indian Helpline</p>
-                    <p className="text-2xl font-black text-foreground">+91 93844 60843</p>
-                    <p className="text-sm text-secondary font-medium italic">Available 10 AM - 6 PM IST</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-8 border-t border-border-subtle flex flex-col gap-6">
-                <p className="text-xs font-black text-muted uppercase tracking-widest">Experience on the go</p>
-                <button
-                  onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
-                  className="flex items-center gap-4 group w-fit"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-foreground text-background flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Download size={20} />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm font-black">Download SpendWise App</p>
-                    <p className="text-[10px] text-muted font-bold uppercase tracking-tight">Available as PWA</p>
-                  </div>
-                </button>
-              </div>
-            </motion.div>
-
-            {/* Right Side: Contact Form */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-surface border border-border-subtle rounded-[3rem] p-8 md:p-12 shadow-2xl relative overflow-hidden"
-            >
-              {/* Decorative background glow */}
-              <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-500/10 blur-[80px] rounded-full" />
-              
-              <AnimatePresence mode="wait">
-                {status === "success" ? (
-                  <motion.div
-                    key="success"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="py-20 text-center space-y-6"
-                  >
-                    <div className="w-20 h-20 bg-success text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-success/20">
-                      <CheckCircle2 size={40} />
-                    </div>
-                    <div className="space-y-2">
-                      <h2 className="text-3xl font-black text-foreground tracking-tight">Message Received!</h2>
-                      <p className="text-secondary font-medium px-8">We've sent your request to the team. You'll hear back from us shortly via email.</p>
-                    </div>
-                    <button
-                      onClick={() => setStatus("idle")}
-                      className="px-8 py-4 bg-surface-variant rounded-2xl font-black text-foreground hover:bg-border-subtle transition-colors"
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">{ch.label}</p>
+                  {ch.href ? (
+                    <a
+                      href={ch.href}
+                      className="text-sm font-black text-foreground hover:text-primary-600 transition-colors truncate block"
                     >
-                      Send Another Message
-                    </button>
-                  </motion.div>
-                ) : (
-                  <motion.form
-                    key="form"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    onSubmit={handleSubmit}
-                    className="space-y-6 relative z-10 text-left"
+                      {ch.value}
+                    </a>
+                  ) : (
+                    <p className="text-sm font-black text-foreground">{ch.value}</p>
+                  )}
+                  <p className="text-xs text-muted font-medium mt-0.5">{ch.note}</p>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* Contact Form */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.22 }}
+            className="bg-surface border border-border-subtle rounded-3xl p-8 md:p-12 max-w-2xl mx-auto"
+          >
+            <AnimatePresence mode="wait">
+              {status === "success" ? (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="py-16 text-center space-y-5"
+                >
+                  <div className="w-16 h-16 bg-success text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-success/20">
+                    <CheckCircle2 size={32} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-foreground mb-2">Message Sent!</h2>
+                    <p className="text-secondary font-medium text-sm max-w-xs mx-auto">
+                      We've received your message and will get back to you within 24 hours.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setStatus("idle")}
+                    className="px-6 py-3 bg-surface-variant rounded-xl font-black text-sm text-foreground hover:bg-border-subtle transition-colors"
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-muted uppercase tracking-widest pl-1" htmlFor="name">Full Name</label>
-                        <div className="relative">
-                          <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                          <input
-                            required
-                            id="name"
-                            name="name"
-                            type="text"
-                            placeholder="Vinoth S"
-                            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-surface-variant/50 border border-border-subtle focus:border-primary-500 focus:bg-surface outline-none transition-all font-bold"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-muted uppercase tracking-widest pl-1" htmlFor="email">Email Address</label>
-                        <div className="relative">
-                          <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                          <input
-                            required
-                            id="email"
-                            name="email"
-                            type="email"
-                            placeholder="vinoth@example.com"
-                            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-surface-variant/50 border border-border-subtle focus:border-primary-500 focus:bg-surface outline-none transition-all font-bold"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    Send Another Message
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.form
+                  key="form"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onSubmit={handleSubmit}
+                  className="space-y-6"
+                >
+                  <div>
+                    <h2 className="text-2xl font-black text-foreground mb-1">Send a Message</h2>
+                    <p className="text-sm text-secondary font-medium">
+                      Fill in the form below — we'll respond as soon as possible.
+                    </p>
+                  </div>
 
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-muted uppercase tracking-widest pl-1" htmlFor="subject">Subject</label>
-                      <input
-                        required
-                        id="subject"
-                        name="subject"
-                        type="text"
-                        placeholder="How can we help you?"
-                        className="w-full px-4 py-4 rounded-2xl bg-surface-variant/50 border border-border-subtle focus:border-primary-500 focus:bg-surface outline-none transition-all font-bold"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-muted uppercase tracking-widest pl-1" htmlFor="message">Message</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-muted uppercase tracking-widest" htmlFor="name">
+                        Full Name
+                      </label>
                       <div className="relative">
-                        <MessageSquare size={18} className="absolute left-4 top-4 text-muted" />
-                        <textarea
+                        <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
+                        <input
                           required
-                          id="message"
-                          name="message"
-                          rows={5}
-                          placeholder="Type your message here..."
-                          className="w-full pl-12 pr-4 py-4 rounded-2xl bg-surface-variant/50 border border-border-subtle focus:border-primary-500 focus:bg-surface outline-none transition-all font-bold resize-none"
+                          id="name"
+                          name="name"
+                          type="text"
+                          placeholder="Your name"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border-subtle focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none transition-all font-semibold text-sm"
                         />
                       </div>
                     </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-muted uppercase tracking-widest" htmlFor="email">
+                        Email Address
+                      </label>
+                      <div className="relative">
+                        <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
+                        <input
+                          required
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="you@example.com"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border-subtle focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none transition-all font-semibold text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                    <AnimatePresence>
-                      {status === "error" && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="p-4 bg-error/10 border border-error/20 rounded-2xl text-error text-sm font-bold flex items-center gap-3"
-                        >
-                          <AlertCircle size={18} />
-                          {errorMessage}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-muted uppercase tracking-widest" htmlFor="subject">
+                      Subject
+                    </label>
+                    <input
+                      required
+                      id="subject"
+                      name="subject"
+                      type="text"
+                      placeholder="What is this about?"
+                      className="w-full px-4 py-3 rounded-xl bg-background border border-border-subtle focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none transition-all font-semibold text-sm"
+                    />
+                  </div>
 
-                    <button
-                      disabled={status === "loading"}
-                      type="submit"
-                      className="w-full py-5 bg-primary-600 text-white rounded-2xl font-black text-lg shadow-xl shadow-primary-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                      {status === "loading" ? (
-                        <>
-                          <Loader2 size={24} className="animate-spin" />
-                          Sending Message...
-                        </>
-                      ) : (
-                        <>
-                          Send Message
-                          <Send size={20} />
-                        </>
-                      )}
-                    </button>
-                    
-                    <p className="text-center text-[10px] font-bold text-muted uppercase tracking-tighter">
-                      By sending this message, you agree to our contact data policy.
-                    </p>
-                  </motion.form>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-muted uppercase tracking-widest" htmlFor="message">
+                      Message
+                    </label>
+                    <div className="relative">
+                      <MessageSquare size={15} className="absolute left-3.5 top-3.5 text-muted" />
+                      <textarea
+                        required
+                        id="message"
+                        name="message"
+                        rows={5}
+                        placeholder="Tell us how we can help..."
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border-subtle focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 outline-none transition-all font-semibold text-sm resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {status === "error" && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex items-center gap-3 p-4 bg-error/10 border border-error/20 rounded-xl text-error text-sm font-bold"
+                      >
+                        <AlertCircle size={16} className="shrink-0" />
+                        {errorMessage}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <button
+                    disabled={status === "loading"}
+                    type="submit"
+                    className="w-full py-4 bg-primary-600 text-white rounded-xl font-black text-sm shadow-lg shadow-primary-600/20 hover:bg-primary-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {status === "loading" ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        Send Message
+                        <Send size={16} />
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-center text-[10px] font-bold text-muted uppercase tracking-wider">
+                    We respect your privacy. Your data is never shared.
+                  </p>
+                </motion.form>
+              )}
+            </AnimatePresence>
+          </motion.div>
+
+          {/* Alternative CTA */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+            className="mt-10 text-center"
+          >
+            <p className="text-sm text-secondary font-medium">
+              Looking for quick answers?{" "}
+              <Link href="/faq" className="text-primary-600 font-black hover:underline inline-flex items-center gap-1">
+                Browse our FAQ <ArrowRight size={14} />
+              </Link>
+            </p>
+          </motion.div>
         </section>
       </main>
 

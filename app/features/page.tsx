@@ -331,11 +331,11 @@ export default function FeaturesPage() {
                   ))}
                 </ul>
               </div>
-              <div className="flex-1 w-full aspect-square rounded-[4rem] bg-surface border border-border-subtle shadow-2xl relative flex items-center justify-center overflow-hidden">
+              <div className="min-w-[250px]  flex-1">
                  {/* Decorative elements for the "Mockup" area */}
                  <div className={`absolute inset-0 ${feature.lightColor} opacity-50`} />
-                 <div className="relative z-10 p-12 w-full h-full flex flex-col">
-                    <div className="w-full h-full rounded-2xl bg-background border border-border-subtle shadow-lg p-6 overflow-hidden">
+                 <div className="relative z-10 p-0 w-full h-full flex flex-col">
+                    <div className="w-full h-full rounded-2xl  p-6 overflow-hidden">
                        <div className="flex items-center justify-between mb-6">
                           <div className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
                              <feature.icon size={14} className={feature.textColor} />
