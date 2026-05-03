@@ -147,29 +147,65 @@ export default function FAQPage() {
           )}
         </section>
 
-        <section className="px-5 md:px-10 max-w-4xl mx-auto mt-32 text-center pb-20">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            className="p-12 bg-foreground rounded-[3.5rem] text-background relative overflow-hidden shadow-2xl"
-          >
-            <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-primary-500/20 blur-[80px] rounded-full" />
-            <div className="relative z-10 space-y-8">
-              <h3 className="text-3xl md:text-5xl font-black tracking-tighter">Still have questions?</h3>
-              <p className="text-background/70 font-medium text-lg max-w-lg mx-auto">Our support team is ready to help you with any technical or financial tracking issues.</p>
+        <section className="py-28 px-5 md:px-10">
+          <div className="max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 32 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-80px" }}
+              className="relative rounded-3xl overflow-hidden border border-border-subtle text-center p-12 md:p-20"
+              style={{
+                background: "linear-gradient(145deg, var(--bg-surface) 0%, var(--bg-surface-variant) 100%)",
+              }}
+            >
+              {/* Glow */}
+              <div
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/2 blur-[100px] pointer-events-none -z-10"
+                style={{ background: "rgba(99,102,241,0.1)" }}
+              />
+
+              <div
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-black tracking-widest uppercase mb-8"
+                style={{
+                  borderColor: "rgba(99,102,241,0.3)",
+                  background: "rgba(99,102,241,0.07)",
+                  color: "#6366f1",
+                }}
+              >
+                <HelpCircle size={12} /> Still have questions?
+              </div>
+
+              <h2 className="text-4xl md:text-6xl font-black tracking-tight text-foreground mb-6 leading-[0.95]">
+                Master Your Wealth <br />
+                <span className="italic" style={{ color: "#6366f1" }}>
+                  Without Confusion.
+                </span>
+              </h2>
+
+              <p className="text-lg text-secondary font-medium max-w-xl mx-auto mb-10">
+                Our support team is ready to help you with any technical or financial tracking issues. master your cash flow today.
+              </p>
+
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href="/contact" className="px-10 py-5 bg-background text-foreground rounded-2xl font-black text-lg shadow-xl hover:translate-y-[-5px] transition-all flex items-center gap-3">
-                  Contact Support <ArrowRight size={20} />
-                </Link>
-                <button 
-                  onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
-                  className="px-10 py-5 bg-transparent text-background border border-background/20 rounded-2xl font-black text-lg hover:bg-background/5 transition-all flex items-center gap-3"
+                <Link
+                  href="/contact"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base transition-all hover:-translate-y-1 active:scale-95 shadow-xl text-white"
+                  style={{ background: "#6366f1" }}
                 >
-                  <Download size={20} /> Download App
+                  Contact Support
+                  <ArrowRight size={18} />
+                </Link>
+                <button
+                  onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-primary-500/40 transition-all"
+                >
+                  <Download size={18} />
+                  Download App
                 </button>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </section>
       </main>
 

@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, TrendingUp, ChevronRight, Download, ArrowUp } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
+  { label: "Home", href: "/" },
   { label: "Features", href: "/features" },
   { label: "How It Works", href: "/how-it-works" },
   { label: "FAQ", href: "/faq" },
@@ -15,6 +17,7 @@ const navLinks = [
 ];
 
 export function Navbar() {
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -107,7 +110,12 @@ export function Navbar() {
               key={link.href}
               href={link.href}
               onClick={(e) => handleNavClick(e, link.href)}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-secondary hover:text-primary-600 hover:bg-surface-variant transition-all duration-200"
+              className={cn(
+                "px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200",
+                pathname === link.href 
+                  ? "text-primary-600 bg-surface-variant" 
+                  : "text-secondary hover:text-primary-600 hover:bg-surface-variant"
+              )}
             >
               {link.label}
             </Link>
@@ -174,7 +182,12 @@ export function Navbar() {
                   <Link
                     href={link.href}
                     onClick={(e) => handleNavClick(e, link.href)}
-                    className="flex px-4 py-3 rounded-xl text-lg font-bold text-secondary hover:text-primary-600 hover:bg-surface-variant"
+                    className={cn(
+                      "flex px-4 py-3 rounded-xl text-lg font-bold transition-all",
+                      pathname === link.href 
+                        ? "text-primary-600 bg-surface-variant" 
+                        : "text-secondary hover:text-primary-600 hover:bg-surface-variant"
+                    )}
                   >
                     {link.label}
                   </Link>

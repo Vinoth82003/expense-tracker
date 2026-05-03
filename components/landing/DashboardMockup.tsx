@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { 
-  Wallet, 
-  TrendingUp, 
-  Activity, 
+import {
+  Wallet,
+  TrendingUp,
+  Activity,
   ShoppingCart,
   ArrowUpRight,
   Sparkles,

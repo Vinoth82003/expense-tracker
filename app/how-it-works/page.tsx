@@ -321,39 +321,65 @@ export default function HowItWorks() {
         </section>
 
         {/* DOWNLOAD CTA BOTTOM */}
-        <section className="px-5 md:px-10 max-w-7xl mx-auto mt-40">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="bg-foreground rounded-[4rem] p-12 md:p-24 text-center relative overflow-hidden shadow-2xl"
-          >
-            <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-primary-500/10 blur-[120px] rounded-full" />
-            <div className="relative z-10 space-y-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-background/10 text-background/80 text-[10px] font-black tracking-widest uppercase">
-                <Sparkles size={14} /> Ready for the next level?
+        <section className="py-28 px-5 md:px-10">
+          <div className="max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 32 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-80px" }}
+              className="relative rounded-3xl overflow-hidden border border-border-subtle text-center p-12 md:p-20"
+              style={{
+                background: "linear-gradient(145deg, var(--bg-surface) 0%, var(--bg-surface-variant) 100%)",
+              }}
+            >
+              {/* Glow */}
+              <div
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/2 blur-[100px] pointer-events-none -z-10"
+                style={{ background: "rgba(99,102,241,0.1)" }}
+              />
+
+              <div
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-black tracking-widest uppercase mb-8"
+                style={{
+                  borderColor: "rgba(99,102,241,0.3)",
+                  background: "rgba(99,102,241,0.07)",
+                  color: "#6366f1",
+                }}
+              >
+                <Sparkles size={12} /> Ready for the next level?
               </div>
-              <h2 className="text-4xl md:text-7xl font-black text-background tracking-tighter leading-tight">
+
+              <h2 className="text-4xl md:text-6xl font-black tracking-tight text-foreground mb-6 leading-[0.95]">
                 Experience Finance <br />
-                Without Boundaries.
+                <span className="italic" style={{ color: "#6366f1" }}>
+                  Without Boundaries.
+                </span>
               </h2>
-              <p className="text-background/70 text-xl font-medium max-w-2xl mx-auto">
+
+              <p className="text-lg text-secondary font-medium max-w-xl mx-auto mb-10">
                 Install SpendWise on your device today and join thousands of Indians mastering their money with forensic precision.
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button
                   onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
-                  className="px-12 py-5 bg-background text-foreground rounded-2xl font-black text-xl shadow-xl hover:translate-y-[-5px] transition-all w-full sm:w-auto flex items-center justify-center gap-3"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base transition-all hover:-translate-y-1 active:scale-95 shadow-xl text-white"
+                  style={{ background: "#6366f1" }}
                 >
-                  <Download size={24} strokeWidth={3} />
+                  <Download size={18} />
                   Download App
                 </button>
-                <Link href="/contact" className="px-12 py-5 bg-transparent text-background border border-background/20 rounded-2xl font-black text-xl hover:bg-background/5 transition-all w-full sm:w-auto">
+                <Link
+                  href="/contact"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-primary-500/40 transition-all"
+                >
                   Help Center
+                  <ChevronRight size={18} />
                 </Link>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </section>
       </main>
 

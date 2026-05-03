@@ -21,7 +21,8 @@ import {
   User,
   Activity,
   ShoppingCart,
-  Loader2
+  Loader2,
+  Download
 } from "lucide-react";
 import Link from "next/link";
 
@@ -268,15 +269,32 @@ export default function FeaturesPage() {
     <>
       <Navbar />
       
-      <main className="pt-32 pb-20 px-5 md:px-10 max-w-7xl mx-auto overflow-hidden" id="main-content">
-        {/* Header Section */}
-        <section className="text-center mb-32 relative">
-           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-[500px] bg-primary-500/5 blur-[120px] -z-10 rounded-full" />
-           
+      <main className="overflow-x-hidden pt-20" id="main-content">
+        {/* Background mesh (from HomeClient) */}
+        <div className="fixed inset-0 -z-10"
+          style={{
+            background: "radial-gradient(ellipse 80% 60% at 70% 40%, rgba(99,102,241,0.06) 0%, transparent 70%), radial-gradient(ellipse 60% 50% at 10% 80%, rgba(99,102,241,0.05) 0%, transparent 70%)"
+          }}
+        />
+        <div
+          className="fixed inset-0 -z-10 opacity-[0.03] dark:opacity-[0.04]"
+          style={{
+            backgroundImage: "linear-gradient(var(--border-color) 1px, transparent 1px), linear-gradient(90deg, var(--border-color) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
+
+        {/* HERO SECTION */}
+        <section className="relative min-h-[60dvh] flex flex-col items-center justify-center py-32 px-5 md:px-10 text-center">
            <motion.div
              initial={{ opacity: 0, y: 20 }}
              animate={{ opacity: 1, y: 0 }}
-             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-600 text-[10px] font-black tracking-widest uppercase mb-8"
+             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-black tracking-widest uppercase mb-8"
+             style={{
+               borderColor: "rgba(99,102,241,0.3)",
+               background: "rgba(99,102,241,0.08)",
+               color: "#6366f1",
+             }}
            >
              <Zap size={14} /> Full Capability Suite
            </motion.div>
@@ -285,10 +303,10 @@ export default function FeaturesPage() {
              initial={{ opacity: 0, y: 20 }}
              animate={{ opacity: 1, y: 0 }}
              transition={{ delay: 0.1 }}
-             className="text-6xl md:text-8xl font-black tracking-tightest leading-[0.9] mb-8"
+             className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.9] mb-8 text-foreground"
            >
              Engineered for <br />
-             <span className="text-primary-600">Financial Mastery.</span>
+             <span className="italic" style={{ color: "#6366f1" }}>Financial Mastery.</span>
            </motion.h1>
            
            <motion.p
@@ -302,84 +320,138 @@ export default function FeaturesPage() {
            </motion.p>
         </section>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 gap-32">
-          {features.map((feature, i) => (
-            <motion.section
-              key={i}
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              className={`flex flex-col ${i % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-16 items-center`}
-            >
-              <div className="flex-1 space-y-8">
-                <div className={`w-16 h-16 rounded-3xl ${feature.lightColor} ${feature.textColor} flex items-center justify-center shadow-sm`}>
-                  <feature.icon size={32} strokeWidth={2.5} />
+        {/* Features List */}
+        <section className="py-20 px-5 md:px-10 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 gap-32">
+            {features.map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                className={`flex flex-col ${i % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-16 items-center`}
+              >
+                <div className="flex-1 space-y-8">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border`}
+                       style={{
+                         background: "rgba(99,102,241,0.08)",
+                         borderColor: "rgba(99,102,241,0.2)",
+                         color: "#6366f1",
+                       }}
+                  >
+                    <feature.icon size={24} strokeWidth={2.5} />
+                  </div>
+                  <h2 className="text-4xl md:text-5xl font-black tracking-tight text-foreground">{feature.title}</h2>
+                  <p className="text-xl text-secondary font-medium leading-relaxed">
+                    {feature.description}
+                  </p>
+                  <ul className="space-y-4">
+                    {feature.details.map((detail, idx) => (
+                      <li key={idx} className="flex items-center gap-3 text-foreground font-bold">
+                        <CheckCircle size={18} style={{ color: "#6366f1" }} />
+                        {detail}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <h2 className="text-4xl md:text-5xl font-black tracking-tight">{feature.title}</h2>
-                <p className="text-xl text-secondary font-medium leading-relaxed">
-                  {feature.description}
-                </p>
-                <ul className="space-y-4">
-                  {feature.details.map((detail, idx) => (
-                    <li key={idx} className="flex items-center gap-3 text-foreground font-bold">
-                      <div className={`w-6 h-6 rounded-full ${feature.color} flex items-center justify-center text-white`}>
-                        <CheckCircle size={14} />
+                <div className="min-w-[250px] w-full lg:w-1/2 flex-1">
+                   {/* Mockup Container */}
+                   <div className="relative z-10 w-full h-full min-h-[400px] rounded-3xl overflow-hidden border border-border-subtle p-6"
+                        style={{
+                          background: "linear-gradient(145deg, var(--bg-surface) 0%, var(--bg-surface-variant) 100%)",
+                        }}
+                   >
+                      <div className="flex items-center justify-between mb-6">
+                         <div className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
+                            <feature.icon size={14} style={{ color: "#6366f1" }} />
+                            {feature.title}
+                         </div>
+                         <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
                       </div>
-                      {detail}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="min-w-[250px]  flex-1">
-                 {/* Decorative elements for the "Mockup" area */}
-                 <div className={`absolute inset-0 ${feature.lightColor} opacity-50`} />
-                 <div className="relative z-10 p-0 w-full h-full flex flex-col">
-                    <div className="w-full h-full rounded-2xl  p-6 overflow-hidden">
-                       <div className="flex items-center justify-between mb-6">
-                          <div className="text-[10px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
-                             <feature.icon size={14} className={feature.textColor} />
-                             {feature.title}
-                          </div>
-                          <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                       </div>
-                       <div className="flex-1 h-full overflow-hidden">
-                          <FeatureMockup index={i} />
-                       </div>
-                    </div>
-                 </div>
-              </div>
-            </motion.section>
-          ))}
-        </div>
+                      <div className="h-[calc(100%-40px)] min-h-[300px] w-full flex items-center justify-center">
+                         <FeatureMockup index={i} />
+                      </div>
+                   </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
 
         {/* Final CTA */}
-        <section className="mt-48 text-center bg-foreground text-background rounded-[4rem] p-12 md:p-24 relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-96 h-96 bg-primary-500/20 blur-[100px] rounded-full" />
-           <div className="relative z-10 space-y-12">
-              <h2 className="text-5xl md:text-7xl font-black tracking-tightest leading-none">
-                Ready to take <br /> <span className="text-primary-500 italic">total control?</span>
+        <section className="py-28 px-5 md:px-10">
+          <div className="max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 32 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true, margin: "-80px" }}
+              className="relative rounded-3xl overflow-hidden border border-border-subtle text-center p-12 md:p-20"
+              style={{
+                background: "linear-gradient(145deg, var(--bg-surface) 0%, var(--bg-surface-variant) 100%)",
+              }}
+            >
+              {/* Glow */}
+              <div
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/2 blur-[100px] pointer-events-none -z-10"
+                style={{ background: "rgba(99,102,241,0.1)" }}
+              />
+
+              <div
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-black tracking-widest uppercase mb-8"
+                style={{
+                  borderColor: "rgba(99,102,241,0.3)",
+                  background: "rgba(99,102,241,0.07)",
+                  color: "#6366f1",
+                }}
+              >
+                <Lock size={12} /> Total Control Awaits
+              </div>
+
+              <h2 className="text-4xl md:text-6xl font-black tracking-tight text-foreground mb-6 leading-[0.95]">
+                Ready to take <br /> 
+                <span className="italic" style={{ color: "#6366f1" }}>
+                  total control?
+                </span>
               </h2>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+
+              <p className="text-lg text-secondary font-medium max-w-xl mx-auto mb-10">
+                Join 10,000+ Indians taking full control of their financial destiny.
+                Free forever. No credit card. No surprises.
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
                   href="/login"
-                  className="w-full sm:w-auto px-12 py-5 rounded-full bg-background text-foreground font-black text-xl shadow-xl hover:translate-y-[-4px] transition-all"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base transition-all hover:-translate-y-1 active:scale-95 shadow-xl text-white"
+                  style={{ background: "#6366f1" }}
                 >
                   Get Started Free
+                  <ArrowRight size={18} />
                 </Link>
-                <div className="flex items-center gap-2 text-background/60 font-black uppercase tracking-widest text-[10px]">
-                   <Lock size={16} /> Bank-Grade Security
-                </div>
+                <button
+                  onClick={() => window.dispatchEvent(new Event("showPwaInstall"))}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-primary-500/40 transition-all"
+                >
+                  <Download size={18} />
+                  Install App
+                </button>
               </div>
-           </div>
+
+              <div className="mt-8 flex items-center justify-center gap-2 text-muted text-[11px] font-black uppercase tracking-widest">
+                <Lock size={12} />
+                Bank-grade security · No credit card required
+              </div>
+            </motion.div>
+          </div>
         </section>
       </main>
 
       <Footer />
       
       <style jsx global>{`
-        .tracking-tightest {
-          letter-spacing: -0.05em;
+        .tracking-tight {
+          letter-spacing: -0.04em;
         }
       `}</style>
     </>
