@@ -25,7 +25,7 @@ import {
 import { useSession } from "next-auth/react";
 import ThemedMarkdown from "@/components/markdown/ThemedMarkdown";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 
 const loadingStages = [
   "Decrypting Financial Ledger",
@@ -135,23 +135,44 @@ export default function AnalyzePage() {
     if (!reportRef.current) return;
     setIsExporting(true);
     try {
-      const canvas = await html2canvas(reportRef.current, { scale: 2, useCORS: true, backgroundColor: "#0a0a0c" }); // Add background if dark mode is default or use current
-      const imgData = canvas.toDataURL("image/png");
+      // Resolve background color from theme variables
+      const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim() || "#0f0f1a";
+      
+      const imgData = await toPng(reportRef.current, {
+        quality: 1,
+        pixelRatio: 2, // Higher quality
+        backgroundColor: bgColor,
+        style: {
+          borderRadius: '0',
+          padding: '20px', // Add some padding for the PDF
+        },
+        cacheBust: true,
+      });
+
       const pdf = new jsPDF("p", "mm", "a4");
+      const img = new Image();
+      img.src = imgData;
+      
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
+      const canvasWidth = img.width;
+      const canvasHeight = img.height;
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pdfHeight = (canvasHeight * pdfWidth) / canvasWidth;
       
       let position = 0;
       let heightLeft = pdfHeight;
       const pageHeight = pdf.internal.pageSize.getHeight();
 
-      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
       heightLeft -= pageHeight;
 
       while (heightLeft > 0) {
         position = heightLeft - pdfHeight;
         pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight);
+        pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfHeight, undefined, 'FAST');
         heightLeft -= pageHeight;
       }
       

@@ -1,93 +1,70 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
-import { revalidateTag } from "next/cache";
 
-const prisma = new PrismaClient();
-
-// Helper to check admin auth
-async function checkAuth() {
+async function isAdmin() {
   const cookieStore = await cookies();
   const session = cookieStore.get("admin_session");
-  return session && session.value === "true";
+  return session?.value === "true";
 }
 
-// GET all global default categories
 export async function GET() {
-  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const categories = await prisma.category.findMany({
-      where: { userId: null, isDefault: true },
-      orderBy: { name: "asc" }
+      where: { isDefault: true, userId: null },
+      orderBy: { name: 'asc' }
     });
-    return NextResponse.json({ categories }, { status: 200 });
+
+    // For each category, get usage stats
+    const formattedCategories = await Promise.all(categories.map(async (cat) => {
+      const transactionCount = await prisma.expense.count({
+        where: { subcategory: cat.name }
+      });
+      const transactionVolume = await prisma.expense.aggregate({
+        where: { subcategory: cat.name },
+        _sum: { amount: true }
+      });
+
+      return {
+        ...cat,
+        usageCount: transactionCount,
+        volume: transactionVolume._sum.amount || 0
+      };
+    }));
+
+    return NextResponse.json(formattedCategories);
   } catch (error) {
-    console.error("Failed to fetch admin categories", error);
+    console.error("Failed to fetch admin categories:", error);
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });
   }
 }
 
-// CREATE a new global default category
-export async function POST(req: Request) {
-  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function POST(req: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
-    const { name, type } = await req.json();
-    if (!name || !type) return NextResponse.json({ error: "Name and type are required" }, { status: 400 });
+    const { name, type, icon, color } = await req.json();
 
-    const newCategory = await prisma.category.create({
+    const category = await (prisma as any).category.create({
       data: {
         name,
         type,
+        icon,
+        color,
         isDefault: true,
         userId: null
       }
     });
-    
-    revalidateTag('global-categories', {});
-    return NextResponse.json({ category: newCategory }, { status: 201 });
+
+    return NextResponse.json(category, { status: 201 });
   } catch (error) {
-    console.error("Failed to create category", error);
+    console.error("Failed to create admin category:", error);
     return NextResponse.json({ error: "Failed to create category" }, { status: 500 });
-  }
-}
-
-export async function PATCH(req: Request) {
-  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  try {
-    const { id, name, type } = await req.json();
-    if (!id || !name || !type) return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-
-    const updatedCategory = await prisma.category.update({
-      where: { id },
-      data: { name, type }
-    });
-
-    revalidateTag('global-categories', {});
-    return NextResponse.json({ category: updatedCategory }, { status: 200 });
-  } catch (error) {
-    console.error("Failed to update category", error);
-    return NextResponse.json({ error: "Failed to update category" }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: Request) {
-  if (!(await checkAuth())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  try {
-    const { id } = await req.json();
-    if (!id) return NextResponse.json({ error: "Category ID is required" }, { status: 400 });
-
-    await prisma.category.delete({
-      where: { id }
-    });
-
-    revalidateTag('global-categories', {});
-    return NextResponse.json({ success: true }, { status: 200 });
-  } catch (error) {
-    console.error("Failed to delete category", error);
-    return NextResponse.json({ error: "Failed to delete category" }, { status: 500 });
   }
 }

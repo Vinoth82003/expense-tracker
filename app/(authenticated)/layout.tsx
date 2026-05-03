@@ -121,14 +121,14 @@ export default function DashboardLayout({
     <div className="min-h-screen flex bg-background text-foreground">
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:flex flex-col w-72 bg-surface border-r border-border-subtle p-6 sticky top-0 h-screen">
-        <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
+        <Link href="/dashboard" className="flex items-center gap-3 mb-10 px-2 group/logo hover:scale-[1.02] transition-all active:scale-95">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg group-hover/logo:shadow-indigo-500/30 transition-all">
             <TrendingUp size={22} color="white" strokeWidth={2.5} />
           </div>
           <span className="font-extrabold text-2xl tracking-tight">
             Spend<span className="text-primary-600">Wise</span>
           </span>
-        </div>
+        </Link>
 
         <nav className="flex-1 space-y-2">
           {navItems.map((item) => {
@@ -198,13 +198,13 @@ export default function DashboardLayout({
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 border-border-subtle overflow-hidden bg-surface-variant flex items-center justify-center font-bold text-secondary shadow-sm">
+            <Link href="/profile" className="w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 border-border-subtle overflow-hidden bg-surface-variant flex items-center justify-center font-bold text-secondary shadow-sm hover:border-primary-500/50 transition-all active:scale-95">
               {session.user?.image ? (
                 <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
               ) : (
                 session.user?.name?.charAt(0) || "U"
               )}
-            </div>
+            </Link>
           </div>
         </header>
 
@@ -231,12 +231,12 @@ export default function DashboardLayout({
               className="absolute top-0 left-0 bottom-0 w-80 bg-surface border-r border-border-subtle p-6 flex flex-col"
             >
               <div className="flex items-center justify-between mb-10 px-2">
-                <div className="flex items-center gap-3">
+                <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 group/logo">
                   <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
                     <TrendingUp size={22} color="white" strokeWidth={2.5} />
                   </div>
-                  <span className="font-extrabold text-2xl tracking-tight">Wise</span>
-                </div>
+                  <span className="font-extrabold text-2xl tracking-tight">Spend<span className="text-primary-600">Wise</span></span>
+                </Link>
                 <button onClick={() => setIsMobileMenuOpen(false)} className="text-secondary">
                   <X size={24} />
                 </button>

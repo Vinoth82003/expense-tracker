@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ 
-      report: JSON.parse(selectedReport.content),
+      report: JSON.parse(selectedReport.content || "{}"),
       date: selectedReport.date,
       history
     });
@@ -256,10 +256,13 @@ export async function POST(req: NextRequest) {
     const reportData = JSON.parse(result);
 
     // 5. Store the report in database
-    await prisma.report.create({
+    await (prisma as any).report.create({
       data: {
         userId,
         content: result,
+        status: "SUCCESS",
+        tokens: 0, // In a real app, you'd get this from the response
+        cost: 0,
       },
     });
 

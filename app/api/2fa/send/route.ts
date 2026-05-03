@@ -27,6 +27,17 @@ export async function POST() {
 
     await send2FACodeEmail(session.user.email, otp);
 
+    // Log OTP creation
+    await (prisma as any).oTPLog.create({
+      data: {
+        userId: (session.user as any).id,
+        email: session.user.email,
+        status: "EXPIRED", // Default to expired until verified
+        ip: "0.0.0.0", // Mock
+        expiresAt: expires,
+      }
+    }).catch((e: any) => console.error("Failed to log OTP:", e));
+
     return NextResponse.json({ success: true, message: "OTP sent to your email" });
   } catch (error: any) {
     console.error("2FA send error:", error);

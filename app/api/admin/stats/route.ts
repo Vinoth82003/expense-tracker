@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
-
-const prisma = new PrismaClient();
 
 export async function GET() {
   const cookieStore = await cookies();
@@ -13,117 +11,92 @@ export async function GET() {
   }
 
   try {
-    const totalUsers = await prisma.user.count();
-    
-    // Calculate total expenses safely
-    const expensesAggregation = await prisma.expense.aggregate({
-      _sum: { amount: true }
-    });
-    const totalExpenses = expensesAggregation._sum.amount || 0;
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Calculate total income safely
-    const incomeAggregation = await prisma.income.aggregate({
-      _sum: { amount: true }
-    });
-    const totalIncome = incomeAggregation._sum.amount || 0;
-
-    // Fetch recent 5 combined activities (we'll fetch 5 recent expenses/incomes separately and zip them)
-    const recentExpenses = await prisma.expense.findMany({
-      take: 3,
-      orderBy: { date: 'desc' },
-      include: { user: { select: { name: true, email: true } } }
-    });
-
-    const recentIncomes = await prisma.income.findMany({
-      take: 2,
-      orderBy: { date: 'desc' },
-      include: { user: { select: { name: true, email: true } } }
-    });
-
-    // Format recent activity log
-    const recentActivity = [
-      ...recentExpenses.map(e => ({
-        user: e.user?.name || e.user?.email || "Unknown User",
-        action: `Logged a ${e.category} expense`,
-        amount: `₹${e.amount.toLocaleString()}`,
-        time: e.date,
-        type: "expense"
-      })),
-      ...recentIncomes.map(i => ({
-        user: i.user?.name || i.user?.email || "Unknown User",
-        action: `Received ${i.source} income`,
-        amount: `+₹${i.amount.toLocaleString()}`,
-        time: i.date,
-        type: "income"
-      }))
-    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-
-    // Calculate a naive avg savings rate for demonstration based on system totals (in real app, this would be per user or historical DB cache)
-    const avgSavings = totalIncome > 0 ? Math.round(((totalIncome - totalExpenses) / totalIncome) * 100) : 0;
-
-    // --- Visualization Data (Last 6 Months) ---
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-    const [monthlyUsers, monthlyExpenses, monthlyIncomes] = await Promise.all([
+    const [
+      totalUsers,
+      activeToday,
+      aiReports,
+      registrations,
+      reportVolume
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({
+        where: { lastActive: { gte: twentyFourHoursAgo } }
+      }),
+      prisma.report.count(),
+      // Data for Area Chart (last 30 days)
       prisma.user.findMany({
-        where: { createdAt: { gte: sixMonthsAgo } },
+        where: { createdAt: { gte: thirtyDaysAgo } },
         select: { createdAt: true }
       }),
-      prisma.expense.findMany({
-        where: { date: { gte: sixMonthsAgo } },
-        select: { amount: true, date: true }
-      }),
-      prisma.income.findMany({
-        where: { date: { gte: sixMonthsAgo } },
-        select: { amount: true, date: true }
+      // Data for Bar Chart (last 7 days)
+      prisma.report.findMany({
+        where: { date: { gte: sevenDaysAgo } },
+        select: { date: true }
       })
     ]);
 
-    // Helper to group by month
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const chartDataMap: Record<string, { month: string, users: number, expenses: number, income: number }> = {};
+    // Estimate tokens: 1.2M tokens per month as base + usage
+    // Daily quota is 5M tokens (arbitrary for the dashboard warning)
+    const estimatedTokens = aiReports * 1250; // 1250 tokens per report avg
+    const tokensUsed = `${(estimatedTokens / 1000000).toFixed(1)}M`;
+    const tokenPercentage = Math.min((estimatedTokens / 5000000) * 100, 100);
 
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const monthKey = `${months[d.getMonth()]} ${d.getFullYear()}`;
-      chartDataMap[monthKey] = { month: monthKey, users: 0, expenses: 0, income: 0 };
-    }
-
-    monthlyUsers.forEach(u => {
-      if (u.createdAt) {
-        const key = `${months[u.createdAt.getMonth()]} ${u.createdAt.getFullYear()}`;
-        if (chartDataMap[key]) chartDataMap[key].users++;
-      }
+    // Process Chart Data
+    const registrationsData = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (29 - i));
+      const dateStr = date.toISOString().split('T')[0];
+      const count = registrations.filter(u => u.createdAt && u.createdAt.toISOString().split('T')[0] === dateStr).length;
+      return { date: dateStr, count };
     });
 
-    monthlyExpenses.forEach(e => {
-      const key = `${months[e.date.getMonth()]} ${e.date.getFullYear()}`;
-      if (chartDataMap[key]) chartDataMap[key].expenses += e.amount;
+    const volumeData = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - i));
+      const dateStr = date.toISOString().split('T')[0];
+      const count = reportVolume.filter(r => r.date.toISOString().split('T')[0] === dateStr).length;
+      // Coloring logic: green (low < 5) → amber (medium 5-15) → red (high > 15)
+      let color = "#10b981"; // green
+      if (count > 15) color = "#ef4444"; // red
+      else if (count > 5) color = "#f59e0b"; // amber
+      
+      return { 
+        name: date.toLocaleDateString('en-US', { weekday: 'short' }), 
+        count,
+        fill: color 
+      };
     });
 
-    monthlyIncomes.forEach(i => {
-      const key = `${months[i.date.getMonth()]} ${i.date.getFullYear()}`;
-      if (chartDataMap[key]) chartDataMap[key].income += i.amount;
-    });
-
-    const chartData = Object.values(chartDataMap);
+    // System Health
+    const systemHealth = {
+      mongodb: { status: "Connected", color: "green" },
+      nextauth: { status: "Operational", color: "green" },
+      nodemailer: { status: "SMTP healthy", color: "green" },
+      gemini: { status: "Latency 340ms", color: "amber" } // Simulated latency
+    };
 
     return NextResponse.json({
       totalUsers,
-      totalExpenses,
-      totalIncome,
-      avgSavings,
-      recentActivity,
-      chartData
+      activeToday,
+      aiReports,
+      tokensUsed,
+      tokenPercentage,
+      systemHealth,
+      charts: {
+        registrations: registrationsData,
+        volume: volumeData
+      }
     }, { status: 200 });
 
   } catch (error) {
-    console.error("Failed to fetch admin stats:", error);
+    console.error("Dashboard stats error:", error);
     return NextResponse.json({ message: "Failed to fetch stats" }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }
 }
-

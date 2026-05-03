@@ -125,6 +125,7 @@ const CustomPieTooltip = ({ active, payload }: CustomTooltipProps) => {
 export default function ReportsPage() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const [rawExpenses, setRawExpenses] = useState<Expense[]>([]);
   const [rawIncomes, setRawIncomes] = useState<Income[]>([]);
   const [prevRawExpenses, setPrevRawExpenses] = useState<Expense[]>([]);
@@ -150,7 +151,7 @@ export default function ReportsPage() {
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [categoryFilter, setCategoryFilter] = useState<"All" | "Needs" | "Wants">("All");
   const [selectedPieSlice, setSelectedPieSlice] = useState<string | null>(null);
-  const [trendMode, setTrendMode] = useState<"daily" | "cumulative" | "stacked">("daily");
+  const [trendMode, setTrendMode] = useState<"daily" | "cumulative" | "stacked" | "cashflow">("daily");
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const modeRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const trendRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -160,7 +161,8 @@ export default function ReportsPage() {
   const monthlyLimit = (session?.user as { monthlyLimit?: number })?.monthlyLimit || 0;
 
   useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 100);
+    setMounted(true);
+    const timer = setTimeout(() => setIsReady(true), 500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -258,7 +260,7 @@ export default function ReportsPage() {
 
   // Auto-scroll for trend tabs
   useEffect(() => {
-    const activeIndex = trendModes.indexOf(trendMode);
+    const activeIndex = trendModes.indexOf(trendMode as any);
     if (trendRefs.current[activeIndex]) {
       trendRefs.current[activeIndex]?.scrollIntoView({
         behavior: 'smooth',
@@ -723,7 +725,7 @@ export default function ReportsPage() {
               </div>
             </div>
             <div className="h-72 w-full">
-              {mounted && !loading && trendData.length > 0 ? (
+              {mounted && isReady && !loading && trendData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                   <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
                     <defs>
@@ -785,7 +787,7 @@ export default function ReportsPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted font-bold italic">
-                  {!mounted ? "Initializing..." : "No data available."}
+                  {!isReady ? "Initializing..." : "No data available."}
                 </div>
               )}
             </div>
@@ -800,7 +802,7 @@ export default function ReportsPage() {
                 Period Comparison
               </h3>
               <div className="h-64 w-full">
-                {mounted && !loading ? (
+                {mounted && isReady && !loading ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                     <BarChart data={comparisonData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }} barGap={4} barCategoryGap="40%">
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#6366f110" />
@@ -836,7 +838,7 @@ export default function ReportsPage() {
               </h3>
               <p className="text-muted text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-4">Actual vs Recommended Profile</p>
               <div className="flex-1 flex items-center justify-center min-h-[250px] w-full">
-                {mounted && !loading && stats.total > 0 ? (
+                {mounted && isReady && !loading && stats.total > 0 ? (
                   <ResponsiveContainer width="100%" height={250} minWidth={100} minHeight={100}>
                     <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
                       <PolarGrid stroke="#6366f120" />
@@ -880,7 +882,7 @@ export default function ReportsPage() {
                 Top Expenditure
               </h3>
               <div className="h-64 w-full">
-                {mounted && !loading && topSubcategories.length > 0 ? (
+                {mounted && isReady && !loading && topSubcategories.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
                     <BarChart data={topSubcategories} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#6366f110" />
@@ -908,7 +910,7 @@ export default function ReportsPage() {
               </h3>
               <p className="text-muted text-xs font-bold uppercase tracking-widest mb-4">Tap slice to cross-filter</p>
               <div className="flex-1 flex flex-col items-center">
-                {mounted && !loading && subcategoryData.length > 0 ? (
+                {mounted && isReady && !loading && subcategoryData.length > 0 ? (
                   <>
                     <div className="h-52 w-full shrink-0">
                       <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>

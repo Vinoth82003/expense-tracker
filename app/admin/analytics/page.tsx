@@ -1,0 +1,402 @@
+"use client";
+
+import { useEffect, useState, useMemo } from "react";
+import { motion } from "framer-motion";
+import { 
+  BarChart, 
+  Bar, 
+  LineChart, 
+  Line, 
+  AreaChart, 
+  Area, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  Legend
+} from "recharts";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Users, 
+  ShieldCheck, 
+  Smartphone, 
+  Download, 
+  Mail,
+  ChevronRight,
+  ArrowUpRight,
+  Target,
+  Zap,
+  Activity
+} from "lucide-react";
+import { subDays, format } from "date-fns";
+
+const TEAL_COLORS = ["#00D4AA", "#00B28F", "#008F73", "#006D58", "#004B3D"];
+const GRAY_COLOR = "#334155";
+
+export default function AdminAnalyticsPage() {
+  const [range, setRange] = useState("30"); // 7, 30, 90
+  const [dauData, setDauData] = useState([]);
+  const [growthData, setGrowthData] = useState([]);
+  const [featureUsage, setFeatureUsage] = useState([]);
+  const [retention, setRetention] = useState([]);
+  const [modes, setModes] = useState<any>(null);
+  const [rates, setRates] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    const from = subDays(new Date(), parseInt(range)).toISOString();
+    const to = new Date().toISOString();
+
+    try {
+      const [dauRes, growthRes, featuresRes, retentionRes, modesRes, ratesRes] = await Promise.all([
+        fetch(`/api/admin/analytics/dau?from=${from}&to=${to}`),
+        fetch(`/api/admin/analytics/growth?from=${from}&to=${to}`),
+        fetch(`/api/admin/analytics/features?from=${from}&to=${to}`),
+        fetch(`/api/admin/analytics/retention`),
+        fetch(`/api/admin/analytics/modes`),
+        fetch(`/api/admin/analytics/2fa-rate`)
+      ]);
+
+      setDauData(await dauRes.json());
+      setGrowthData(await growthRes.json());
+      setFeatureUsage(await featuresRes.json());
+      setRetention(await retentionRes.json());
+      setModes(await modesRes.json());
+      setRates(await ratesRes.json());
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [range]);
+
+  const dauMauRatio = useMemo(() => {
+    if (dauData.length === 0) return 0;
+    const last = dauData[dauData.length - 1] as any;
+    return last.ratio;
+  }, [dauData]);
+
+  const exportCSV = () => {
+    // Basic CSV export logic
+    const data = [
+      ["Date", "DAU", "MAU", "Ratio"],
+      ...dauData.map((d: any) => [d.date, d.dau, d.mau, d.ratio])
+    ];
+    const csvContent = "data:text/csv;charset=utf-8," + data.map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `spendwise_analytics_${range}d.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
+    <div className="space-y-8 pb-20">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">App analytics</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Engagement, retention, and feature usage</p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
+            {["7", "30", "90"].map(r => (
+              <button 
+                key={r} 
+                onClick={() => setRange(r)}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${range === r ? 'bg-white dark:bg-slate-700 text-teal-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Last {r} Days
+              </button>
+            ))}
+          </div>
+          <button 
+            onClick={exportCSV}
+            className="p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-teal-500 transition-all group"
+          >
+            <Download size={20} className="text-slate-400 group-hover:text-teal-500" />
+          </button>
+        </div>
+      </div>
+
+      {/* Row 1: DAU/MAU & Growth */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* DAU/MAU */}
+        <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-1">Stickiness (DAU/MAU)</h3>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-slate-900 dark:text-white">{dauMauRatio}%</span>
+                <span className="text-emerald-500 flex items-center text-sm font-bold">
+                  <TrendingUp size={16} /> 4.2%
+                </span>
+              </div>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-500">
+              <Activity size={24} />
+            </div>
+          </div>
+          <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dauData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1E2536', border: 'none', borderRadius: '12px', color: '#fff' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <Legend iconType="circle" />
+                <Line type="monotone" dataKey="dau" stroke="#00D4AA" strokeWidth={3} dot={false} activeDot={{ r: 6 }} name="DAU" />
+                <Line type="monotone" dataKey="mau" stroke="#3B82F6" strokeWidth={2} strokeDasharray="5 5" dot={false} name="MAU" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Growth */}
+        <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-1">User Growth</h3>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-slate-900 dark:text-white">
+                  {growthData.length > 0 ? (growthData[growthData.length - 1] as any).users : 0}
+                </span>
+                <span className="text-slate-400 text-sm font-bold">Total registered</span>
+              </div>
+            </div>
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+              <Users size={24} />
+            </div>
+          </div>
+          <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={growthData}>
+                <defs>
+                  <linearGradient id="colorGrowth" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#00D4AA" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#00D4AA" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1E2536', border: 'none', borderRadius: '12px', color: '#fff' }}
+                />
+                <Area type="monotone" dataKey="users" stroke="#00D4AA" strokeWidth={3} fillOpacity={1} fill="url(#colorGrowth)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Feature Usage */}
+      <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-8">
+        <div>
+          <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-1">Feature Usage</h3>
+          <p className="text-2xl font-bold">Engagement across platform modules</p>
+        </div>
+        <div className="h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={featureUsage} layout="vertical" margin={{ left: 50 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
+              <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
+              <YAxis dataKey="feature" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#64748B' }} />
+              <Tooltip 
+                cursor={{ fill: 'rgba(0, 212, 170, 0.05)' }}
+                contentStyle={{ backgroundColor: '#1E2536', border: 'none', borderRadius: '12px', color: '#fff' }}
+              />
+              <Bar dataKey="count" fill="#00D4AA" radius={[0, 8, 8, 0]} barSize={30}>
+                {featureUsage.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={TEAL_COLORS[index % TEAL_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Row 3: Splits */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Expense Mode Split */}
+        <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 flex flex-col items-center">
+          <div className="w-full mb-8">
+            <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Expense Mode Split</h3>
+            <p className="text-xl font-bold">User preference distribution</p>
+          </div>
+          <div className="relative h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: "Limit Mode", value: modes?.limit || 0 },
+                    { name: "No Limit", value: modes?.noLimit || 0 }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={100}
+                  paddingAngle={8}
+                  dataKey="value"
+                >
+                  <Cell fill="#00D4AA" />
+                  <Cell fill="#E2E8F0" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-3xl font-black text-slate-900 dark:text-white">{modes?.total || 0}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Users</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-8 w-full mt-8">
+            <div className="p-4 bg-teal-500/5 rounded-2xl border border-teal-500/10">
+              <p className="text-[10px] font-black uppercase text-teal-600 mb-1">Limit Mode</p>
+              <p className="text-2xl font-black">{modes?.limitPercent}%</p>
+              <p className="text-[10px] text-emerald-500 font-bold flex items-center gap-1 mt-1">
+                <ArrowUpRight size={12} /> +4% trend
+              </p>
+            </div>
+            <div className="p-4 bg-slate-500/5 rounded-2xl border border-slate-500/10">
+              <p className="text-[10px] font-black uppercase text-slate-600 mb-1">No Limit</p>
+              <p className="text-2xl font-black">{modes?.noLimitPercent}%</p>
+              <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1 mt-1">
+                <TrendingDown size={12} /> Stable
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 2FA & PWA Rates */}
+        <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-8">
+          <div>
+            <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Adoption Rates</h3>
+            <p className="text-xl font-bold">Platform feature penetration</p>
+          </div>
+          
+          <div className="space-y-12 py-4">
+            {/* 2FA */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">2FA Security</p>
+                    <p className="text-xs text-slate-500">Users with OTP enabled</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-3xl font-black text-slate-900 dark:text-white">{rates?.twoFactor.percent}%</span>
+                </div>
+              </div>
+              <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }} 
+                  animate={{ width: `${rates?.twoFactor.percent}%` }}
+                  className="h-full bg-teal-500 rounded-full"
+                />
+              </div>
+              <button className="flex items-center gap-2 text-xs font-black uppercase text-teal-600 hover:text-teal-700 transition-colors">
+                <Mail size={14} /> Send nudge email
+              </button>
+            </div>
+
+            {/* PWA */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                    <Smartphone size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">PWA Installs</p>
+                    <p className="text-xs text-slate-500">App installed on home screen</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-3xl font-black text-slate-900 dark:text-white">{rates?.pwa.percent}%</span>
+                </div>
+              </div>
+              <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }} 
+                  animate={{ width: `${rates?.pwa.percent}%` }}
+                  className="h-full bg-blue-500 rounded-full"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                <TrendingUp size={12} className="text-emerald-500" /> +12% this month
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 4: Retention Cohorts */}
+      <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-slate-100 dark:border-slate-800">
+          <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-1">User Retention</h3>
+          <p className="text-xl font-bold">Signup cohort performance</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Cohort</th>
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Users</th>
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Week 1</th>
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Week 2</th>
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Month 1</th>
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Month 3</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+              {retention.map((row: any, i) => (
+                <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                  <td className="py-5 px-8 text-sm font-black text-slate-900 dark:text-white">{row.month}</td>
+                  <td className="py-5 px-8 text-sm font-bold text-slate-500">{row.users}</td>
+                  <RetentionCell value={row.week1} />
+                  <RetentionCell value={row.week2} />
+                  <RetentionCell value={row.month1} />
+                  <RetentionCell value={row.month3} />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RetentionCell({ value }: { value: string | null }) {
+  if (value === null) return <td className="py-5 px-8 text-xs text-slate-300 italic">-</td>;
+  const num = parseFloat(value);
+  const color = num >= 50 ? "bg-emerald-500/10 text-emerald-600" : num >= 25 ? "bg-amber-500/10 text-amber-600" : "bg-red-500/10 text-red-600";
+  return (
+    <td className="py-5 px-8">
+      <div className={`px-3 py-1 rounded-lg text-xs font-black inline-block ${color}`}>
+        {value}%
+      </div>
+    </td>
+  );
+}

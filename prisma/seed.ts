@@ -1,4 +1,6 @@
-const { PrismaClient } = require("@prisma/client");
+import { PrismaClient } from "@prisma/client";
+import process from "process";
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -33,13 +35,13 @@ async function main() {
   ];
 
   for (const faq of faqs) {
-    await prisma.fAQ.upsert({
+    await (prisma as any).fAQ.upsert({
       where: { id: "000000000000000000000000" }, // Dummy to always trigger create if not exact
       update: {},
       create: faq
     }).catch(() => {
         // Fallback for upsert on non-existent ID in MongoDB
-        return prisma.fAQ.create({ data: faq });
+        return (prisma as any).fAQ.create({ data: faq });
     });
   }
 
@@ -62,7 +64,7 @@ async function main() {
   ];
 
   for (const doc of docs) {
-    await prisma.doc.upsert({
+    await (prisma as any).doc.upsert({
       where: { slug: doc.slug },
       update: {},
       create: doc

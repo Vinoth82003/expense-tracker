@@ -33,6 +33,15 @@ export async function POST(request: Request) {
     }
 
     if (user.twoFactorOTP !== otp) {
+      await (prisma as any).oTPLog.create({
+        data: {
+          userId: (session.user as any).id,
+          email: session.user.email,
+          status: "FAILED",
+          ip: "0.0.0.0",
+          expiresAt: user.twoFactorOTPExpires,
+        }
+      }).catch((e: any) => {});
       return NextResponse.json({ error: "Invalid OTP." }, { status: 400 });
     }
 
@@ -44,6 +53,17 @@ export async function POST(request: Request) {
         twoFactorOTPExpires: null,
       },
     });
+
+    // Log success
+    await (prisma as any).oTPLog.create({
+      data: {
+        userId: (session.user as any).id,
+        email: session.user.email,
+        status: "SUCCESS",
+        ip: "0.0.0.0",
+        expiresAt: user.twoFactorOTPExpires,
+      }
+    }).catch((e: any) => {});
 
     // Set secure cookie to mark session as 2FA verified
     const cookieStore = await cookies();

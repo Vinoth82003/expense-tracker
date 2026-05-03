@@ -118,13 +118,13 @@ export default function AdminDocs() {
     <div className="space-y-10 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
-          <h1 className="text-4xl font-black text-foreground tracking-tighter">Documentation CMS</h1>
-          <p className="text-secondary font-medium">Manage platform documentation using Markdown with real-time preview.</p>
+          <h1 className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Documentation CMS</h1>
+          <p className="text-slate-600 dark:text-slate-400 font-medium">Manage platform documentation using Markdown with real-time preview.</p>
         </div>
         {!isAdding && !editingId && (
           <button 
             onClick={() => { setIsAdding(true); setEditingId(null); setFormData({ title: "", content: "# New Section\n", category: "Basics", slug: "", order: 0 }); }}
-            className="px-6 py-4 bg-primary-600 text-white rounded-2xl font-black shadow-xl shadow-primary-600/20 hover:bg-primary-700 transition-all flex items-center justify-center gap-2"
+            className="px-6 py-4 bg-teal-500 text-white rounded-2xl font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-600 transition-all flex items-center justify-center gap-2"
           >
             <Plus size={20} />
             Add Section
@@ -140,27 +140,27 @@ export default function AdminDocs() {
             exit={{ opacity: 0, scale: 0.98 }}
             className="space-y-6"
           >
-            <div className="flex items-center justify-between bg-surface p-4 rounded-2xl border border-border-subtle">
+            <div className="flex items-center justify-between bg-white dark:bg-[#161B27] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="flex items-center gap-4">
                  <button 
                    onClick={() => setPreviewMode(false)}
-                   className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${!previewMode ? 'bg-primary-600 text-white' : 'text-secondary hover:bg-surface-variant'}`}
+                   className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${!previewMode ? 'bg-teal-500 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E2536]'}`}
                  >
                    Editor
                  </button>
                  <button 
                    onClick={() => setPreviewMode(true)}
-                   className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${previewMode ? 'bg-primary-600 text-white' : 'text-secondary hover:bg-surface-variant'}`}
+                   className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${previewMode ? 'bg-teal-500 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1E2536]'}`}
                  >
                    Preview
                  </button>
               </div>
               <div className="flex items-center gap-2">
-                 <button onClick={handleSave} className="px-6 py-2 bg-emerald-500 text-white rounded-xl font-black text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                 <button onClick={handleSave} className="px-6 py-2 bg-emerald-500 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all">
                    <Save size={16} />
                    Publish
                  </button>
-                 <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                 <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all">
                    <X size={20} />
                  </button>
               </div>
@@ -169,9 +169,9 @@ export default function AdminDocs() {
             {!previewMode ? (
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <div className="lg:col-span-1 space-y-6">
-                  <div className="p-6 bg-surface rounded-[2rem] border border-border-subtle space-y-4">
+                  <div className="p-6 bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-muted uppercase tracking-widest pl-1">Title</label>
+                       <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Title</label>
                        <input 
                          required
                          value={formData.title}
@@ -179,24 +179,24 @@ export default function AdminDocs() {
                            const title = e.target.value;
                            setFormData({...formData, title, slug: generateSlug(title)});
                          }}
-                         className="w-full p-3 rounded-xl bg-surface border border-border-subtle font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
+                         className="w-full p-3 rounded-xl bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-700 font-medium text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                        />
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-muted uppercase tracking-widest pl-1">Slug</label>
+                       <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Slug</label>
                        <input 
                          required
                          value={formData.slug}
                          onChange={(e) => setFormData({...formData, slug: e.target.value})}
-                         className="w-full p-3 rounded-xl bg-surface border border-border-subtle font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
+                         className="w-full p-3 rounded-xl bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-700 font-medium text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                        />
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-muted uppercase tracking-widest pl-1">Category</label>
+                       <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Category</label>
                        <select 
                          value={formData.category}
                          onChange={(e) => setFormData({...formData, category: e.target.value})}
-                         className="w-full p-3 rounded-xl bg-surface border border-border-subtle font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
+                         className="w-full p-3 rounded-xl bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-700 font-medium text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all appearance-none"
                        >
                          <option>Basics</option>
                          <option>Features</option>
@@ -205,12 +205,12 @@ export default function AdminDocs() {
                        </select>
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-muted uppercase tracking-widest pl-1">Display Order</label>
+                       <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Display Order</label>
                        <input 
                          type="number"
                          value={formData.order}
                          onChange={(e) => setFormData({...formData, order: parseInt(e.target.value)})}
-                         className="w-full p-3 rounded-xl bg-surface border border-border-subtle font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
+                         className="w-full p-3 rounded-xl bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-700 font-medium text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all"
                        />
                     </div>
                   </div>
@@ -219,14 +219,14 @@ export default function AdminDocs() {
                   <textarea 
                     value={formData.content}
                     onChange={(e) => setFormData({...formData, content: e.target.value})}
-                    className="w-full h-[600px] p-10 rounded-[3rem] bg-surface border border-border-subtle outline-none focus:ring-2 focus:ring-primary-500/20 font-mono text-sm leading-relaxed shadow-lg"
+                    className="w-full h-[600px] p-8 sm:p-10 rounded-[3rem] bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-800 outline-none focus:ring-2 focus:ring-teal-500 font-mono text-sm leading-relaxed shadow-sm text-slate-900 dark:text-slate-200 transition-all"
                     placeholder="Enter markdown content..."
                   />
                 </div>
               </div>
             ) : (
-              <div className="p-10 md:p-20 bg-surface rounded-[4rem] border border-border-subtle shadow-xl min-h-[600px]">
-                <h1 className="text-4xl font-black text-foreground mb-8 pb-4 border-b border-border-subtle">{formData.title}</h1>
+              <div className="p-10 md:p-20 bg-white dark:bg-[#161B27] rounded-[4rem] border border-slate-200 dark:border-slate-800 shadow-sm min-h-[600px]">
+                <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-8 pb-4 border-b border-slate-200 dark:border-slate-800">{formData.title}</h1>
                 <ThemedMarkdown content={formData.content} />
               </div>
             )}
@@ -237,21 +237,21 @@ export default function AdminDocs() {
       {!isAdding && !editingId && (
         <div className="space-y-6">
           <div className="relative mb-8">
-            <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-muted" />
+            <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input 
               type="text" 
               placeholder="Search documents..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-14 pr-6 py-5 rounded-3xl bg-surface border border-border-subtle shadow-sm font-bold text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
+              className="w-full pl-14 pr-6 py-5 rounded-3xl bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-800 shadow-sm font-medium text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {loading ? (
-              <div className="col-span-full py-20 text-center animate-pulse text-muted font-black uppercase tracking-widest">Accessing File System...</div>
+              <div className="col-span-full py-20 text-center animate-pulse text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Accessing File System...</div>
             ) : filteredDocs.length === 0 ? (
-               <div className="col-span-full py-20 text-center bg-surface border border-dashed border-border-subtle rounded-[3rem] text-secondary font-bold">
+               <div className="col-span-full py-20 text-center bg-white dark:bg-[#161B27] border border-dashed border-slate-200 dark:border-slate-800 rounded-[3rem] text-slate-600 dark:text-slate-400 font-medium">
                  No documents found. Create your first help article!
                </div>
             ) : (
@@ -259,29 +259,29 @@ export default function AdminDocs() {
                 <motion.div
                   key={doc.id}
                   layout
-                  className="p-8 rounded-[2.5rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl transition-all group flex flex-col justify-between"
+                  className="p-8 rounded-[2.5rem] bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-teal-500/30 transition-all group flex flex-col justify-between"
                 >
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
-                       <span className="px-3 py-1 bg-primary-50 text-primary-600 text-[10px] font-black uppercase tracking-widest rounded-full">
+                       <span className="px-3 py-1 bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[10px] font-bold uppercase tracking-widest rounded-full">
                          {doc.category}
                        </span>
-                       <span className="text-[10px] font-black text-muted uppercase">#{doc.order}</span>
+                       <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">#{doc.order}</span>
                     </div>
-                    <h4 className="text-xl font-black text-foreground group-hover:text-primary-600 transition-colors leading-tight">{doc.title}</h4>
-                    <p className="text-xs text-muted font-bold truncate leading-relaxed">/{doc.slug}</p>
+                    <h4 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-teal-500 transition-colors leading-tight">{doc.title}</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate leading-relaxed">/{doc.slug}</p>
                   </div>
-                  <div className="flex items-center gap-2 mt-8 pt-6 border-t border-border-subtle">
+                  <div className="flex items-center gap-2 mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
                      <button 
                        onClick={() => startEdit(doc)}
-                       className="flex-1 py-3 bg-surface-variant text-secondary rounded-xl font-black text-xs hover:bg-primary-600 hover:text-white transition-all flex items-center justify-center gap-2"
+                       className="flex-1 py-3 bg-slate-50 dark:bg-[#1E2536] text-slate-600 dark:text-slate-300 rounded-xl font-bold text-xs hover:bg-teal-500 hover:text-white dark:hover:bg-teal-600 transition-all flex items-center justify-center gap-2"
                      >
                        <Edit2 size={14} />
                        Edit
                      </button>
                      <button 
                        onClick={() => handleDelete(doc.id)}
-                       className="w-12 h-12 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-all flex items-center justify-center"
+                       className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 transition-all flex items-center justify-center"
                      >
                        <Trash2 size={14} />
                      </button>

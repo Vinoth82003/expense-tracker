@@ -13,37 +13,175 @@ model User {
   email        String     @unique
   avatar       String?
   authProvider String?
+  password     String?
   monthlyLimit Float?
   expenseMode  String?    // "limit" or "no-limit"
   onboarded    Boolean    @default(false)
   isAdmin      Boolean    @default(false)
+  adminRole    String?    @default("SUPER") // "SUPER" or "READONLY"
 
   twoFactorEnabled    Boolean   @default(false)
   twoFactorOTP        String?
   twoFactorOTPExpires DateTime?
   
+  isPWAInstalled   Boolean    @default(false)
+
   expenses     Expense[]
   categories   Category[]
   incomes      Income[]
   reports      Report[]
   budgets      Budget[]
+  pageViews    PageView[]
 
   streak       Int        @default(0)
   lastActive   DateTime?  @default(now())
 
-  createdAt    DateTime?   @default(now())
-  updatedAt    DateTime    @updatedAt
+  isSuspended      Boolean   @default(false)
+  suspensionReason String?
+
+  sessions      UserSession[]
+  otpLogs       OTPLog[]
+  loginHistory  LoginHistory[]
+
+  isLocked         Boolean   @default(false)
+  lockedAt         DateTime?
+  lockReason       String?
+
+  unsubscribes     Unsubscribe[]
+  securityAlerts   SecurityAlert[]
+
+  createdAt        DateTime?   @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model SecurityAlert {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        String   // "BRUTE_FORCE", "NEW_COUNTRY", "MASS_IMPORT", "AI_ABUSE"
+  severity    String   // "CRITICAL", "WARNING"
+  description String
+  userId      String?  @db.ObjectId
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String   @default("ACTIVE") // "ACTIVE", "DISMISSED"
+  createdAt   DateTime @default(now())
+}
+
+model BlockedIP {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  ip        String   @unique
+  note      String?
+  addedBy   String   // Admin name
+  requests  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  adminName   String
+  adminId     String   @db.ObjectId
+  actionType  String   // "USER_SUSPENDED", "USER_DELETED", "2FA_RESET", etc.
+  target      String   // user email or resource id
+  details     String
+  ip          String
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  subject        String
+  body           String
+  recipientCount Int
+  recipientFilter String? // JSON stringified filter
+  status         String   // "SENT", "FAILED"
+  adminName      String
+  createdAt      DateTime @default(now())
+}
+
+model EmailTemplate {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  subject   String
+  body      String
+  isSystem  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model Unsubscribe {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model PageView {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page      String   // e.g., "Dashboard", "Expenses", etc.
+  createdAt DateTime @default(now())
+
+  @@index([page, createdAt])
+}
+
+model UserSession {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device    String
+  browser   String
+  ip        String
+  location  String?
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
+model OTPLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?  @db.ObjectId
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  status    String   // "SUCCESS", "FAILED", "EXPIRED"
+  ip        String
+  userAgent String?
+  attempts  Int      @default(1)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model LoginHistory {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  method    String   
+  status    String   
+  ip        String
+  device    String
+  browser   String
+  userAgent String?
+  createdAt DateTime @default(now())
 }
 
 model Report {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  content   String   // The AI generated report text (JSON stringified)
+  content   String?  // The AI generated report text (JSON stringified)
+  status    String   @default("SUCCESS") // "SUCCESS", "FAILED", "PROCESSING"
+  tokens    Int?     @default(0)
+  cost      Float?   @default(0)
+  error     String?
   date      DateTime @default(now())
   
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+}
+
+model Settings {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  key               String   @unique
+  value             String
+  updatedAt         DateTime @updatedAt
 }
 
 model Budget {
@@ -77,6 +215,8 @@ model Category {
   name      String
   type      String   // "Needs" or "Wants"
   isDefault Boolean  @default(false)
+  icon      String?
+  color     String?
 
   userId    String?  @db.ObjectId
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)

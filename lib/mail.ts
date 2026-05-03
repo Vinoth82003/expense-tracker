@@ -92,3 +92,20 @@ export const send2FACodeEmail = async (email: string, code: string) => {
     console.error("Failed to send 2FA code email:", err);
   }
 };
+export const sendEmail = async (to: string, subject: string, html: string) => {
+  const transporter = getTransporter();
+  const mailOptions = {
+    from: `"SpendWise" <${process.env.SMTP_USER}>`,
+    to,
+    subject,
+    html,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (err: any) {
+    console.error("Failed to send email:", err);
+    return { success: false, error: err.message };
+  }
+};

@@ -1,17 +1,74 @@
+import { AuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendWelcomeEmail } from "@/lib/mail";
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Missing email or password");
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user) {
+          // Auto-signup logic: If user doesn't exist, create them
+          const hashedPassword = await bcrypt.hash(credentials.password, 10);
+          const newUser = await (prisma.user.create as any)({
+            data: {
+              email: credentials.email,
+              password: hashedPassword,
+              authProvider: "credentials",
+              onboarded: false,
+            },
+          });
+
+          try {
+            await sendWelcomeEmail(newUser.email, "New User");
+          } catch (e) {
+            console.error("Welcome email failed:", e);
+          }
+
+          return newUser;
+        }
+
+        // If user exists but was Google-only, we might want to block this or link it
+        // For now, let's check if they have a password
+        if (!(user as any).password) {
+          throw new Error("This account uses Google sign-in. Please use Google to continue.");
+        }
+
+        const isValid = await bcrypt.compare(credentials.password, (user as any).password);
+        if (!isValid) {
+          throw new Error("Invalid password");
+        }
+
+        return user;
+      }
+    }),
   ],
   pages: {
     signIn: "/login",
   },
+  session: {
+    strategy: "jwt",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async signIn({ user, account }: { user: any; account: any }) {
       if (!user.email) {
@@ -40,7 +97,7 @@ export const authOptions = {
             },
           });
 
-          console.log(`User created (ID: ${newUser.id}). Sending welcome email...`);
+          // console.log(`User created (ID: ${newUser.id}). Sending welcome email...`);
           try {
             // Send welcome email
             await sendWelcomeEmail(newUser.email, newUser.name || "");
@@ -48,6 +105,23 @@ export const authOptions = {
             console.error("Warning: Failed to send welcome email:", emailError);
           }
         }
+
+        // Log successful login
+        const loggedUser = await prisma.user.findUnique({ where: { email: user.email } });
+        if (loggedUser) {
+          await (prisma as any).loginHistory.create({
+            data: {
+              userId: loggedUser.id,
+              method: account?.provider || "google",
+              status: "SUCCESS",
+              ip: "0.0.0.0", 
+              device: "Unknown",
+              browser: "Unknown",
+              userAgent: "",
+            }
+          }).catch((e: any) => console.error("Failed to log login history:", e));
+        }
+
       } catch (error) {
         console.error("Prisma error during sign-in/upsert:", error);
         return false;

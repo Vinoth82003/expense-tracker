@@ -1,21 +1,26 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { signIn } from "next-auth/react";
 import {
   TrendingUp,
   ArrowLeft,
-  ShieldCheck,
-  Sparkles,
-  Target,
-  Zap,
+  Mail,
+  Lock,
   Loader2,
+  ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -26,198 +31,184 @@ export default function LoginPage() {
     }
   };
 
-  const benefits = [
-    {
-      icon: ShieldCheck,
-      title: "Bank-grade Security",
-      desc: "Your data is encrypted and completely private.",
-    },
-    {
-      icon: Target,
-      title: "Smart Goals",
-      desc: "Set limits, monitor trends, and save faster.",
-    },
-    {
-      icon: Sparkles,
-      title: "Clarity on Spending",
-      desc: "Gain deep insights on every rupee you spend.",
-    },
-    {
-      icon: Zap,
-      title: "Real-time Tracking",
-      desc: "Instant synchronization across all your devices.",
-    },
-  ];
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (res?.error) {
+        setError(res.error);
+        setIsLoading(false);
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setError("An unexpected error occurred");
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="flex min-h-screen bg-background relative overflow-hidden">
-      {/* 
-        ========================================
-        LEFT PANEL - BRANDING & BENEFITS
-        ========================================
-      */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-slate-950 flex-col justify-between p-20 overflow-hidden text-white border-r border-white/5">
-        <div className="absolute top-[-20%] left-[-10%] w-[80%] h-[80%] bg-primary-600/20 rounded-full blur-[140px] pointer-events-none animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-violet-600/20 rounded-full blur-[140px] pointer-events-none animate-pulse [animation-delay:2s]" />
-        
-        <div className="relative z-10">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-3 text-white/50 hover:text-white transition-all font-black uppercase tracking-widest text-[10px] mb-24 group"
-          >
-            <motion.div whileHover={{ x: -5 }} className="flex items-center gap-2">
-              <ArrowLeft size={16} strokeWidth={3} />
-              <span>Back to HQ</span>
-            </motion.div>
-          </Link>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="space-y-8"
-          >
-            <div className="w-20 h-20 bg-gradient-to-br from-primary-600 to-indigo-700 rounded-[1.5rem] flex items-center justify-center shadow-2xl mb-12 rotate-3 hover:rotate-0 transition-transform duration-500">
-              <TrendingUp size={40} color="white" strokeWidth={3} />
-            </div>
-            <h1 className="text-7xl font-black mb-8 leading-[0.85] tracking-tightest">
-              Master Your <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 via-indigo-400 to-violet-400 italic">
-                Spending.
-              </span>
-            </h1>
-            <p className="text-2xl text-white/60 font-medium max-w-md leading-relaxed">
-              Join the elite circle of Indians tracking wealth with forensic precision and effortless simplicity.
-            </p>
-          </motion.div>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative">
+      {/* Background Orbs (Subtle) */}
+      <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary-500/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-violet-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+      {/* Back to Home */}
+      <Link
+        href="/"
+        className="absolute top-8 left-8 flex items-center gap-2 text-muted hover:text-foreground transition-colors text-sm font-medium z-10"
+      >
+        <ArrowLeft size={16} />
+        <span>Back to Home</span>
+      </Link>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-[400px] relative z-10"
+      >
+        {/* Branding */}
+        <div className="flex flex-col items-center mb-10">
+          <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-primary-500/20 mb-4">
+            <TrendingUp size={28} color="white" strokeWidth={3} />
+          </div>
+          <h1 className="text-3xl font-black tracking-tightest text-foreground">SpendWise</h1>
+          <p className="text-secondary text-sm mt-1 font-medium">Your Wealth Under Control.</p>
         </div>
 
-        <div className="relative z-10 grid grid-cols-2 gap-8 mt-12 border-t border-white/10 pt-12">
-          {benefits.slice(0, 2).map((benefit, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 + idx * 0.1 }}
-              className="space-y-3"
-            >
-              <h3 className="font-black text-white text-lg tracking-tight">{benefit.title}</h3>
-              <p className="text-white/40 text-sm leading-relaxed font-medium">{benefit.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
+        <div className="bg-surface glass p-8 sm:p-10 rounded-[3rem] border border-border-subtle shadow-2xl shadow-black/5">
+          <AnimatePresence mode="wait">
+            {!showEmailForm ? (
+              <motion.div
+                key="social"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-black text-foreground tracking-tight">Welcome</h2>
+                  <p className="text-secondary text-sm mt-1 font-medium">Continue to your dashboard</p>
+                </div>
 
-      {/* 
-        ========================================
-        RIGHT PANEL - LOGIN CARD
-        ========================================
-      */}
-      <div className="w-full lg:w-1/2 flex flex-col relative items-center justify-center p-6 sm:p-12">
-        {/* Mobile-only back button */}
-        <Link
-          href="/"
-          className="absolute top-8 left-8 flex lg:hidden items-center gap-2 text-secondary hover:text-foreground transition-colors font-medium z-20"
-        >
-          <motion.div whileHover={{ x: -4 }} className="flex items-center gap-2 text-sm">
-            <ArrowLeft size={18} />
-            <span>Home</span>
-          </motion.div>
-        </Link>
-        
-        <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
-          {/* Logo on mobile only */}
-          <div className="flex lg:hidden justify-center mb-8">
-             <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-2xl">
-              <TrendingUp size={32} color="white" strokeWidth={2.5} />
-            </div>
-          </div>
-
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-black text-foreground mb-3 tracking-tight">
-              Welcome Back
-            </h2>
-            <p className="text-secondary font-medium">
-              Sign in to continue to SpendWise
-            </p>
-          </div>
-
-          <motion.div 
-            className="p-8 sm:p-10 rounded-[2rem] bg-surface/80 backdrop-blur-2xl border border-border-subtle shadow-2xl shadow-indigo-500/5 relative overflow-hidden"
-          >
-            {/* Soft inner glow */}
-            <div className="absolute inset-0 border-2 border-white/20 rounded-[2rem] pointer-events-none mix-blend-overlay"></div>
-
-            <motion.button
-              whileHover={{ scale: 1.02, y: -4 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-              className="w-full relative group py-6 px-6 rounded-2xl bg-foreground text-background font-black text-sm md:text-xl whitespace-nowrap flex wrap sm:nowrap items-center justify-center gap-2 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
-            >
-              {/* Shine effect */}
-              <div className="absolute text-sm inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
-
-              {isLoading ? (
-                <>
-                  <Loader2 className="animate-spin" size={24} />
-                  Verifying Identity...
-                </>
-              ) : (
-                <>
-                    <svg className="w-4 h-4 md:w-6 md:h-6" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
+                <button
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading}
+                  className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-surface border border-border-subtle rounded-[1.5rem] hover:bg-surface-variant transition-all font-bold text-foreground shadow-sm group active:scale-95"
+                >
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
                   Continue with Google
-                </>
-              )}
-            </motion.button>
+                </button>
 
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border-subtle" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-surface px-4 text-muted font-bold tracking-widest uppercase rounded-full">Secure Entry</span>
-              </div>
-            </div>
+                <div className="flex justify-center pt-2">
+                  <button
+                    onClick={() => setShowEmailForm(true)}
+                    className="text-primary-600 hover:text-primary-700 text-xs font-black tracking-widest uppercase flex items-center gap-1 group transition-colors"
+                  >
+                    Continue with email
+                    <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="email"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <button
+                    onClick={() => setShowEmailForm(false)}
+                    className="p-2 hover:bg-surface-variant rounded-xl transition-colors text-muted hover:text-foreground"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                  <h2 className="text-xl font-black text-foreground tracking-tight">Email access</h2>
+                </div>
 
-            <p className="text-center text-xs text-muted font-medium leading-relaxed">
-              By continuing, you acknowledge that you have read and agree to our{" "}
-              <Link href="#" className="font-bold text-primary-600 hover:text-primary-700 transition-colors">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="#" className="font-bold text-primary-600 hover:text-primary-700 transition-colors">
-                Privacy Policy
-              </Link>.
-            </p>
-          </motion.div>
-        </motion.div>
-      </div>
+                <form onSubmit={handleEmailSignIn} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted ml-1">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" size={18} />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full pl-14 pr-5 py-5 bg-surface-variant border border-transparent focus:border-primary-500 rounded-[1.5rem] text-foreground transition-all outline-none font-medium placeholder:text-muted/50"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted ml-1">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" size={18} />
+                      <input
+                        type="password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full pl-14 pr-5 py-5 bg-surface-variant border border-transparent focus:border-primary-500 rounded-[1.5rem] text-foreground transition-all outline-none font-medium placeholder:text-muted/50"
+                      />
+                    </div>
+                  </div>
+
+                  {error && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-error text-xs font-bold bg-error/10 p-4 rounded-2xl border border-error/20"
+                    >
+                      {error}
+                    </motion.p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full py-5 bg-foreground text-background font-black rounded-[1.5rem] shadow-xl hover:translate-y-[-2px] transition-all flex items-center justify-center gap-3 disabled:opacity-50 active:scale-95"
+                  >
+                    {isLoading ? <Loader2 size={20} className="animate-spin" /> : "Secure Login"}
+                    {!isLoading && <ChevronRight size={20} />}
+                  </button>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <p className="text-center text-[10px] text-muted mt-10 leading-relaxed font-black uppercase tracking-widest">
+          By continuing, you agree to our <br />
+          <Link href="/terms" className="text-foreground hover:text-primary-600 transition-colors">Terms</Link> & <Link href="/privacy" className="text-foreground hover:text-primary-600 transition-colors">Privacy</Link>
+        </p>
+      </motion.div>
+      
+      <style jsx global>{`
+        .tracking-tightest {
+          letter-spacing: -0.05em;
+        }
+      `}</style>
     </div>
   );
 }
-
