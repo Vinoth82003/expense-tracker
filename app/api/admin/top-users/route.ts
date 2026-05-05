@@ -53,7 +53,7 @@ export async function GET() {
       return NextResponse.json({ error: "No users found" }, { status: 404 });
     }
 
-    console.log("topUsers:", topUsers);
+    // console.log("topUsers:", topUsers);
 
     const formattedUsers = topUsers.map((u, index) => ({
       rank: index + 1,

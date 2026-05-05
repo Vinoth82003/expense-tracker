@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useDashboard } from "@/context/DashboardContext";
 import { 
   PieChart, 
   Pie, 
@@ -45,55 +46,22 @@ const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#06b6d4", "#f59e0b", "#10b981"
 
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const { 
+    expenses, 
+    incomes, 
+    monthlyLimit, 
+    expenseMode, 
+    loading, 
+    isTogglingMode,
+    toggleExpenseMode 
+  } = useDashboard();
+  
   const [mounted, setMounted] = useState(false);
   const firstName = session?.user?.name?.split(" ")[0] || "there";
-  const [expenseMode, setExpenseMode] = useState<string>("no-limit");
-  const [monthlyLimit, setMonthlyLimit] = useState<number>(0);
-  const [isTogglingMode, setIsTogglingMode] = useState(false);
-
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [incomes, setIncomes] = useState<Income[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 100);
-    const fetchDashboardData = async () => {
-      try {
-        const currentDate = new Date();
-        const monthFilter = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-        
-        const [expRes, incRes, budgetRes] = await Promise.all([
-          fetch(`/api/expenses?month=${monthFilter}`),
-          fetch(`/api/income?month=${monthFilter}`),
-          fetch(`/api/budget?month=${monthFilter}`)
-        ]);
-
-        const expData = await expRes.json();
-        const incData = await incRes.json();
-        const budgetData = await budgetRes.json();
-
-        setExpenses(expData.expenses || []);
-        setIncomes(incData.incomes || []);
-        setMonthlyLimit(budgetData.limit || 0);
-        
-        if (session?.user) {
-          setExpenseMode((session.user as any).expenseMode || "no-limit");
-        }
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    if (session) {
-      fetchDashboardData();
-      
-      const handleRefresh = () => fetchDashboardData();
-      window.addEventListener('expenseAdded', handleRefresh);
-      return () => window.removeEventListener('expenseAdded', handleRefresh);
-    }
-  }, [session]);
+    setMounted(true);
+  }, []);
 
   const stats = useMemo(() => {
     const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -112,30 +80,6 @@ export default function DashboardPage() {
 
     return { totalSpent, totalIncome, netBalance, dailyAverage, remaining, chartData };
   }, [expenses, incomes, expenseMode, monthlyLimit]);
-
-  const toggleExpenseMode = async () => {
-    if (isTogglingMode) return;
-    setIsTogglingMode(true);
-    const newMode = expenseMode === "limit" ? "no-limit" : "limit";
-    try {
-      const res = await fetch("/api/user/expense-mode", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expenseMode: newMode })
-      });
-      if (res.ok) {
-        setExpenseMode(newMode);
-        // Also update the session user object locally so it persists during navigation
-        if (session && session.user) {
-          (session.user as any).expenseMode = newMode;
-        }
-      }
-    } catch (error) {
-      console.error("Failed to toggle expense mode:", error);
-    } finally {
-      setIsTogglingMode(false);
-    }
-  };
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">

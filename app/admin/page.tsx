@@ -333,7 +333,7 @@ export default function AdminDashboard() {
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
                 {topUsers.map((user) => (
-                  <tr key={user.userId} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => window.location.href = `/admin/users/${user.userId}`}>
+                  <tr key={user.userId} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" onClick={() => window.location.href = `/admin/users?id=${user.userId}`}>
                     <td className="py-4 pr-4 font-bold text-slate-400 text-sm">#{user.rank}</td>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">

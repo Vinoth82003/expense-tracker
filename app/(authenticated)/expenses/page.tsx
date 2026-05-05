@@ -23,6 +23,7 @@ import {
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
 import { TransactionDetailModal } from "@/components/ui/TransactionDetailModal";
 import { useUI } from "@/context/UIContext";
+import { useDashboard } from "@/context/DashboardContext";
 import { Loader2, Eye } from "lucide-react";
 
 interface Expense {
@@ -36,6 +37,12 @@ interface Expense {
 
 export default function ExpensesPage() {
   const { data: session } = useSession();
+  const { 
+    expenses: contextExpenses, 
+    loading: contextLoading, 
+    refreshData: refreshContext 
+  } = useDashboard();
+
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -83,14 +90,37 @@ export default function ExpensesPage() {
   };
 
   useEffect(() => {
-    if (viewMode === "month" || (dateRange.from && dateRange.to)) {
-      fetchExpenses();
+    const ACTUAL_CURRENT_MONTH = (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    })();
+
+    if (viewMode === "month" && currentMonth === ACTUAL_CURRENT_MONTH) {
+      setExpenses(contextExpenses);
+      setLoading(contextLoading);
+    } else {
+      if (viewMode === "month" || (dateRange.from && dateRange.to)) {
+        fetchExpenses();
+      }
     }
     
-    const handleRefresh = () => fetchExpenses();
+    const handleRefresh = () => {
+      if (viewMode === "month" && currentMonth === ACTUAL_CURRENT_MONTH) {
+        refreshContext();
+      } else {
+        fetchExpenses();
+      }
+    };
+
     window.addEventListener('expenseAdded', handleRefresh);
-    return () => window.removeEventListener('expenseAdded', handleRefresh);
-  }, [currentMonth, viewMode, dateRange]);
+    window.addEventListener('incomeAdded', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('expenseAdded', handleRefresh);
+      window.removeEventListener('incomeAdded', handleRefresh);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth, viewMode, dateRange, contextExpenses, contextLoading]);
 
   const changeMonth = (offset: number) => {
     const [year, month] = currentMonth.split('-').map(Number);

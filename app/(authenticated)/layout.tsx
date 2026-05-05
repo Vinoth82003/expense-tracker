@@ -25,6 +25,7 @@ import {
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
 import { UIProvider } from "@/context/UIContext";
+import { DashboardProvider } from "@/context/DashboardContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ActivityTracker } from "@/components/activity/ActivityTracker";
 
@@ -297,8 +298,10 @@ export default function DashboardLayout({
 
   return (
     <UIProvider>
-      <ActivityTracker />
-      {content}
+      <DashboardProvider>
+        <ActivityTracker />
+        {content}
+      </DashboardProvider>
     </UIProvider>
   );
 }

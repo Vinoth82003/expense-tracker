@@ -127,6 +127,16 @@ export default function AdminUsersPage() {
     }
   };
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("id");
+      if (id) {
+        fetchUserDetail(id);
+      }
+    }
+  }, []);
+
   const handleSuspend = async () => {
     if (!selectedUser) return;
     setActionLoading(true);

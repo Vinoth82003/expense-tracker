@@ -19,6 +19,7 @@ import {
   Filter,
   Eye,
 } from "lucide-react";
+import { useDashboard } from "@/context/DashboardContext";
 import {
   AreaChart,
   Area,
@@ -123,7 +124,15 @@ const CustomPieTooltip = ({ active, payload }: CustomTooltipProps) => {
 };
 
 export default function ReportsPage() {
-  const { data: session } = useSession();
+  const { 
+    expenses: contextExpenses, 
+    incomes: contextIncomes, 
+    prevExpenses: contextPrevExpenses,
+    monthlyLimit: contextMonthlyLimit,
+    loading: contextLoading,
+    refreshData: refreshContext
+  } = useDashboard();
+
   const [mounted, setMounted] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [rawExpenses, setRawExpenses] = useState<Expense[]>([]);
@@ -158,7 +167,7 @@ export default function ReportsPage() {
   const modes = ["day", "week", "month", "range"] as const;
   const trendModes = ["daily", "cumulative", "stacked", "cashflow"] as const;
 
-  const monthlyLimit = (session?.user as { monthlyLimit?: number })?.monthlyLimit || 0;
+  const monthlyLimit = contextMonthlyLimit;
 
   useEffect(() => {
     setMounted(true);
@@ -237,12 +246,39 @@ export default function ReportsPage() {
   };
 
   useEffect(() => {
-    if (!session) return;
-    if (viewMode === "month" || viewMode === "day" || viewMode === "week" || (viewMode === "range" && dateRange.from && dateRange.to)) {
-      fetchExpenses();
+    const ACTUAL_CURRENT_MONTH = (() => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    })();
+
+    if (viewMode === "month" && currentMonth === ACTUAL_CURRENT_MONTH) {
+      setRawExpenses(contextExpenses);
+      setRawIncomes(contextIncomes);
+      setPrevRawExpenses(contextPrevExpenses);
+      setLoading(contextLoading);
+    } else {
+      if (viewMode === "month" || viewMode === "day" || viewMode === "week" || (viewMode === "range" && dateRange.from && dateRange.to)) {
+        fetchExpenses();
+      }
     }
+
+    const handleRefresh = () => {
+      if (viewMode === "month" && currentMonth === ACTUAL_CURRENT_MONTH) {
+        refreshContext();
+      } else {
+        fetchExpenses();
+      }
+    };
+
+    window.addEventListener('expenseAdded', handleRefresh);
+    window.addEventListener('incomeAdded', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('expenseAdded', handleRefresh);
+      window.removeEventListener('incomeAdded', handleRefresh);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, viewMode, currentMonth, currentDay, currentWeekStart, dateRange]);
+  }, [viewMode, currentMonth, currentDay, currentWeekStart, dateRange, contextExpenses, contextIncomes, contextPrevExpenses, contextLoading]);
 
   // Auto-scroll for mode tabs
   useEffect(() => {

@@ -198,14 +198,14 @@ const FeatureMockup = ({ index }: { index: number }) => {
         <div className="bg-surface rounded-[2rem] border border-border-subtle p-6 shadow-sm flex flex-col h-full w-full">
           <h3 className="text-xl font-black mb-6">Category Split</h3>
           <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="w-32 h-32 rounded-full relative mb-8 shadow-inner" style={{ background: "conic-gradient(#6366f1 0% 40%, #8b5cf6 40% 70%, #ec4899 70% 100%)" }}>
+            <div className="w-32 h-32 rounded-full relative mb-8 shadow-inner" style={{ background: "conic-gradient(#6366f1 0% 60%, #8b5cf6 60% 100%" }}>
                <div className="absolute inset-[18px] bg-surface rounded-full shadow-sm" />
             </div>
             <div className="w-full grid grid-cols-1 gap-3">
               {[
                 { name: "Needs", val: "₹24,500", color: "#6366f1" },
                 { name: "Wants", val: "₹18,000", color: "#8b5cf6" },
-                { name: "Investments", val: "₹12,000", color: "#ec4899" }
+                // { name: "Investments", val: "₹12,000", color: "#ec4899" }
               ].map((entry) => (
                 <div key={entry.name} className="flex items-center gap-3 bg-surface-variant/30 p-3 rounded-2xl border border-border-subtle">
                   <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
