@@ -280,7 +280,7 @@ export default function AdminDashboard() {
       {/* Row 4: Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
-        <div className="p-8 bg-white dark:bg-[#161B27] rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-8 bg-white dark:bg-[#161B27] rounded-[2.5rem] max-h-[500px] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col overflow-hidden overflow-y-auto scrollbar-no">
           <div className="flex justify-between items-center mb-8">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-teal-50 dark:bg-teal-500/10 text-teal-600 rounded-lg">
