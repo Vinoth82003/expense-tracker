@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
-import { sendEmail } from "@/lib/mail";
+import { emailQueue } from "@/lib/queue";
 import { subDays } from "date-fns";
 
 async function isAdmin() {
@@ -58,41 +58,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No recipients found" }, { status: 400 });
     }
 
-    // 3. Send emails (simplified loop)
-    let successCount = 0;
-    for (const user of users) {
-      const personalizedBody = body.replace(/{userName}/g, user.name || "User");
-      const html = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-          ${personalizedBody.replace(/\n/g, '<br/>')}
-          <hr style="margin-top: 30px; border: 0; border-top: 1px solid #eee;"/>
-          <p style="font-size: 12px; color: #999;">
-            You received this because you are a registered SpendWise user.
-            <br/>
-            To stop receiving these emails, please unsubscribe in your settings.
-          </p>
-        </div>
-      `;
-
-      const result = await sendEmail(user.email, subject, html);
-      if (result.success) successCount++;
-    }
-
-    // 4. Log in history
-    await (prisma as any).notification.create({
+    // 3. Enqueue emails (using BullMQ)
+    let enqueuedCount = 0;
+    
+    // Log the notification in history FIRST, to get the notification ID
+    const notification = await (prisma as any).notification.create({
       data: {
         subject,
         body,
         recipientCount: users.length,
         recipientFilter: JSON.stringify(recipientFilter),
-        status: "SENT",
+        status: "PROCESSING",
         adminName
       }
     });
 
+    const jobs = users.map(user => ({
+      name: 'send-email',
+      data: {
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name,
+        subject,
+        body,
+        notificationId: notification.id
+      }
+    }));
+
+    // Add jobs in bulk
+    await emailQueue.addBulk(jobs);
+    enqueuedCount = users.length;
+
+    // Update notification status to SUCCESS
+    await (prisma as any).notification.update({
+      where: { id: notification.id },
+      data: { status: "SUCCESS" }
+    });
+
     return NextResponse.json({ 
-      message: `Announcement sent successfully to ${successCount} users.`,
-      count: successCount 
+      message: `Announcement queued for delivery to ${enqueuedCount} users.`,
+      count: enqueuedCount 
     });
   } catch (error) {
     console.error("Failed to send notification:", error);

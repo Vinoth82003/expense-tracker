@@ -20,7 +20,8 @@ import {
   Moon,
   Banknote,
   Sparkles,
-  LayoutGrid
+  LayoutGrid,
+  Bell
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
@@ -28,6 +29,8 @@ import { UIProvider } from "@/context/UIContext";
 import { DashboardProvider } from "@/context/DashboardContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ActivityTracker } from "@/components/activity/ActivityTracker";
+import { SystemStatusChecker } from "@/components/layout/SystemStatusChecker";
+import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -36,6 +39,7 @@ const navItems = [
   { name: "Reports", href: "/reports", icon: PieChart },
   { name: "Analyze", href: "/analyze", icon: Sparkles },
   { name: "Categories", href: "/settings/categories", icon: LayoutGrid },
+  { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Profile", href: "/profile", icon: User },
 ];
@@ -50,7 +54,19 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [featureFlags, setFeatureFlags] = useState<any>({ aiAnalysis: true });
   const { theme, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    fetch("/api/system/status")
+      .then(res => res.json())
+      .then(data => {
+        if (data?.featureFlags) {
+          setFeatureFlags(data.featureFlags);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -132,7 +148,10 @@ export default function DashboardLayout({
         </Link>
 
         <nav className="flex-1 space-y-2">
-          {navItems.map((item) => {
+          {navItems.filter(item => {
+            if (item.name === "Analyze" && !featureFlags.aiAnalysis) return false;
+            return true;
+          }).map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
@@ -191,6 +210,8 @@ export default function DashboardLayout({
               Add Expense
             </button>
             
+            <NotificationDropdown />
+            
             <button
               onClick={toggleTheme}
               className="p-2.5 lg:p-3 rounded-xl bg-surface border border-border-subtle text-secondary hover:text-foreground transition-all active:scale-95 shadow-sm"
@@ -244,7 +265,10 @@ export default function DashboardLayout({
               </div>
 
               <nav className="flex-1 space-y-2">
-                {navItems.map((item) => {
+                {navItems.filter(item => {
+                  if (item.name === "Analyze" && !featureFlags.aiAnalysis) return false;
+                  return true;
+                }).map((item) => {
                   const isActive = pathname === item.href;
                   return (
                     <Link
@@ -299,6 +323,7 @@ export default function DashboardLayout({
   return (
     <UIProvider>
       <DashboardProvider>
+        <SystemStatusChecker />
         <ActivityTracker />
         {content}
       </DashboardProvider>

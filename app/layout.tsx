@@ -21,6 +21,8 @@ import { PageLoader } from "@/components/ui/PageLoader";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import PWAInstallBanner from "@/components/layout/PWAInstallBanner";
 import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
+import { PublicMaintenanceBanner } from "@/components/layout/PublicMaintenanceBanner";
+import { ModalProvider } from "@/components/providers/ModalProvider";
 
 export const viewport = {
   width: "device-width",
@@ -138,10 +140,13 @@ export default function RootLayout({
           Skip to main content
         </a>
 
+        <PublicMaintenanceBanner />
         <PageLoader />
         <OfflineIndicator />
         <AuthProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <ModalProvider>{children}</ModalProvider>
+          </ThemeProvider>
         </AuthProvider>
         <PWAInstallBanner />
       </body>

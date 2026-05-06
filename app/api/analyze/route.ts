@@ -58,22 +58,35 @@ export async function POST(req: NextRequest) {
   const userId = (session.user as any).id;
 
   try {
-    // 0. Check for today's access limit
+    // 0. Check settings (Feature Flags and AI Quotas)
+    const settingsRows = await (prisma as any).settings.findMany({
+      where: { key: { in: ['featureFlags', 'aiSettings'] } }
+    });
+    const settingsMap = settingsRows.reduce((acc: any, row: any) => {
+      try { acc[row.key] = JSON.parse(row.value); } catch(e) { acc[row.key] = row.value; }
+      return acc;
+    }, {});
+    
+    const featureFlags = settingsMap.featureFlags || { aiAnalysis: true };
+    const aiSettings = settingsMap.aiSettings || { maxReports: 3 };
+
+    if (!featureFlags.aiAnalysis) {
+      return NextResponse.json({ error: "AI Analysis feature is currently disabled by the administrator." }, { status: 403 });
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const existingReport = await prisma.report.findFirst({
+    const existingReportsCount = await prisma.report.count({
       where: {
         userId,
-        date: {
-          gte: today,
-        },
+        date: { gte: today },
       },
     });
 
-    if (existingReport) {
+    if (existingReportsCount >= aiSettings.maxReports) {
       return NextResponse.json({ 
-        error: "Daily limit reached. You can only perform 1 analysis per day. Your report for today is already available." 
+        error: `Daily limit reached. You can only perform ${aiSettings.maxReports} analysis per day.` 
       }, { status: 429 });
     }
 

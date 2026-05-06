@@ -52,7 +52,7 @@ export async function GET() {
         type: "budget",
         userId: b.userId,
         description: `${b.user?.name || b.user?.email} updated their monthly budget to ₹${b.amount}`,
-        timestamp: new Date(), // Mock timestamp since Budget model doesn't have createdAt
+        timestamp: new Date(parseInt(b.id.substring(0,8), 16) * 1000), // Infer date from MongoDB ObjectId
         color: "amber"
       }))
     ];

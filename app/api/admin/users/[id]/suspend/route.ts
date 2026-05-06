@@ -34,6 +34,18 @@ export async function PATCH(
       } as any,
     });
 
+    // Create Audit Log
+    await (prisma as any).auditLog.create({
+      data: {
+        adminName: "Admin", // Should be fetched from session in real app
+        adminId: "000000000000000000000000", // Placeholder if no admin ID is in session
+        actionType: (updatedUser as any).isSuspended ? "USER_SUSPENDED" : "USER_UNSUSPENDED",
+        target: user.email,
+        details: `Reason: ${reason || 'N/A'}`,
+        ip: req.headers.get("x-forwarded-for") || "127.0.0.1",
+      }
+    });
+
     return NextResponse.json({ 
       message: `User ${(updatedUser as any).isSuspended ? 'suspended' : 'activated'} successfully`,
       isSuspended: (updatedUser as any).isSuspended 

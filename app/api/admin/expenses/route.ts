@@ -59,10 +59,9 @@ export async function GET(req: NextRequest) {
       prisma.expense.count({ where })
     ]);
 
-    // Mock flagged logic: amount > 10000 or arbitrary condition for demo
     const formattedExpenses = expenses.map(e => ({
       ...e,
-      isFlagged: e.amount > 10000 || flagged, // Mock flag
+      isFlagged: e.amount > 10000, 
     }));
 
     // If flagged=true filter was requested, filter them
@@ -71,7 +70,7 @@ export async function GET(req: NextRequest) {
     const stats = {
       totalAmount: (await prisma.expense.aggregate({ _sum: { amount: true } }))._sum.amount || 0,
       recordCount: await prisma.expense.count(),
-      flaggedCount: 12, // Mock
+      flaggedCount: await prisma.expense.count({ where: { amount: { gt: 10000 } } }),
     };
 
     return NextResponse.json({

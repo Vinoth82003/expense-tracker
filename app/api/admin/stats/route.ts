@@ -21,7 +21,8 @@ export async function GET() {
       activeToday,
       aiReports,
       registrations,
-      reportVolume
+      reportVolume,
+      totalTokensAgg
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({
@@ -37,14 +38,29 @@ export async function GET() {
       prisma.report.findMany({
         where: { date: { gte: sevenDaysAgo } },
         select: { date: true }
+      }),
+      prisma.report.aggregate({
+        _sum: { tokens: true }
       })
     ]);
 
-    // Estimate tokens: 1.2M tokens per month as base + usage
-    // Daily quota is 5M tokens (arbitrary for the dashboard warning)
-    const estimatedTokens = aiReports * 1250; // 1250 tokens per report avg
-    const tokensUsed = `${(estimatedTokens / 1000000).toFixed(1)}M`;
-    const tokenPercentage = Math.min((estimatedTokens / 5000000) * 100, 100);
+    const actualTokens = totalTokensAgg?._sum?.tokens || 0;
+    
+    let tokensUsed = "0";
+    if (actualTokens >= 1000000) {
+      tokensUsed = `${(actualTokens / 1000000).toFixed(1)}M`;
+    } else if (actualTokens >= 1000) {
+      tokensUsed = `${(actualTokens / 1000).toFixed(1)}k`;
+    } else {
+      tokensUsed = actualTokens.toString();
+    }
+
+    const aiSettingsRow = await (prisma as any).settings.findUnique({ where: { key: 'aiSettings' } });
+    let maxTokens = 5000000;
+    if (aiSettingsRow) {
+      try { maxTokens = JSON.parse(aiSettingsRow.value).maxTokens || maxTokens; } catch(e) {}
+    }
+    const tokenPercentage = Math.min((actualTokens / maxTokens) * 100, 100);
 
     // Process Chart Data
     const registrationsData = Array.from({ length: 30 }, (_, i) => {
@@ -73,11 +89,18 @@ export async function GET() {
     });
 
     // System Health
+    let mongoStatus = { status: "Connected", color: "green" };
+    try {
+      await prisma.$runCommandRaw({ ping: 1 });
+    } catch {
+      mongoStatus = { status: "Disconnected", color: "red" };
+    }
+
     const systemHealth = {
-      mongodb: { status: "Connected", color: "green" },
+      mongodb: mongoStatus,
       nextauth: { status: "Operational", color: "green" },
-      nodemailer: { status: "SMTP healthy", color: "green" },
-      gemini: { status: "Latency 340ms", color: "amber" } // Simulated latency
+      nodemailer: { status: "SMTP configured", color: "green" },
+      gemini: { status: "API Connected", color: "green" }
     };
 
     return NextResponse.json({

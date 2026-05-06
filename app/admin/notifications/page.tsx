@@ -29,6 +29,7 @@ import {
   X,
   Smartphone
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 
 interface Template {
   id: string;
@@ -58,6 +59,7 @@ interface Unsubscribe {
 }
 
 export default function AdminNotificationsPage() {
+  const { alert, confirm } = useModal();
   const [activeTab, setActiveTab] = useState("send");
   const [loading, setLoading] = useState(false);
 
@@ -82,6 +84,12 @@ export default function AdminNotificationsPage() {
   // Templates State
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [isNewTemplateMode, setIsNewTemplateMode] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState("");
+
+  // Viewing State
+  const [viewingNotification, setViewingNotification] = useState<NotificationLog | null>(null);
+  const [viewingRecipients, setViewingRecipients] = useState<{name: string | null, email: string}[]>([]);
 
   // Unsubscribes State
   const [unsubscribes, setUnsubscribes] = useState<Unsubscribe[]>([]);
@@ -139,15 +147,19 @@ export default function AdminNotificationsPage() {
 
   useEffect(() => {
     if (activeTab === "history") fetchHistory();
-    if (activeTab === "templates") fetchTemplates();
+    if (activeTab === "templates") {
+      fetchTemplates();
+      setIsNewTemplateMode(false);
+    }
     if (activeTab === "unsubscribe") fetchUnsubscribes();
   }, [activeTab, fetchHistory, fetchTemplates, fetchUnsubscribes]);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
   const sendAnnouncement = async () => {
-    if (!subject || !body) return alert("Subject and body are required");
-    if (!confirm(`Send this announcement to recipients?`)) return;
+    if (!subject || !body) return alert({ title: "Validation Error", message: "Subject and body are required", type: "warning" });
+    const isConfirmed = await confirm({ title: "Confirm Send", message: "Send this announcement to the selected recipients?" });
+    if (!isConfirmed) return;
 
     setLoading(true);
     try {
@@ -162,13 +174,16 @@ export default function AdminNotificationsPage() {
 
       if (res.ok) {
         const data = await res.json();
-        alert(data.message);
+        await alert({ title: "Success", message: data.message, type: "success" });
         setSubject("");
         setBody("");
         setActiveTab("history");
+      } else {
+         const err = await res.json();
+         alert({ title: "Error", message: err.error || "Failed to send", type: "error" });
       }
     } catch (error) {
-      alert("Failed to send");
+      alert({ title: "Error", message: "Failed to send", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -185,31 +200,103 @@ export default function AdminNotificationsPage() {
           body: body
         })
       });
-      if (res.ok) alert("Test email sent to your inbox!");
+      if (res.ok) alert({ title: "Test Sent", message: "Test email sent to your inbox!", type: "success" });
+      else alert({ title: "Test Failed", message: "Could not send test email.", type: "error" });
     } catch (error) {
-      alert("Test failed");
+      alert({ title: "Test Failed", message: "Network error", type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
   const saveTemplate = async () => {
-    if (!selectedTemplate) return;
+    if (isNewTemplateMode) {
+      if (!newTemplateName || !subject || !body) {
+        return alert({ title: "Validation Error", message: "Name, subject, and body are required.", type: "warning" });
+      }
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/admin/notifications/templates`, {
+          method: "POST",
+          body: JSON.stringify({ name: newTemplateName, subject, body })
+        });
+        if (res.ok) {
+          await alert({ title: "Success", message: "Template created successfully!", type: "success" });
+          setIsNewTemplateMode(false);
+          fetchTemplates();
+        } else {
+           const err = await res.json();
+           alert({ title: "Error", message: err.error, type: "error" });
+        }
+      } catch (error) {
+        alert({ title: "Error", message: "Save failed", type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      if (!selectedTemplate) return;
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/admin/notifications/templates/${selectedTemplate.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ 
+            subject: selectedTemplate.subject, 
+            body: selectedTemplate.body 
+          })
+        });
+        if (res.ok) {
+          await alert({ title: "Success", message: "Template saved!", type: "success" });
+          fetchTemplates();
+        }
+      } catch (error) {
+        alert({ title: "Error", message: "Save failed", type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const deleteTemplate = async (id: string) => {
+    const isConfirmed = await confirm({ 
+      title: "Delete Template", 
+      message: "Are you sure you want to delete this custom template? This action cannot be undone.", 
+      danger: true 
+    });
+    if (!isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/admin/notifications/templates/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await alert({ title: "Deleted", message: "Template deleted.", type: "success" });
+        fetchTemplates();
+      } else {
+         const err = await res.json();
+         alert({ title: "Error", message: err.error, type: "error" });
+      }
+    } catch (e) {
+      alert({ title: "Error", message: "Failed to delete", type: "error" });
+    }
+  };
+
+  const loadTemplateIntoComposer = (template: Template) => {
+    setSubject(template.subject);
+    setBody(template.body);
+    setActiveTab("send");
+  };
+
+  const viewNotification = async (id: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/notifications/templates/${selectedTemplate.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ 
-          subject: selectedTemplate.subject, 
-          body: selectedTemplate.body 
-        })
-      });
+      const res = await fetch(`/api/admin/notifications/${id}`);
       if (res.ok) {
-        alert("Template saved!");
-        fetchTemplates();
+        const data = await res.json();
+        setViewingNotification(data.notification);
+        setViewingRecipients(data.recipients);
+      } else {
+        alert({ title: "Error", message: "Failed to load notification details.", type: "error" });
       }
-    } catch (error) {
-      alert("Save failed");
+    } catch (e) {
+      alert({ title: "Error", message: "Failed to load notification details.", type: "error" });
     } finally {
       setLoading(false);
     }
@@ -419,13 +506,20 @@ export default function AdminNotificationsPage() {
                       </div>
                     </td>
                     <td className="py-4 px-8">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${log.status === 'SENT' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400'}`}>
-                        {log.status === 'SENT' ? '✓ Sent' : '✗ Failed'}
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                        log.status === 'SUCCESS' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 
+                        log.status === 'PROCESSING' ? 'bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400' :
+                        'bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+                      }`}>
+                        {log.status === 'SUCCESS' ? '✓ Success' : log.status === 'PROCESSING' ? '⋯ Processing' : '✗ Failed'}
                       </span>
                     </td>
                     <td className="py-4 px-8 text-xs font-bold text-slate-500">{log.adminName}</td>
                     <td className="py-4 px-8 text-right">
-                      <button className="p-2 text-slate-400 hover:text-teal-500 transition-colors">
+                      <button 
+                        onClick={() => viewNotification(log.id)}
+                        className="p-2 text-slate-400 hover:text-teal-500 transition-colors"
+                      >
                         <Eye size={16} />
                       </button>
                     </td>
@@ -441,19 +535,47 @@ export default function AdminNotificationsPage() {
             {/* Template List */}
             <div className="lg:col-span-1 space-y-4">
               <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
-                <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-2">Templates</h3>
+                <div className="flex justify-between items-center px-2">
+                  <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Templates</h3>
+                  <button 
+                    onClick={() => {
+                      setIsNewTemplateMode(true);
+                      setNewTemplateName("");
+                      setSelectedTemplate({ id: "", name: "", subject: "", body: "", isSystem: false, updatedAt: "" });
+                      setSubject("");
+                      setBody("");
+                    }}
+                    className="p-1 text-slate-400 hover:text-teal-500 transition-colors"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
                 <div className="space-y-1">
                   {templates.map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => setSelectedTemplate(t)}
-                      className={`w-full text-left px-4 py-3 rounded-xl transition-all ${selectedTemplate?.id === t.id ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
-                    >
-                      <div className="text-xs font-black truncate">{t.name}</div>
-                      <div className={`text-[9px] font-bold ${selectedTemplate?.id === t.id ? 'text-white/70' : 'text-slate-400'}`}>
-                        {t.isSystem ? 'System Template' : 'Custom Template'}
-                      </div>
-                    </button>
+                    <div key={t.id} className={`flex items-center group w-full text-left px-4 py-3 rounded-xl transition-all ${selectedTemplate?.id === t.id && !isNewTemplateMode ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}>
+                      <button
+                        onClick={() => {
+                          setSelectedTemplate(t);
+                          setIsNewTemplateMode(false);
+                          setSubject(t.subject);
+                          setBody(t.body);
+                        }}
+                        className="flex-1 text-left"
+                      >
+                        <div className="text-xs font-black truncate">{t.name}</div>
+                        <div className={`text-[9px] font-bold ${selectedTemplate?.id === t.id && !isNewTemplateMode ? 'text-white/70' : 'text-slate-400'}`}>
+                          {t.isSystem ? 'System Template' : 'Custom Template'}
+                        </div>
+                      </button>
+                      {!t.isSystem && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); deleteTemplate(t.id); }}
+                          className={`p-2 opacity-0 group-hover:opacity-100 transition-opacity ${selectedTemplate?.id === t.id && !isNewTemplateMode ? 'text-white hover:text-red-200' : 'text-red-400 hover:text-red-600'}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -468,12 +590,32 @@ export default function AdminNotificationsPage() {
                       <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
                         <FileCode size={20} />
                       </div>
-                      <div>
-                        <h3 className="font-black text-slate-900 dark:text-white">{selectedTemplate.name}</h3>
-                        <p className="text-[10px] text-slate-500">Edit content and variables</p>
+                      <div className="flex-1">
+                        {isNewTemplateMode ? (
+                           <input 
+                             type="text" 
+                             placeholder="Template Name..." 
+                             value={newTemplateName}
+                             onChange={e => setNewTemplateName(e.target.value)}
+                             className="bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none font-black text-slate-900 dark:text-white"
+                           />
+                        ) : (
+                          <>
+                            <h3 className="font-black text-slate-900 dark:text-white">{selectedTemplate.name}</h3>
+                            <p className="text-[10px] text-slate-500">Edit content and variables</p>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-3">
+                      {!isNewTemplateMode && (
+                        <button 
+                          onClick={() => loadTemplateIntoComposer(selectedTemplate)}
+                          className="px-4 py-2 text-[10px] font-black uppercase text-slate-400 hover:text-teal-500 transition-colors border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-2"
+                        >
+                          <Send size={14} /> Use Template
+                        </button>
+                      )}
                       <button 
                         onClick={() => sendTestEmail(selectedTemplate)}
                         className="px-4 py-2 text-[10px] font-black uppercase text-slate-400 hover:text-teal-500 transition-colors border border-slate-200 dark:border-slate-700 rounded-lg"
@@ -603,6 +745,60 @@ export default function AdminNotificationsPage() {
           </div>
         </div>
       </div>
+      {/* View Notification Modal */}
+      <AnimatePresence>
+        {viewingNotification && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-[#161B27] rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">Announcement Details</h3>
+                  <p className="text-sm font-medium text-slate-500">Sent by {viewingNotification.adminName} on {new Date(viewingNotification.createdAt).toLocaleDateString()}</p>
+                </div>
+                <button 
+                  onClick={() => setViewingNotification(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-8 overflow-y-auto space-y-6">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2 block">Subject</label>
+                  <div className="text-lg font-bold text-slate-900 dark:text-white">{viewingNotification.subject}</div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2 block">Message Body</label>
+                  <div className="prose prose-slate dark:prose-invert max-w-none text-sm font-medium whitespace-pre-wrap p-4 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800">
+                    {viewingNotification.body}
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Recipients ({viewingRecipients.length})</label>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto border border-slate-100 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800">
+                    {viewingRecipients.map((r, i) => (
+                      <div key={i} className="p-3 text-sm flex justify-between">
+                        <span className="font-bold text-slate-700 dark:text-slate-300">{r.name || "Unknown"}</span>
+                        <span className="text-slate-500">{r.email}</span>
+                      </div>
+                    ))}
+                    {viewingRecipients.length === 0 && (
+                       <div className="p-4 text-sm text-center text-slate-500 italic">No specific recipients found for this filter.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

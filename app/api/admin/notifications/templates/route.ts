@@ -54,3 +54,30 @@ export async function GET() {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function POST(req: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { name, subject, body } = await req.json();
+
+    const template = await (prisma as any).emailTemplate.create({
+      data: {
+        name,
+        subject,
+        body,
+        isSystem: false
+      }
+    });
+
+    return NextResponse.json(template);
+  } catch (error: any) {
+    console.error("Failed to create template:", error);
+    if (error.code === 'P2002') {
+       return NextResponse.json({ error: "Template with this name already exists" }, { status: 400 });
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
