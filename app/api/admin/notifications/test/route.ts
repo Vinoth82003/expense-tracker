@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
-import { sendEmail } from "@/lib/mail";
+import { sendEmail, replaceVariables, wrapLayout } from "@/lib/mail";
 
 async function isAdmin() {
   const cookieStore = await cookies();
@@ -45,21 +45,15 @@ export async function POST(req: NextRequest) {
       date: new Date().toLocaleDateString()
     };
 
-    let processedSubject = finalSubject;
-    let processedBody = finalBody;
+    const processedSubject = replaceVariables(finalSubject, sampleValues);
+    const processedBody = replaceVariables(finalBody, sampleValues);
 
-    Object.entries(sampleValues).forEach(([key, val]: any) => {
-      const regex = new RegExp(`{${key}}`, "g");
-      processedSubject = processedSubject.replace(regex, val);
-      processedBody = processedBody.replace(regex, val);
-    });
-
-    const html = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; border: 2px dashed #00D4AA; border-radius: 12px;">
-        <p style="text-align: center; color: #00D4AA; font-weight: bold; margin-bottom: 20px;">--- TEST PREVIEW ---</p>
+    const html = wrapLayout(`
+      <div style="border: 2px dashed #0d9488; border-radius: 16px; padding: 20px; position: relative;">
+        <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 10px; color: #0d9488; font-weight: bold; font-size: 10px; text-transform: uppercase;">Test Preview</div>
         ${processedBody.replace(/\n/g, '<br/>')}
       </div>
-    `;
+    `);
 
     const result = await sendEmail(adminEmail, `[TEST] ${processedSubject}`, html);
 

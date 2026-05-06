@@ -50,6 +50,9 @@ model User {
   unsubscribes     Unsubscribe[]
   securityAlerts   SecurityAlert[]
 
+  readNotificationIds     String[]  @default([])
+  deletedNotificationIds  String[]  @default([])
+
   createdAt        DateTime?   @default(now())
   updatedAt        DateTime    @updatedAt
 }

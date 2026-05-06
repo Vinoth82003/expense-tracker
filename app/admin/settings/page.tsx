@@ -16,7 +16,9 @@ import {
   XCircle,
   RefreshCw,
   Server,
-  Code
+  Code,
+  Zap,
+  UserX
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
@@ -29,6 +31,12 @@ export default function AdminSettingsPage() {
   const [aiSettings, setAiSettings] = useState<any>({});
   const [maintenance, setMaintenance] = useState<any>({});
   const [smtp, setSmtp] = useState<any>({});
+  const [systemTemplates, setSystemTemplates] = useState<any>({
+    maintenanceAnnouncement: "",
+    twoFactorOverride: "",
+    accountLockout: ""
+  });
+  const [allTemplates, setAllTemplates] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState("");
   const [newAdminRole, setNewAdminRole] = useState("SUPER");
@@ -47,6 +55,16 @@ export default function AdminSettingsPage() {
         setAiSettings(data.aiSettings);
         setMaintenance(data.maintenance);
         setSmtp(data.smtp);
+        setSystemTemplates(data.systemTemplates || {
+          maintenanceAnnouncement: "",
+          twoFactorOverride: "",
+          accountLockout: ""
+        });
+      }
+
+      const templatesRes = await fetch("/api/admin/notifications/templates");
+      if (templatesRes.ok) {
+        setAllTemplates(await templatesRes.json());
       }
     } finally {
       setLoading(false);
@@ -97,6 +115,17 @@ export default function AdminSettingsPage() {
     setSaving(false);
     if (res.ok) showToast("AI settings saved");
     else showToast("Failed to save AI settings", "error");
+  };
+
+  const saveSystemTemplates = async () => {
+    setSaving(true);
+    const res = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      body: JSON.stringify({ systemTemplates })
+    });
+    setSaving(false);
+    if (res.ok) showToast("Automation settings saved");
+    else showToast("Failed to save automation settings", "error");
   };
 
   const toggleMaintenance = async (enabled: boolean) => {
@@ -186,6 +215,7 @@ export default function AdminSettingsPage() {
   const TABS = [
     { id: "flags", label: "Feature flags", icon: ToggleLeft },
     { id: "ai", label: "AI & rate limits", icon: Bot },
+    { id: "automation", label: "Automation", icon: Zap },
     { id: "maintenance", label: "Maintenance", icon: Wrench },
     { id: "smtp", label: "Email (SMTP)", icon: Mail },
     { id: "cache", label: "Cache", icon: Database },
@@ -306,6 +336,87 @@ export default function AdminSettingsPage() {
               </div>
               <button onClick={saveAiSettings} disabled={saving} className="px-8 py-4 bg-teal-500 text-white rounded-2xl font-black uppercase shadow-lg shadow-teal-500/20 hover:bg-teal-600 transition-all flex items-center gap-2">
                 {saving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />} Save AI Settings
+              </button>
+            </div>
+          )}
+
+          {activeTab === "automation" && (
+            <div className="space-y-8 max-w-2xl">
+              <div>
+                <h2 className="text-xl font-bold dark:text-white">Automation & Workflows</h2>
+                <p className="text-xs text-slate-500 mt-1">Assign notification templates to automatic system actions.</p>
+              </div>
+              
+              <div className="space-y-6">
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
+                      <Wrench size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold dark:text-white">Maintenance Announcement</h3>
+                      <p className="text-[10px] text-slate-500">Template used when sending bulk maintenance notifications.</p>
+                    </div>
+                  </div>
+                  <select 
+                    value={systemTemplates.maintenanceAnnouncement} 
+                    onChange={e => setSystemTemplates({...systemTemplates, maintenanceAnnouncement: e.target.value})}
+                    className="w-full p-4 bg-white dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
+                  >
+                    <option value="">Select a template...</option>
+                    {allTemplates.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                      <ShieldAlert size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold dark:text-white">2FA Admin Override</h3>
+                      <p className="text-[10px] text-slate-500">Email sent when an admin force-disables user's 2FA.</p>
+                    </div>
+                  </div>
+                  <select 
+                    value={systemTemplates.twoFactorOverride} 
+                    onChange={e => setSystemTemplates({...systemTemplates, twoFactorOverride: e.target.value})}
+                    className="w-full p-4 bg-white dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 appearance-none"
+                  >
+                    <option value="">Select a template...</option>
+                    {allTemplates.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                      <UserX size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold dark:text-white">Account Lockout</h3>
+                      <p className="text-[10px] text-slate-500">Email sent when an admin locks a user's account.</p>
+                    </div>
+                  </div>
+                  <select 
+                    value={systemTemplates.accountLockout} 
+                    onChange={e => setSystemTemplates({...systemTemplates, accountLockout: e.target.value})}
+                    className="w-full p-4 bg-white dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 appearance-none"
+                  >
+                    <option value="">Select a template...</option>
+                    {allTemplates.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button onClick={saveSystemTemplates} disabled={saving} className="px-8 py-4 bg-teal-500 text-white rounded-2xl font-black uppercase shadow-lg shadow-teal-500/20 hover:bg-teal-600 transition-all flex items-center gap-2">
+                {saving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />} Save Automation Config
               </button>
             </div>
           )}

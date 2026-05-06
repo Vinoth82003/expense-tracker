@@ -27,7 +27,8 @@ import {
   Eye,
   Info,
   Clock,
-  Globe
+  Globe,
+  X
 } from "lucide-react";
 
 interface Alert {
@@ -80,11 +81,16 @@ export default function AdminSecurityPage() {
   const [newIP, setNewIP] = useState("");
   const [ipNote, setIpNote] = useState("");
 
-  // 2FA Override
+  // User Actions (Unified)
   const [searchEmail, setSearchEmail] = useState("");
   const [foundUser, setFoundUser] = useState<any>(null);
   const [adminPassword, setAdminPassword] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
+  
+  // Audit Filtering
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditType, setAuditType] = useState("All Actions");
+  const [selectedAuditLog, setSelectedAuditLog] = useState<AuditLog | null>(null);
 
   const fetchAlerts = useCallback(async () => {
     const res = await fetch("/api/admin/security/alerts");
@@ -103,15 +109,32 @@ export default function AdminSecurityPage() {
 
   const fetchAudit = useCallback(async () => {
     const res = await fetch("/api/admin/security/audit");
-    if (res.ok) setAuditLog(await res.json());
-  }, []);
+    if (res.ok) {
+      let logs = await res.json();
+      
+      // Client-side filtering for search and type
+      if (auditSearch) {
+        logs = logs.filter((l: any) => 
+          l.target.toLowerCase().includes(auditSearch.toLowerCase()) ||
+          l.adminName.toLowerCase().includes(auditSearch.toLowerCase()) ||
+          l.details.toLowerCase().includes(auditSearch.toLowerCase())
+        );
+      }
+      
+      if (auditType !== "All Actions") {
+        logs = logs.filter((l: any) => l.actionType === auditType);
+      }
+      
+      setAuditLog(logs);
+    }
+  }, [auditSearch, auditType]);
 
   useEffect(() => {
-    if (activeTab === "alerts") fetchAlerts();
-    if (activeTab === "lockouts") fetchLockouts();
-    if (activeTab === "blocklist") fetchBlocklist();
-    if (activeTab === "audit") fetchAudit();
-  }, [activeTab, fetchAlerts, fetchLockouts, fetchBlocklist, fetchAudit]);
+    fetchAlerts();
+    fetchLockouts();
+    fetchBlocklist();
+    fetchAudit();
+  }, [fetchAlerts, fetchLockouts, fetchBlocklist, fetchAudit]);
 
   const activeAlerts = alerts.filter(a => a.status === 'ACTIVE');
   const criticalAlerts = activeAlerts.filter(a => a.severity === 'CRITICAL');
@@ -122,9 +145,26 @@ export default function AdminSecurityPage() {
   };
 
   const unlockAccount = async (userId: string) => {
-    if (!confirm("Unlock this account?")) return;
-    const res = await fetch(`/api/admin/security/lockouts/${userId}/unlock`, { method: 'PATCH' });
-    if (res.ok) fetchLockouts();
+    const reason = prompt("Reason for unlocking?");
+    if (!reason) return;
+    const pwd = prompt("Confirm Admin Password:");
+    if (!pwd) return;
+    
+    setLoading(true);
+    const res = await fetch("/api/admin/security/lockout", {
+      method: "POST",
+      body: JSON.stringify({ userId, action: 'unlock', reason, adminPassword: pwd })
+    });
+
+    if (res.ok) {
+      alert("Account unlocked successfully.");
+      fetchLockouts();
+      fetchAudit();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Unlock failed");
+    }
+    setLoading(false);
   };
 
   const banAccount = async (userId: string) => {
@@ -160,24 +200,61 @@ export default function AdminSecurityPage() {
     }
   };
 
-  const override2FA = async () => {
-    if (!foundUser || !adminPassword || !overrideReason) return;
+  const handleSecurityAction = async (action: 'override' | 'lock' | 'unlock', userId?: string) => {
+    const targetId = userId || foundUser?.id;
+    if (!targetId || !adminPassword || !overrideReason) {
+      alert("Please fill all required fields including admin password and reason.");
+      return;
+    }
+    
     setLoading(true);
-    const res = await fetch("/api/admin/security/2fa-override", {
+    const endpoint = action === 'override' ? '/api/admin/security/2fa-override' : '/api/admin/security/lockout';
+    const payload = action === 'override' 
+      ? { userId: targetId, adminPassword, reason: overrideReason }
+      : { userId: targetId, action, reason: overrideReason, adminPassword };
+
+    const res = await fetch(endpoint, {
       method: "POST",
-      body: JSON.stringify({ userId: foundUser.id, adminPassword, reason: overrideReason })
+      body: JSON.stringify(payload)
     });
+
     if (res.ok) {
-      alert("2FA Disabled successfully.");
+      alert(`${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully.`);
       setFoundUser(null);
       setAdminPassword("");
       setOverrideReason("");
+      setSearchEmail("");
       fetchAudit();
+      fetchLockouts();
     } else {
       const data = await res.json();
-      alert(data.error || "Override failed");
+      alert(data.error || "Action failed");
     }
     setLoading(false);
+  };
+
+  const exportAuditCSV = () => {
+    const headers = ["Timestamp", "Admin", "Action", "Target", "IP", "Details"];
+    const rows = auditLog.map(l => [
+      new Date(l.createdAt).toLocaleString(),
+      l.adminName,
+      l.actionType,
+      l.target,
+      l.ip,
+      l.details
+    ]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n"
+      + rows.map(e => e.join(",")).join("\n");
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `audit_log_${new Date().toISOString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getActionBadgeColor = (type: string) => {
@@ -192,6 +269,67 @@ export default function AdminSecurityPage() {
 
   return (
     <div className="space-y-8 pb-20">
+      {/* Audit Log Modal */}
+      <AnimatePresence>
+        {selectedAuditLog && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg bg-white dark:bg-[#161B27] rounded-[2.5rem] p-10 shadow-2xl space-y-6"
+            >
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getActionBadgeColor(selectedAuditLog.actionType)}`}>
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Audit Details</h3>
+                    <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">{selectedAuditLog.id}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedAuditLog(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Admin</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedAuditLog.adminName}</p>
+                  </div>
+                  <div className="p-4 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">IP Address</p>
+                    <p className="text-sm font-mono font-bold text-slate-900 dark:text-white">{selectedAuditLog.ip}</p>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Detailed Log</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-slate-200 dark:border-slate-800/50">
+                    {selectedAuditLog.details}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-slate-400 px-2">
+                  <span>Target: <span className="text-teal-500">{selectedAuditLog.target}</span></span>
+                  <span>{new Date(selectedAuditLog.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setSelectedAuditLog(null)}
+                className="w-full py-4 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl font-black uppercase shadow-lg transition-all hover:bg-slate-800"
+              >
+                Close Details
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -440,17 +578,28 @@ export default function AdminSecurityPage() {
                 <input 
                   type="text" 
                   placeholder="Search target user or resource..."
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-xs font-bold outline-none"
                 />
               </div>
               <div className="flex gap-2">
-                <select className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-xs font-bold outline-none border-none">
-                  <option>All Actions</option>
-                  <option>User Suspended</option>
-                  <option>2FA Reset</option>
-                  <option>IP Blocked</option>
+                <select 
+                  value={auditType}
+                  onChange={(e) => setAuditType(e.target.value)}
+                  className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-xs font-bold outline-none border-none"
+                >
+                  <option value="All Actions">All Actions</option>
+                  <option value="USER_LOCKED">User Locked</option>
+                  <option value="USER_UNLOCKED">User Unlocked</option>
+                  <option value="2FA_OVERRIDE">2FA Override</option>
+                  <option value="IP_BLOCKED">IP Blocked</option>
+                  <option value="SETTING_CHANGED">Setting Changed</option>
                 </select>
-                <button className="px-6 py-3 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2">
+                <button 
+                  onClick={exportAuditCSV}
+                  className="px-6 py-3 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2"
+                >
                   <Download size={16} /> Export CSV
                 </button>
               </div>
@@ -482,7 +631,10 @@ export default function AdminSecurityPage() {
                       <td className="py-4 px-8 text-xs font-bold text-teal-600">{log.target}</td>
                       <td className="py-4 px-8 text-[10px] font-mono text-slate-400">{log.ip}</td>
                       <td className="py-4 px-8 text-right">
-                        <button className="p-2 text-slate-400 hover:text-teal-500 transition-colors">
+                        <button 
+                          onClick={() => setSelectedAuditLog(log)}
+                          className="p-2 text-slate-400 hover:text-teal-500 transition-colors"
+                        >
                           <Eye size={16} />
                         </button>
                       </td>
@@ -495,7 +647,7 @@ export default function AdminSecurityPage() {
         )}
       </div>
 
-      {/* 2FA Override Panel */}
+      {/* User Security Actions Panel */}
       <div className="bg-slate-900 dark:bg-slate-800/50 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
           <ShieldAlert size={120} />
@@ -504,12 +656,11 @@ export default function AdminSecurityPage() {
         <div className="max-w-4xl relative z-10 space-y-8">
           <div>
             <h2 className="text-2xl font-black tracking-tight mb-2 flex items-center gap-3">
-              <Lock size={28} className="text-rose-500" />
-              2FA Admin Override
+              <ShieldCheck size={28} className="text-teal-500" />
+              User Security Actions
             </h2>
-            <p className="text-rose-400 text-sm font-bold max-w-xl">
-              CAUTION: Disabling 2FA for a user bypasses their primary security layer. 
-              This action is logged in the audit trail and the user will be notified immediately.
+            <p className="text-slate-400 text-sm font-bold max-w-xl">
+              Perform administrative overrides for user security settings. All actions are logged and users will be notified.
             </p>
           </div>
 
@@ -535,56 +686,161 @@ export default function AdminSecurityPage() {
               </div>
 
               {foundUser && (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-white/5 rounded-3xl border border-white/10 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-black">{foundUser.name || "User"}</p>
-                    <p className="text-[10px] text-slate-400">{foundUser.email}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase text-slate-400">Status:</span>
-                    {foundUser.twoFactorEnabled ? (
-                      <span className="px-2 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase rounded">Active</span>
-                    ) : (
-                      <span className="px-2 py-0.5 bg-slate-700 text-slate-400 text-[9px] font-black uppercase rounded">Disabled</span>
-                    )}
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-white/5 rounded-3xl border border-white/10 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black">{foundUser.name || "User"}</p>
+                      <p className="text-[10px] text-slate-400">{foundUser.email}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase text-slate-400">2FA:</span>
+                        {foundUser.twoFactorEnabled ? (
+                          <span className="px-2 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase rounded">Active</span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-slate-700 text-slate-400 text-[9px] font-black uppercase rounded">Disabled</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase text-slate-400">Status:</span>
+                        {foundUser.isLocked ? (
+                          <span className="px-2 py-0.5 bg-rose-500 text-white text-[9px] font-black uppercase rounded">Locked</span>
+                        ) : (
+                          <span className="px-2 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase rounded">Normal</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}
             </div>
 
             <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400">Admin Password</label>
-                <input 
-                  type="password" 
-                  placeholder="Required for override..."
-                  value={adminPassword}
-                  onChange={(e) => setAdminPassword(e.target.value)}
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400">Admin Password</label>
+                  <input 
+                    type="password" 
+                    placeholder="Password..."
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400">Reason</label>
+                  <input 
+                    type="text" 
+                    placeholder="Reason..."
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                    className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400">Reason for override</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Lost recovery keys..."
-                  value={overrideReason}
-                  onChange={(e) => setOverrideReason(e.target.value)}
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500"
-                />
+              
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => handleSecurityAction('override')}
+                  disabled={loading || !foundUser || !adminPassword || !overrideReason || !foundUser.twoFactorEnabled}
+                  className="flex-1 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black uppercase text-[10px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <ShieldX size={16} /> Disable 2FA
+                </button>
+                {foundUser?.isLocked ? (
+                  <button 
+                    onClick={() => handleSecurityAction('unlock')}
+                    disabled={loading || !foundUser || !adminPassword || !overrideReason}
+                    className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase text-[10px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <Unlock size={16} /> Unlock
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleSecurityAction('lock')}
+                    disabled={loading || !foundUser || !adminPassword || !overrideReason}
+                    className="flex-1 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black uppercase text-[10px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <Lock size={16} /> Lock Account
+                  </button>
+                )}
               </div>
-              <button 
-                onClick={override2FA}
-                disabled={loading || !foundUser || !adminPassword || !overrideReason}
-                className="w-full py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black uppercase shadow-xl shadow-rose-600/30 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-              >
-                {loading ? <RefreshCw size={20} className="animate-spin" /> : <ShieldX size={20} />}
-                Force Disable 2FA
-              </button>
             </div>
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {selectedAuditLog && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-[#161B27] w-full max-w-xl rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+            >
+              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getActionBadgeColor(selectedAuditLog.actionType)}`}>
+                    <ShieldAlert size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Audit Detail</h3>
+                    <p className="text-xs font-black text-slate-900 dark:text-white">{selectedAuditLog.actionType.replace('_', ' ')}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedAuditLog(null)}
+                  className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Timestamp</label>
+                    <p className="text-sm font-bold">{new Date(selectedAuditLog.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">IP Address</label>
+                    <p className="text-sm font-mono font-bold text-teal-500">{selectedAuditLog.ip}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Administrator</label>
+                    <p className="text-sm font-bold">{selectedAuditLog.adminName}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Target Resource</label>
+                    <p className="text-sm font-bold text-rose-500">{selectedAuditLog.target}</p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400">Detailed Action Logs</label>
+                  <div className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-800">
+                    <p className="text-sm leading-relaxed font-medium text-slate-600 dark:text-slate-400 italic">
+                      "{selectedAuditLog.details}"
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                <button 
+                  onClick={() => setSelectedAuditLog(null)}
+                  className="px-8 py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold text-xs hover:opacity-90 transition-opacity"
+                >
+                  Close Detail
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -23,7 +23,8 @@ import {
   User as UserIcon,
   Calendar,
   IndianRupee,
-  Cpu
+  Cpu,
+  Activity
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -61,6 +62,7 @@ export default function AdminReportsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [selectedStatus, setSelectedStatus] = useState("All");
+  const [search, setSearch] = useState("");
 
   // Config
   const [maxReports, setMaxReports] = useState(3);
@@ -88,7 +90,7 @@ export default function AdminReportsPage() {
   const fetchReports = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/reports?page=${page}&status=${selectedStatus}`);
+      const res = await fetch(`/api/admin/reports?page=${page}&status=${selectedStatus}&search=${search}`);
       if (res.ok) {
         const data = await res.json();
         setReports(data.reports);
@@ -99,7 +101,7 @@ export default function AdminReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, selectedStatus]);
+  }, [page, selectedStatus, search]);
 
   useEffect(() => {
     fetchStats();
@@ -167,38 +169,55 @@ export default function AdminReportsPage() {
       {/* KPI Strip */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <KPIBox 
-          label="Reports Today" 
-          value={stats?.reportsToday?.toString() || "0"} 
-          subValue={`Rate limit: ${stats?.rateLimit || 3}/user/day`}
-          icon={Brain}
+          label="Total Intelligent Reports" 
+          value={stats?.reportsMonth?.toLocaleString() || "0"} 
+          subValue="Generated this billing cycle"
+          icon={Cpu}
           color="text-teal-500"
+          trend="+12% vs last month"
         />
         <KPIBox 
-          label="Total This Month" 
-          value={stats?.reportsMonth?.toString() || "0"} 
-          subValue="Across all users"
-          icon={BarChart3}
-          color="text-blue-500"
+          label="Daily Velocity" 
+          value={stats?.reportsToday?.toString() || "0"} 
+          subValue={`Quota: ${stats?.rateLimit || 3}/user/day`}
+          icon={Zap}
+          color="text-amber-500"
+          trend="Real-time tracking"
         />
-        <div className="p-6 bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <div className="flex justify-between items-center">
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Token Usage Today</p>
-            <Zap size={16} className={tokenQuotaPercent > 80 ? 'text-amber-500' : 'text-slate-400'} />
+        <div className="p-8 bg-white dark:bg-[#161B27] rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Brain size={80} />
           </div>
-          <p className="text-2xl font-bold">{(stats?.tokensToday / 1000000).toFixed(1)}M <span className="text-sm font-medium text-slate-400">/ 3.5M</span></p>
-          <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }} animate={{ width: `${tokenQuotaPercent}%` }}
-              className={`h-full ${tokenQuotaPercent > 90 ? 'bg-red-500' : tokenQuotaPercent > 70 ? 'bg-amber-500' : 'bg-teal-500'}`}
-            />
+          <div className="relative z-10 space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Global Token Quota</p>
+              <Activity size={16} className={tokenQuotaPercent > 80 ? 'text-rose-500 animate-pulse' : 'text-teal-500'} />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-black">{(stats?.tokensToday / 1000000).toFixed(2)}M</p>
+              <p className="text-xs font-bold text-slate-400">/ 3.5M</p>
+            </div>
+            <div className="space-y-2">
+              <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }} animate={{ width: `${tokenQuotaPercent}%` }}
+                  className={`h-full ${tokenQuotaPercent > 90 ? 'bg-rose-500' : tokenQuotaPercent > 70 ? 'bg-amber-500' : 'bg-teal-500'}`}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] font-black uppercase text-slate-400">
+                <span>Usage: {tokenQuotaPercent.toFixed(1)}%</span>
+                <span>Reset in 14h</span>
+              </div>
+            </div>
           </div>
         </div>
         <KPIBox 
-          label="Estimated Cost" 
+          label="Estimated API Spend" 
           value={`₹${(stats?.costToday || 0).toLocaleString()}`} 
-          subValue="Today's API spend"
+          subValue="Calculated daily overhead"
           icon={IndianRupee}
           color="text-emerald-500"
+          trend="Budget: ₹500/day"
         />
       </div>
 
@@ -293,7 +312,9 @@ export default function AdminReportsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
               type="text" 
-              placeholder="Filter by User ID or Email..."
+              placeholder="Search by ID, Name or Email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="pl-10 pr-4 py-2.5 bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-teal-500 w-64"
             />
           </div>
@@ -424,6 +445,7 @@ export default function AdminReportsPage() {
       </div>
 
       {/* Report Viewer Panel */}
+      {/* Report Viewer Panel (Forensic Dossier Style) */}
       <AnimatePresence>
         {isPanelOpen && selectedReport && (
           <div className="fixed inset-0 z-[120] flex justify-end">
@@ -435,81 +457,145 @@ export default function AdminReportsPage() {
             <motion.div 
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-2xl bg-white dark:bg-[#0F1117] h-full shadow-2xl flex flex-col"
+              className="relative w-full max-w-2xl bg-[#FCFCFD] dark:bg-[#0A0C10] h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800"
             >
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-500 flex items-center justify-center text-white">
-                    <Brain size={20} />
+              {/* Dossier Header */}
+              <div className="p-10 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-[#0A0C10] relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none rotate-12">
+                  <Shield size={200} />
+                </div>
+                
+                <div className="flex items-center gap-6 relative z-10">
+                  <div className="w-16 h-16 rounded-[1.5rem] bg-slate-900 dark:bg-slate-100 flex items-center justify-center text-white dark:text-slate-900 shadow-2xl">
+                    <Brain size={32} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold">AI Forensic Report</h2>
-                    <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase rounded">Admin View</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 bg-rose-500 text-white text-[8px] font-black uppercase tracking-widest rounded">Confidential</span>
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Dossier #{selectedReport.id.slice(-8)}</span>
+                    </div>
+                    <h2 className="text-2xl font-black tracking-tight dark:text-white uppercase">Forensic Analysis</h2>
                   </div>
                 </div>
-                <button onClick={() => setIsPanelOpen(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                <button 
+                  onClick={() => setIsPanelOpen(false)} 
+                  className="w-12 h-12 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors relative z-10"
+                >
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50/20 dark:bg-slate-900/10">
-                {/* Meta Header */}
-                <div className="grid grid-cols-2 gap-4 p-6 bg-white dark:bg-[#161B27] rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-xs font-bold overflow-hidden">
-                      {selectedReport.user.avatar ? <img src={selectedReport.user.avatar} className="w-full h-full object-cover" /> : <UserIcon size={20} />}
+              <div className="flex-1 overflow-y-auto p-10 space-y-10">
+                {/* Subject Identification */}
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                    <UserIcon size={12} /> Subject Identification
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 p-8 bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg font-bold overflow-hidden border-2 border-slate-200 dark:border-slate-700">
+                        {selectedReport.user.avatar ? <img src={selectedReport.user.avatar} className="w-full h-full object-cover" /> : selectedReport.user.name?.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-900 dark:text-white">{selectedReport.user.name || "Anonymous User"}</p>
+                        <p className="text-[10px] font-bold text-slate-500">{selectedReport.user.email}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900 dark:text-white">{selectedReport.user.name}</p>
-                      <p className="text-[10px] text-slate-500">{selectedReport.user.email}</p>
+                    <div className="text-right flex flex-col justify-center">
+                      <p className="text-[10px] font-black uppercase text-slate-400">Timestamp</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        {new Date(selectedReport.date).toLocaleDateString()} at {new Date(selectedReport.date).toLocaleTimeString()}
+                      </p>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black uppercase text-slate-400">Tokens / Cost</p>
-                    <p className="text-sm font-bold text-teal-500">{selectedReport.tokens.toLocaleString()} / ₹{selectedReport.cost.toFixed(2)}</p>
                   </div>
                 </div>
 
-                {/* Report Content */}
-                <div className="prose prose-slate dark:prose-invert max-w-none">
+                {/* Analysis Parameters */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Compute Cost</p>
+                    <p className="text-lg font-black text-emerald-500">₹{selectedReport.cost.toFixed(4)}</p>
+                  </div>
+                  <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Tokens Burned</p>
+                    <p className="text-lg font-black text-blue-500">{selectedReport.tokens.toLocaleString()}</p>
+                  </div>
+                  <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Status Code</p>
+                    <p className={`text-lg font-black ${selectedReport.status === 'SUCCESS' ? 'text-teal-500' : 'text-rose-500'}`}>{selectedReport.status}</p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-slate-200 dark:bg-slate-800" />
+
+                {/* Report Findings */}
+                <div className="space-y-6">
+                  <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                    <Search size={12} /> Findings & Anomalies
+                  </h3>
+                  
                   {selectedReport.status === 'SUCCESS' ? (
                     <div className="space-y-6">
                       {(() => {
                         try {
                           const data = JSON.parse(selectedReport.content || "{}");
                           return Object.entries(data).map(([key, val]: any) => (
-                            <section key={key} className="p-6 bg-white dark:bg-[#161B27] rounded-3xl border border-slate-100 dark:border-slate-800">
-                              <h3 className="text-sm font-black uppercase text-teal-500 mb-4 tracking-widest flex items-center gap-2">
-                                <CheckCircle2 size={16} />
+                            <motion.section 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              key={key} 
+                              className="p-8 bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group"
+                            >
+                              <div className="absolute top-0 left-0 w-1 h-full bg-teal-500 opacity-20 group-hover:opacity-100 transition-opacity" />
+                              <h3 className="text-xs font-black uppercase text-teal-600 dark:text-teal-400 mb-4 tracking-widest flex items-center gap-2">
+                                <CheckCircle2 size={14} />
                                 {key.replace(/([A-Z])/g, ' $1').trim()}
                               </h3>
-                              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{val}</p> section
-                            </section>
+                              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
+                                {val}
+                              </p>
+                            </motion.section>
                           ));
                         } catch {
-                          return <p className="p-8 text-center text-slate-500 italic">Report content could not be parsed as JSON.</p>;
+                          return (
+                            <div className="p-12 text-center bg-slate-50 dark:bg-slate-900 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+                              <AlertTriangle className="mx-auto text-amber-500 mb-4" size={32} />
+                              <p className="text-sm font-bold text-slate-500 italic">Report data is not in standard forensic JSON format.</p>
+                              <pre className="mt-4 p-4 bg-slate-900 text-slate-300 text-[10px] rounded-xl overflow-auto text-left">
+                                {selectedReport.content}
+                              </pre>
+                            </div>
+                          );
                         }
                       })()}
                     </div>
                   ) : (
-                    <div className="p-12 text-center space-y-4">
-                      <XCircle className="mx-auto text-red-500" size={48} />
+                    <div className="p-12 text-center space-y-6 bg-rose-500/5 rounded-[2rem] border-2 border-dashed border-rose-500/20">
+                      <XCircle className="mx-auto text-rose-500" size={64} />
                       <div>
-                        <h3 className="text-lg font-bold">Generation Failed</h3>
-                        <p className="text-sm text-slate-500 italic">"{selectedReport.error || "Unknown API error occurred."}"</p>
+                        <h3 className="text-xl font-black text-rose-500 uppercase tracking-tight">Intelligence Failure</h3>
+                        <p className="text-sm text-slate-500 mt-2 font-medium">"{selectedReport.error || "A critical API error prevented report generation."}"</p>
                       </div>
+                      <button className="px-8 py-3 bg-rose-500 text-white rounded-xl font-bold text-xs uppercase shadow-xl shadow-rose-500/20">
+                        Retry Generation
+                      </button>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#161B27]">
+              {/* Dossier Footer Actions */}
+              <div className="p-10 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0A0C10] flex gap-4">
+                <button 
+                  className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                >
+                  <IndianRupee size={16} /> Audit Cost
+                </button>
                 <button 
                   onClick={() => deleteReport(selectedReport.id)}
-                  className="w-full py-4 bg-red-500/10 text-red-500 rounded-2xl font-bold hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                  className="flex-1 py-4 bg-rose-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-rose-600/30 hover:bg-rose-700 transition-all flex items-center justify-center gap-2"
                 >
-                  <Trash2 size={18} />
-                  Delete this Report
+                  <Trash2 size={16} /> Shred Document
                 </button>
               </div>
             </motion.div>
@@ -520,17 +606,25 @@ export default function AdminReportsPage() {
   );
 }
 
-function KPIBox({ label, value, subValue, icon: Icon, color }: any) {
+function KPIBox({ label, value, subValue, icon: Icon, color, trend }: any) {
   return (
-    <div className="p-6 bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
-      <div className="flex justify-between items-center">
+    <div className="p-8 bg-white dark:bg-[#161B27] rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none space-y-4 relative overflow-hidden group">
+      <div className="flex justify-between items-center relative z-10">
         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{label}</p>
-        <div className={`w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center ${color}`}>
-          <Icon size={16} />
+        <div className={`w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center ${color} group-hover:scale-110 transition-transform`}>
+          <Icon size={20} />
         </div>
       </div>
-      <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
-      <p className="text-[10px] font-medium text-slate-500">{subValue}</p>
+      <div className="relative z-10">
+        <p className="text-3xl font-black text-slate-900 dark:text-white mb-1">{value}</p>
+        <p className="text-[10px] font-bold text-slate-500 uppercase">{subValue}</p>
+      </div>
+      {trend && (
+        <div className="pt-4 border-t border-slate-50 dark:border-slate-800 flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">{trend}</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -190,7 +190,10 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const totalVolume = categories.reduce((acc, curr) => acc + (curr.volume || 0), 0);
+  const topCategory = useMemo(() => {
+    if (categories.length === 0) return null;
+    return [...categories].sort((a, b) => (b.volume || 0) - (a.volume || 0))[0];
+  }, [categories]);
 
   return (
     <div className="space-y-8 pb-20">
@@ -242,7 +245,7 @@ export default function AdminCategoriesPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard label="System Categories" value={categories.length.toString()} icon={Settings} color="text-teal-500" />
         <StatCard label="User Subcategories" value={totalSub.toString()} icon={Layers} color="text-blue-500" />
-        <StatCard label="Total Volume" value={`₹${(totalVolume / 10000000).toFixed(1)}Cr`} icon={Zap} color="text-amber-500" />
+        <StatCard label="Top Category" value={topCategory?.name || "N/A"} icon={Zap} color="text-amber-500" />
       </div>
 
       {/* System Categories Section */}

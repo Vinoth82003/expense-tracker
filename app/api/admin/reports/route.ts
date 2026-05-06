@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const userId = searchParams.get("userId");
+    const search = searchParams.get("search");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const page = parseInt(searchParams.get("page") || "1");
@@ -26,6 +27,13 @@ export async function GET(req: NextRequest) {
     const where: any = {};
     if (status && status !== "All") where.status = status;
     if (userId) where.userId = userId;
+    if (search) {
+      where.OR = [
+        { id: { contains: search, mode: 'insensitive' } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { user: { name: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
     if (from || to) {
       where.date = {};
       if (from) where.date.gte = new Date(from);

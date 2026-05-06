@@ -22,9 +22,21 @@ const SYSTEM_TEMPLATES = [
     isSystem: true
   },
   {
-    name: "Welcome email",
-    subject: "Welcome to SpendWise, {userName}!",
-    body: "Hi {userName},\n\nWe're excited to have you on board! Start tracking your expenses and gain forensic insights into your spending habits today.",
+    name: "Maintenance announcement",
+    subject: "SpendWise Scheduled Maintenance: {date}",
+    body: "Hello {userName},\n\nWe would like to inform you that SpendWise will be undergoing scheduled maintenance on {date}.\n\nDuring this time, the application may be temporarily unavailable. We apologize for any inconvenience caused.\n\nReason: {reason}",
+    isSystem: true
+  },
+  {
+    name: "2FA Admin Override",
+    subject: "Security Alert: 2FA Disabled by Administrator",
+    body: "Hello {userName},\n\nThis is a formal notification that your Two-Factor Authentication (2FA) has been disabled by a SpendWise Administrator.\n\nReason provided: {reason}\n\nIf you did not request this, please secure your account immediately.",
+    isSystem: true
+  },
+  {
+    name: "Account Lockout",
+    subject: "Security Alert: Your Account Has Been Locked",
+    body: "Hello {userName},\n\nThis is a formal notification that your SpendWise account has been locked by an Administrator.\n\nReason provided: {reason}\n\nPlease contact support for further assistance and to resolve this issue.",
     isSystem: true
   }
 ];

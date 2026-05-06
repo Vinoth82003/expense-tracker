@@ -78,19 +78,19 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    // Keep this for legacy budgetAlertThreshold support if needed
-    const { budgetAlertThreshold } = await req.json();
+    const data = await req.json();
 
-    if (budgetAlertThreshold) {
+    for (const [key, value] of Object.entries(data)) {
       await (prisma as any).settings.upsert({
-        where: { key: 'budgetAlertThreshold' },
-        update: { value: budgetAlertThreshold.toString() },
-        create: { key: 'budgetAlertThreshold', value: budgetAlertThreshold.toString() }
+        where: { key },
+        update: { value: typeof value === 'object' ? JSON.stringify(value) : String(value) },
+        create: { key, value: typeof value === 'object' ? JSON.stringify(value) : String(value) }
       });
     }
 
     return NextResponse.json({ message: "Settings updated successfully" });
   } catch (error) {
+    console.error("Failed to update settings:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

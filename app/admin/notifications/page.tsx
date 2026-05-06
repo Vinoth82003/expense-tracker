@@ -124,12 +124,12 @@ export default function AdminNotificationsPage() {
       if (res.ok) {
         const data = await res.json();
         setTemplates(data);
-        if (data.length > 0 && !selectedTemplate) setSelectedTemplate(data[0]);
+        setSelectedTemplate((prev) => (!prev && data.length > 0) ? data[0] : prev);
       }
     } catch (error) {
       console.error("Templates fetch failed");
     }
-  }, [selectedTemplate]);
+  }, []);
 
   const fetchUnsubscribes = useCallback(async () => {
     try {
@@ -157,6 +157,7 @@ export default function AdminNotificationsPage() {
     if (activeTab === "templates") {
       fetchTemplates();
       setIsNewTemplateMode(false);
+      setSelectedTemplate(prev => prev?.id === "" ? null : prev);
     }
     if (activeTab === "unsubscribe") fetchUnsubscribes();
   }, [activeTab, fetchHistory, fetchTemplates, fetchUnsubscribes]);
@@ -269,7 +270,7 @@ export default function AdminNotificationsPage() {
 
   const saveTemplate = async () => {
     if (isNewTemplateMode) {
-      if (!newTemplateName || !subject || !body) {
+      if (!newTemplateName || !selectedTemplate?.subject || !selectedTemplate?.body) {
         return alert({
           title: "Validation Error",
           message: "Name, subject, and body are required.",
@@ -281,7 +282,11 @@ export default function AdminNotificationsPage() {
         const res = await fetch(`/api/admin/notifications/templates`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newTemplateName, subject, body }),
+          body: JSON.stringify({
+            name: newTemplateName,
+            subject: selectedTemplate.subject,
+            body: selectedTemplate.body,
+          }),
         });
         if (res.ok) {
           await alert({
@@ -316,7 +321,7 @@ export default function AdminNotificationsPage() {
         setLoading(false);
       }
     } else {
-      if (!selectedTemplate) return;
+      if (!selectedTemplate || !selectedTemplate.id) return;
       setLoading(true);
       try {
         const res = await fetch(
@@ -494,9 +499,23 @@ export default function AdminNotificationsPage() {
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
-                  <span className="text-xs font-black uppercase text-slate-400 tracking-widest">
-                    New Announcement
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                      New Announcement
+                    </span>
+                    <select 
+                      onChange={(e) => {
+                        const t = templates.find(temp => temp.id === e.target.value);
+                        if (t) loadTemplateIntoComposer(t);
+                      }}
+                      className="bg-transparent border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 text-[10px] font-bold text-slate-500 outline-none focus:ring-1 focus:ring-teal-500"
+                    >
+                      <option value="">Load Template...</option>
+                      {templates.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setIsPreviewMode(false)}
@@ -869,6 +888,7 @@ export default function AdminNotificationsPage() {
                           "{amount}",
                           "{limit}",
                           "{date}",
+                          "{reason}",
                         ].map((v) => (
                           <button
                             key={v}

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { createdAt: true, name: true },
+      select: { createdAt: true, name: true, readNotificationIds: true, deletedNotificationIds: true },
     });
 
     if (!user) {
@@ -34,10 +34,13 @@ export async function GET(req: NextRequest) {
       take: 20,
     });
 
-    // Personalize placeholders for this user in the payload the UI renders
-    // Admin stores templates in Notification.subject/body with placeholders like {userName}
+    // Filter out deleted notifications
+    const activeNotifications = notifications.filter(
+      (n: any) => !user.deletedNotificationIds.includes(n.id)
+    );
+
     const userName = user.name || "User";
-    const personalizedNotifications = notifications.map((n: any) => {
+    const personalizedNotifications = activeNotifications.map((n: any) => {
       const subject =
         typeof n.subject === "string"
           ? n.subject.replace(/{userName}/g, userName)
@@ -52,15 +55,12 @@ export async function GET(req: NextRequest) {
         ...n,
         subject,
         body,
+        isRead: user.readNotificationIds.includes(n.id),
       };
     });
 
-    // Check last read timestamp to calculate unread count
-    // If not tracked properly, just return recent. We'll add simple 'lastReadNotificationId' logic or assume all are unread if newer than last login.
-    // Let's use a dummy unread count for MVP: notifications in last 7 days = unread
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const unreadCount = personalizedNotifications.filter(
-      (n: any) => new Date(n.createdAt) > sevenDaysAgo,
+      (n: any) => !n.isRead
     ).length;
 
     return NextResponse.json({

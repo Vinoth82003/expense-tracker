@@ -1,5 +1,5 @@
 import { Queue, Worker } from "bullmq";
-import { sendEmail } from "./mail";
+import { sendEmail, replaceVariables, wrapLayout } from "./mail";
 import { prisma } from "./prisma";
 import IORedis from "ioredis";
 
@@ -13,25 +13,29 @@ export const emailQueue = new Queue("emailQueue", { connection });
 // Next.js API routes are typically serverless, but if running a custom server or long-running process, this works.
 // Alternatively, this worker can be started in a separate node process.
 const worker = new Worker("emailQueue", async (job) => {
-  const { userId, userEmail, userName, subject, body, notificationId } = job.data;
+  const { userId, userEmail, userName, subject, body, notificationId, ...extra } = job.data;
 
   try {
-    const personalizedBody = body.replace(/{userName}/g, userName || "User");
-    const html = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-        ${personalizedBody.replace(/\n/g, '<br/>')}
-        <hr style="margin-top: 30px; border: 0; border-top: 1px solid #eee;"/>
-        <p style="font-size: 12px; color: #999;">
-          You received this because you are a registered SpendWise user.
-          <br/>
-          To stop receiving these emails, please unsubscribe in your settings.
-        </p>
-      </div>
+    const variables = {
+      userName: userName || "User",
+      date: extra.date || new Date().toLocaleDateString(),
+      amount: extra.amount || "0",
+      limit: extra.limit || "0",
+      code: extra.code || "",
+      ...extra
+    };
+
+    const personalizedSubject = replaceVariables(subject, variables);
+    const personalizedBody = replaceVariables(body, variables);
+    
+    const contentHtml = `
+      ${personalizedBody.replace(/\n/g, '<br/>')}
     `;
 
-    const result = await sendEmail(userEmail, subject, html);
+    const html = wrapLayout(contentHtml);
+
+    const result = await sendEmail(userEmail, personalizedSubject, html);
     
-    // You could update a specific delivery status here if you had a model for it.
     console.log(`Email job completed for ${userEmail}`);
     return result;
   } catch (error) {

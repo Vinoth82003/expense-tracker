@@ -302,10 +302,15 @@ export default function AdminTransactionsPage() {
                     <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[120px]">{tx.note || "No note"}</p>
                   </td>
                   <td className="py-4 px-6">
-                    {tx.isFlagged && (
+                    {tx.isFlagged ? (
                       <div className="flex items-center gap-1 text-amber-500" title="Outlier detected">
                         <AlertTriangle size={14} />
                         <span className="text-[10px] font-black uppercase">Flagged</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-emerald-500" title="Regular transaction">
+                        <CheckCircle2 size={14} />
+                        <span className="text-[10px] font-black uppercase">Normal</span>
                       </div>
                     )}
                   </td>
