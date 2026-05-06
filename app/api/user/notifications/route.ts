@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { createdAt: true }
+      select: { createdAt: true, name: true },
     });
 
     if (!user) {
@@ -25,27 +25,53 @@ export async function GET(req: NextRequest) {
     // Fetch global notifications sent AFTER user was created
     const notifications = await (prisma as any).notification.findMany({
       where: {
-        status: "SENT",
+        status: "SUCCESS",
         createdAt: {
-          gte: user.createdAt
-        }
+          gte: user.createdAt,
+        },
       },
       orderBy: { createdAt: "desc" },
-      take: 20
+      take: 20,
+    });
+
+    // Personalize placeholders for this user in the payload the UI renders
+    // Admin stores templates in Notification.subject/body with placeholders like {userName}
+    const userName = user.name || "User";
+    const personalizedNotifications = notifications.map((n: any) => {
+      const subject =
+        typeof n.subject === "string"
+          ? n.subject.replace(/{userName}/g, userName)
+          : n.subject;
+
+      const body =
+        typeof n.body === "string"
+          ? n.body.replace(/{userName}/g, userName)
+          : n.body;
+
+      return {
+        ...n,
+        subject,
+        body,
+      };
     });
 
     // Check last read timestamp to calculate unread count
     // If not tracked properly, just return recent. We'll add simple 'lastReadNotificationId' logic or assume all are unread if newer than last login.
     // Let's use a dummy unread count for MVP: notifications in last 7 days = unread
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const unreadCount = notifications.filter((n: any) => new Date(n.createdAt) > sevenDaysAgo).length;
+    const unreadCount = personalizedNotifications.filter(
+      (n: any) => new Date(n.createdAt) > sevenDaysAgo,
+    ).length;
 
     return NextResponse.json({
-      notifications,
-      unreadCount
+      notifications: personalizedNotifications,
+      unreadCount,
     });
   } catch (error) {
     console.error("Failed to fetch user notifications:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

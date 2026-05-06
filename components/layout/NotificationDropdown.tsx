@@ -77,7 +77,7 @@ export function NotificationDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-80 sm:w-96 bg-surface border border-border-subtle rounded-2xl shadow-2xl z-50 overflow-hidden"
+            className="fixed left-4 right-4 top-20 sm:left-auto sm:absolute sm:-right-0 sm:top-auto sm:mt-2 origin-top-right w-auto sm:w-[24rem] bg-surface border border-border-subtle rounded-2xl shadow-2xl z-50 overflow-hidden"
           >
             <div className="p-4 border-b border-border-subtle flex items-center justify-between bg-surface-variant/30">
               <h3 className="font-black text-foreground">Announcements</h3>
@@ -95,14 +95,22 @@ export function NotificationDropdown() {
               ) : (
                 <div className="divide-y divide-border-subtle">
                   {notifications.map((notif) => (
-                    <div key={notif.id} className="p-4 hover:bg-surface-variant transition-colors group">
+                    <div
+                      key={notif.id}
+                      className="p-4 hover:bg-surface-variant transition-colors group"
+                    >
                       <div className="flex items-center justify-between mb-1">
-                        <h4 className="text-sm font-black text-foreground">{notif.subject}</h4>
+                        <h4 className="text-sm font-black text-foreground">
+                          {notif.subject}
+                        </h4>
                         <span className="text-[10px] font-bold text-muted uppercase tracking-widest">
-                          {new Date(notif.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                          {new Date(notif.createdAt).toLocaleDateString(
+                            "en-IN",
+                            { day: "numeric", month: "short" },
+                          )}
                         </span>
                       </div>
-                      <p className="text-sm text-secondary font-medium leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all">
+                      <p className="text-sm text-secondary font-medium leading-relaxed line-clamp-2 transition-all">
                         {notif.body}
                       </p>
                     </div>
@@ -110,9 +118,14 @@ export function NotificationDropdown() {
                 </div>
               )}
             </div>
+
             {notifications.length > 0 && (
               <div className="p-3 border-t border-border-subtle bg-surface text-center">
-                <a href="/notifications" onClick={() => setIsOpen(false)} className="text-sm font-bold text-primary-500 hover:text-primary-600 transition-colors">
+                <a
+                  href="/notifications"
+                  onClick={() => setIsOpen(false)}
+                  className="text-sm font-bold text-primary-500 hover:text-primary-600 transition-colors"
+                >
                   View All Announcements
                 </a>
               </div>
