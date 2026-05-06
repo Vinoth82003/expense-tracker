@@ -21,7 +21,8 @@ import {
   Banknote,
   Sparkles,
   LayoutGrid,
-  Bell
+  Bell,
+  BrainCog
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
@@ -37,7 +38,7 @@ const navItems = [
   { name: "Expenses", href: "/expenses", icon: ReceiptIndianRupee },
   { name: "Income", href: "/income", icon: Banknote },
   { name: "Reports", href: "/reports", icon: PieChart },
-  { name: "Analyze", href: "/analyze", icon: Sparkles },
+  { name: "AI Analyze", href: "/analyze", icon: BrainCog },
   { name: "Categories", href: "/settings/categories", icon: LayoutGrid },
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Settings", href: "/settings", icon: Settings },
@@ -262,10 +263,7 @@ export default function DashboardLayout({
               </div>
 
               <nav className="flex-1 space-y-2">
-                {navItems.filter(item => {
-                  if (item.name === "Analyze" && !featureFlags.aiAnalysis) return false;
-                  return true;
-                }).map((item) => {
+                {navItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
                     <Link
