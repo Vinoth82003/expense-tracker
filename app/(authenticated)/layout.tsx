@@ -148,10 +148,7 @@ export default function DashboardLayout({
         </Link>
 
         <nav className="flex-1 space-y-2">
-          {navItems.filter(item => {
-            if (item.name === "Analyze" && !featureFlags.aiAnalysis) return false;
-            return true;
-          }).map((item) => {
+          {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
