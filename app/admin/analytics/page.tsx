@@ -212,23 +212,42 @@ export default function AdminAnalyticsPage() {
           <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-1">Feature Usage</h3>
           <p className="text-2xl font-bold">Engagement across platform modules</p>
         </div>
-        <div className="h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={featureUsage} layout="vertical" margin={{ left: 50 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
-              <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
-              <YAxis dataKey="feature" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 'bold', fill: '#64748B' }} />
-              <Tooltip 
-                cursor={{ fill: 'rgba(0, 212, 170, 0.05)' }}
-                contentStyle={{ backgroundColor: '#1E2536', border: 'none', borderRadius: '12px', color: '#fff' }}
-              />
-              <Bar dataKey="count" fill="#00D4AA" radius={[0, 8, 8, 0]} barSize={30}>
-                {featureUsage.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={TEAL_COLORS[index % TEAL_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        
+        <div className="space-y-5">
+          {featureUsage.map((item: any, index: number) => {
+            const maxCount = Math.max(...featureUsage.map((f: any) => f.count)) || 1;
+            const percentage = (item.count / maxCount) * 100;
+            const color = TEAL_COLORS[index % TEAL_COLORS.length];
+            
+            return (
+              <div key={item.feature} className="flex items-center gap-4 group">
+                <div className="w-24 text-right">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{item.feature}</span>
+                </div>
+                <div className="flex-1 h-6 bg-slate-100 dark:bg-slate-800/50 rounded-r-lg rounded-l-sm overflow-hidden relative">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percentage}%` }}
+                    transition={{ duration: 1, delay: index * 0.1, ease: "easeOut" }}
+                    className="h-full rounded-r-lg relative overflow-hidden"
+                    style={{ backgroundColor: color }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/20" />
+                  </motion.div>
+                </div>
+                <div className="w-16">
+                  <span className="text-sm font-black text-slate-900 dark:text-white">{item.count}</span>
+                  <span className="text-[10px] text-slate-400 ml-1">hits</span>
+                </div>
+              </div>
+            );
+          })}
+          
+          {featureUsage.length === 0 && (
+            <div className="py-10 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl">
+              <p className="text-sm font-bold text-slate-500">Not enough data to calculate engagement yet.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -363,10 +382,10 @@ export default function AdminAnalyticsPage() {
               <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-[10px] font-black uppercase text-slate-400 tracking-widest">
                 <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Cohort</th>
                 <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Users</th>
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Week 1</th>
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Week 2</th>
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Month 1</th>
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Month 3</th>
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">D1</th>
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">D7</th>
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">D14</th>
+                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">D30</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
@@ -374,10 +393,10 @@ export default function AdminAnalyticsPage() {
                 <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                   <td className="py-5 px-8 text-sm font-black text-slate-900 dark:text-white">{row.month}</td>
                   <td className="py-5 px-8 text-sm font-bold text-slate-500">{row.users}</td>
-                  <RetentionCell value={row.week1} />
-                  <RetentionCell value={row.week2} />
-                  <RetentionCell value={row.month1} />
-                  <RetentionCell value={row.month3} />
+                  <RetentionCell value={row.d1} />
+                  <RetentionCell value={row.d7} />
+                  <RetentionCell value={row.d14} />
+                  <RetentionCell value={row.d30} />
                 </tr>
               ))}
             </tbody>

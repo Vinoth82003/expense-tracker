@@ -135,7 +135,7 @@ export const authOptions: AuthOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: session.user.email! },
-            select: { id: true, name: true, onboarded: true, expenseMode: true, monthlyLimit: true, twoFactorEnabled: true },
+            select: { id: true, name: true, onboarded: true, expenseMode: true, monthlyLimit: true, twoFactorEnabled: true, isSuspended: true },
           });
 
           if (dbUser) {
@@ -145,6 +145,7 @@ export const authOptions: AuthOptions = {
             (session.user as any).expenseMode = dbUser.expenseMode;
             (session.user as any).monthlyLimit = dbUser.monthlyLimit;
             (session.user as any).twoFactorEnabled = (dbUser as any).twoFactorEnabled;
+            (session.user as any).isSuspended = dbUser.isSuspended;
           }
         } catch (error) {
           console.error("Error fetching session user from Prisma:", error);

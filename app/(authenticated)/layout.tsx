@@ -32,6 +32,7 @@ import { useTheme } from "@/components/providers/ThemeProvider";
 import { ActivityTracker } from "@/components/activity/ActivityTracker";
 import { SystemStatusChecker } from "@/components/layout/SystemStatusChecker";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
+import { SuspendedOverlay } from "@/components/layout/SuspendedOverlay";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -67,6 +68,26 @@ export default function DashboardLayout({
         }
       })
       .catch(console.error);
+
+    // Track PWA Installation
+    const handleAppInstalled = () => {
+      fetch("/api/user/pwa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ installed: true }),
+      }).catch(console.error);
+    };
+
+    window.addEventListener("appinstalled", handleAppInstalled);
+    
+    // Also check if already running as PWA
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      handleAppInstalled();
+    }
+
+    return () => {
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
   }, []);
 
   useEffect(() => {
@@ -320,8 +341,13 @@ export default function DashboardLayout({
       <DashboardProvider>
         <SystemStatusChecker />
         <ActivityTracker />
-        {content}
+        {(session?.user as any)?.isSuspended ? (
+          <SuspendedOverlay />
+        ) : (
+          content
+        )}
       </DashboardProvider>
     </UIProvider>
   );
+       
 }

@@ -48,6 +48,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         if (recipientFilter.newUsers) {
           where.createdAt = { gte: subDays(new Date(), 7) };
         }
+        if (recipientFilter.noIncomeNoExpenses) {
+          where.AND = [
+            { incomes: { none: {} } },
+            { expenses: { none: {} } }
+          ];
+        }
         if (recipientFilter.specificEmail) {
           where.email = recipientFilter.specificEmail;
         }

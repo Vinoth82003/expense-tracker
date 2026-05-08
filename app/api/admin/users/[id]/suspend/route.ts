@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
+import { sendAutomatedEmail } from "@/lib/mail";
 
 async function isAdmin() {
   const cookieStore = await cookies();
@@ -37,14 +38,26 @@ export async function PATCH(
     // Create Audit Log
     await (prisma as any).auditLog.create({
       data: {
-        adminName: "Admin", // Should be fetched from session in real app
-        adminId: "000000000000000000000000", // Placeholder if no admin ID is in session
+        adminName: "Admin",
+        adminId: "000000000000000000000000",
         actionType: (updatedUser as any).isSuspended ? "USER_SUSPENDED" : "USER_UNSUSPENDED",
         target: user.email,
         details: `Reason: ${reason || 'N/A'}`,
         ip: req.headers.get("x-forwarded-for") || "127.0.0.1",
       }
     });
+    
+    // 3. Send Email
+    if ((updatedUser as any).isSuspended) {
+      await sendAutomatedEmail(user.email, "accountSuspension", {
+        userName: user.name || "User",
+        reason: reason || "Violation of terms"
+      });
+    } else {
+      await sendAutomatedEmail(user.email, "accountReactivation", {
+        userName: user.name || "User"
+      });
+    }
 
     return NextResponse.json({ 
       message: `User ${(updatedUser as any).isSuspended ? 'suspended' : 'activated'} successfully`,

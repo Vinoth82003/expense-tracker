@@ -29,19 +29,17 @@ export async function GET(req: NextRequest) {
       const dayEnd = endOfDay(day);
       const monthStart = subDays(dayEnd, 30);
 
-      const dau = await (prisma as any).loginHistory.groupBy({
+      const dau = await prisma.pageView.groupBy({
         by: ['userId'],
         where: {
-          createdAt: { gte: dayStart, lte: dayEnd },
-          status: "SUCCESS"
+          createdAt: { gte: dayStart, lte: dayEnd }
         }
       });
 
-      const mau = await (prisma as any).loginHistory.groupBy({
+      const mau = await prisma.pageView.groupBy({
         by: ['userId'],
         where: {
-          createdAt: { gte: monthStart, lte: dayEnd },
-          status: "SUCCESS"
+          createdAt: { gte: monthStart, lte: dayEnd }
         }
       });
 

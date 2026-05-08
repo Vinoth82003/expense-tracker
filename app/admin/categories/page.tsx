@@ -30,7 +30,8 @@ import {
   Music,
   Globe,
   Lock,
-  Gift
+  Gift,
+  Activity
 } from "lucide-react";
 import { 
   BarChart, 
@@ -245,7 +246,12 @@ export default function AdminCategoriesPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard label="System Categories" value={categories.length.toString()} icon={Settings} color="text-teal-500" />
         <StatCard label="User Subcategories" value={totalSub.toString()} icon={Layers} color="text-blue-500" />
-        <StatCard label="Top Category" value={topCategory?.name || "N/A"} icon={Zap} color="text-amber-500" />
+        <StatCard 
+          label="Categorization Health" 
+          value={`${Math.round((categories.filter(c => (c.usageCount || 0) > 0).length / Math.max(categories.length, 1)) * 100)}%`} 
+          icon={Activity} 
+          color="text-emerald-500" 
+        />
       </div>
 
       {/* System Categories Section */}

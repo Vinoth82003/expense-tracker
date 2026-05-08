@@ -42,6 +42,15 @@ const defaultSmtp = {
   fromName: "SpendWise"
 };
 
+const defaultSystemTemplates = {
+  maintenanceAnnouncement: "Maintenance announcement",
+  twoFactorOverride: "2FA Admin Override",
+  accountLockout: "Account Lockout",
+  accountUnlock: "Account Unlock",
+  accountSuspension: "Account Suspension",
+  accountReactivation: "Account Reactivation"
+};
+
 export async function GET() {
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -64,6 +73,7 @@ export async function GET() {
       aiSettings: settingsMap.aiSettings || defaultAiSettings,
       maintenance: settingsMap.maintenance || defaultMaintenance,
       smtp: settingsMap.smtp || defaultSmtp,
+      systemTemplates: settingsMap.systemTemplates || defaultSystemTemplates,
       budgetAlertThreshold: settingsMap.budgetAlertThreshold ? parseInt(settingsMap.budgetAlertThreshold) : 80,
     });
   } catch (error) {

@@ -38,6 +38,24 @@ const SYSTEM_TEMPLATES = [
     subject: "Security Alert: Your Account Has Been Locked",
     body: "Hello {userName},\n\nThis is a formal notification that your SpendWise account has been locked by an Administrator.\n\nReason provided: {reason}\n\nPlease contact support for further assistance and to resolve this issue.",
     isSystem: true
+  },
+  {
+    name: "Account Suspension",
+    subject: "Security Notice: Your Account Has Been Suspended",
+    body: "Hello {userName},\n\nWe would like to inform you that your SpendWise account has been suspended by an Administrator.\n\nReason for suspension: {reason}\n\nDuring suspension, you will not be able to access your dashboard or track expenses. Please contact our support team if you believe this is an error.",
+    isSystem: true
+  },
+  {
+    name: "Account Reactivation",
+    subject: "Welcome Back: Your SpendWise Account is Active",
+    body: "Hello {userName},\n\nGreat news! Your SpendWise account has been reactivated by an Administrator.\n\nYou can now log in and continue tracking your finances as usual.\n\nThank you for your patience.",
+    isSystem: true
+  },
+  {
+    name: "Account Unlock",
+    subject: "Security Update: Your Account Has Been Unlocked",
+    body: "Hello {userName},\n\nThis is to inform you that your SpendWise account has been unlocked by an Administrator.\n\nYou should now be able to log in securely. We recommend reviewing your security settings and updating your password if you suspect any unauthorized access.",
+    isSystem: true
   }
 ];
 

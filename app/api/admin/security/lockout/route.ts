@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
-import { sendEmail } from "@/lib/mail";
+import { sendAutomatedEmail } from "@/lib/mail";
 
 async function isAdmin() {
   const cookieStore = await cookies();
@@ -64,46 +64,18 @@ export async function POST(req: NextRequest) {
     // 5. Send Notification Email
     try {
       if (isLocked) {
-        const settingsRow = await (prisma as any).settings.findUnique({ where: { key: "systemTemplates" } });
-        const systemTemplates = settingsRow ? JSON.parse(settingsRow.value) : {};
-        const templateName = systemTemplates.accountLockout || "Account Lockout";
-
-        const template = await (prisma as any).emailTemplate.findUnique({ where: { name: templateName } });
-
-        if (template) {
-          const { replaceVariables, wrapLayout } = await import("@/lib/mail");
-          const variables = {
-            userName: user.name || "User",
-            reason: reason || "No reason provided",
-            date: new Date().toLocaleDateString()
-          };
-
-          const subject = replaceVariables(template.subject, variables);
-          const body = replaceVariables(template.body, variables);
-
-          await sendEmail(user.email, subject, wrapLayout(body));
-        } else {
-          // Fallback
-          await sendEmail(
-            user.email,
-            "Security Alert: Your Account Has Been Locked",
-            `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-              <h2 style="color: #DC2626;">Account Lockout Alert</h2>
-              <p>Hello ${user.name || "User"},</p>
-              <p>This is a formal notification that your SpendWise account has been <strong>locked by an Administrator</strong>.</p>
-              <div style="background: #FEF2F2; padding: 15px; border-radius: 8px; border: 1px solid #FEE2E2; margin: 20px 0;">
-                <p style="margin: 0;"><strong>Reason provided:</strong> ${reason}</p>
-              </div>
-              <p>Please contact support for further assistance.</p>
-              <p style="margin-top: 30px;">Best,<br/> <strong>SpendWise Security Team</strong></p>
-            </div>
-            `
-          );
-        }
+        await sendAutomatedEmail(user.email, "accountLockout", {
+          userName: user.name || "User",
+          reason: reason || "No reason provided",
+          date: new Date().toLocaleDateString()
+        });
+      } else {
+        await sendAutomatedEmail(user.email, "accountUnlock", {
+          userName: user.name || "User"
+        });
       }
     } catch (err) {
-      console.error("Failed to send lockout email:", err);
+      console.error("Failed to send lockout/unlock email:", err);
     }
 
     return NextResponse.json({ message: `Account ${isLocked ? 'locked' : 'unlocked'} successfully.` });

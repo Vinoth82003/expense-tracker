@@ -4,25 +4,23 @@ import { cookies } from "next/headers";
 import { emailQueue } from "@/lib/queue";
 import { subDays } from "date-fns";
 
-async function isAdmin() {
+async function isAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
   const session = cookieStore.get("admin_session");
   return session?.value === "true";
 }
 
-async function getAdminName() {
-  // Mocking for now, in real app we'd get from session
-  return "Admin";
-}
-
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    if (!(await isAdmin())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { subject, body, recipientFilter } = await req.json();
-    const adminName = await getAdminName();
+
+    if (!subject || !body) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
 
     // 1. Fetch unsubscribed emails
     const unsubscribed = await (prisma as any).unsubscribe.findMany({
@@ -30,25 +28,53 @@ export async function POST(req: NextRequest) {
     });
     const unsubscribedEmails = unsubscribed.map((u: any) => u.email);
 
-    // 2. Build user query based on filter
+    // 2. Build where clause
     const where: any = {
       email: { notIn: unsubscribedEmails }
     };
 
     if (recipientFilter) {
-      if (recipientFilter.twoFactorEnabled) where.twoFactorEnabled = true;
-      if (recipientFilter.limitMode) where.expenseMode = "limit";
-      if (recipientFilter.active30d) {
-        where.lastActive = { gte: subDays(new Date(), 30) };
+      const { 
+        twoFactorEnabled, limitMode, active30d, newUsers, 
+        incomeNoExpenses, noIncomeNoExpenses,
+        inactive2d, inactive7d, specificEmail 
+      } = recipientFilter;
+
+      if (twoFactorEnabled) where.twoFactorEnabled = true;
+      if (limitMode) where.expenseMode = "limit";
+      if (active30d) where.lastActive = { gte: subDays(new Date(), 30) };
+      if (newUsers) where.createdAt = { gte: subDays(new Date(), 7) };
+      
+      if (incomeNoExpenses) {
+        where.incomes = { some: {} };
+        where.expenses = { none: {} };
       }
-      if (recipientFilter.newUsers) {
-        where.createdAt = { gte: subDays(new Date(), 7) };
+      
+      if (noIncomeNoExpenses) {
+        where.incomes = { none: {} };
+        where.expenses = { none: {} };
       }
-      if (recipientFilter.specificEmail) {
-        where.email = recipientFilter.specificEmail;
+
+      if (inactive2d) {
+        where.lastActive = { lte: subDays(new Date(), 2) };
       }
+
+      if (inactive7d) {
+        where.lastActive = { lte: subDays(new Date(), 7) };
+      }
+
+      if (recipientFilter.onboarded === false) {
+        where.onboarded = false;
+      }
+
+      if (recipientFilter.noPWA === true) {
+        where.isPWAInstalled = false;
+      }
+
+      if (specificEmail) where.email = specificEmail;
     }
 
+    // 3. Fetch recipients
     const users = await prisma.user.findMany({
       where,
       select: { id: true, name: true, email: true }
@@ -58,49 +84,125 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No recipients found" }, { status: 400 });
     }
 
-    // 3. Enqueue emails (using BullMQ)
-    let enqueuedCount = 0;
-    
-    // Log the notification in history FIRST, to get the notification ID
+    // 4. Create notification record
     const notification = await (prisma as any).notification.create({
       data: {
         subject,
         body,
         recipientCount: users.length,
-        recipientFilter: JSON.stringify(recipientFilter),
+        recipientFilter: JSON.stringify(recipientFilter || {}),
         status: "PROCESSING",
-        adminName
+        adminName: "Admin"
       }
     });
 
-    const jobs = users.map(user => ({
-      name: 'send-email',
-      data: {
-        userId: user.id,
-        userEmail: user.email,
-        userName: user.name,
-        subject,
-        body,
-        notificationId: notification.id
+    // 5. Enqueue jobs with validation
+    const jobs = users.map(user => {
+      if (!user.email || !user.id) {
+        throw new Error(`Invalid user data for user ${user.id || 'unknown'}`);
       }
-    }));
-
-    // Add jobs in bulk
-    await emailQueue.addBulk(jobs);
-    enqueuedCount = users.length;
-
-    // Update notification status to SUCCESS
-    await (prisma as any).notification.update({
-      where: { id: notification.id },
-      data: { status: "SUCCESS" }
+      return {
+        name: 'send-email',
+        data: {
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name || "User",
+          subject,
+          body,
+          notificationId: notification.id
+        }
+      };
     });
 
-    return NextResponse.json({ 
-      message: `Announcement queued for delivery to ${enqueuedCount} users.`,
-      count: enqueuedCount 
+    // Add jobs
+    const enqueuedJobs = await Promise.all(
+      jobs.map(job => emailQueue.add(job.name, job.data))
+    );
+
+    console.log(`[Send] Enqueued ${enqueuedJobs.length} jobs. IDs: ${enqueuedJobs.map(j => j.id).join(', ')}`);
+
+    // 6. Wait for all jobs to complete using polling (most reliable in dev/hot-reload)
+    async function waitForJobCompletion(job: any, timeout = 120000) {
+      const startTime = Date.now();
+      while (Date.now() - startTime < timeout) {
+        const state = await job.getState();
+        if (state === 'completed') return { success: true };
+        if (state === 'failed') {
+          const reason = await job.getFailedReason();
+          return { success: false, error: reason };
+        }
+        // Poll every 200ms
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      throw new Error(`Job ${job.id} timed out after ${timeout}ms`);
+    }
+
+    try {
+      console.log(`[Send] Waiting for ${enqueuedJobs.length} jobs to finish...`);
+      const results = await Promise.all(
+        enqueuedJobs.map(job => waitForJobCompletion(job))
+      );
+
+      const failedJobs = results.filter(r => !r.success);
+      if (failedJobs.length > 0) {
+        throw new Error(`${failedJobs.length} jobs failed to complete successfully.`);
+      }
+
+      console.log(`[Send] All ${enqueuedJobs.length} jobs have finished.`);
+
+      // Update status to SUCCESS (initial dispatch complete)
+      await (prisma as any).notification.update({
+        where: { id: notification.id },
+        data: { status: "SUCCESS" }
+      });
+
+      return NextResponse.json({
+        success: true,
+        notificationId: notification.id,
+        count: users.length
+      });
+
+    } catch (jobErr: any) {
+      console.error(`[Send] Error waiting for jobs to finish:`, jobErr);
+      
+      // Update notification status to FAILED
+      await (prisma as any).notification.update({
+        where: { id: notification.id },
+        data: { 
+          status: "FAILED",
+          error: jobErr.message
+        }
+      }).catch((err:any) => console.error("[Send] Failed to update notification error status:", err));
+      
+      return NextResponse.json(
+        { error: "Jobs failed to complete: " + jobErr.message },
+        { status: 500 }
+      );
+    }
+
+  } catch (error: any) {
+    console.error("[Send-API] Error:", error);
+    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    if (!(await isAdmin())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+    const notification = await (prisma as any).notification.findUnique({
+      where: { id },
     });
-  } catch (error) {
-    console.error("Failed to send notification:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+    return NextResponse.json(notification);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

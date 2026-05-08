@@ -73,6 +73,12 @@ export default function AdminNotificationsPage() {
     limitMode: false,
     active30d: false,
     newUsers: false,
+    incomeNoExpenses: false,
+    noIncomeNoExpenses: false,
+    inactive2d: false,
+    inactive7d: false,
+    onboarded: null,
+    noPWA: false,
   });
   const [specificEmail, setSpecificEmail] = useState("");
 
@@ -139,6 +145,29 @@ export default function AdminNotificationsPage() {
       console.error("Unsubscribes fetch failed");
     }
   }, []);
+
+  const resubscribeUser = async (id: string) => {
+    const isConfirmed = await confirm({
+      title: "Confirm Re-subscribe",
+      message: "Are you sure you want to remove this user from the unsubscribe list?",
+    });
+    if (!isConfirmed) return;
+
+    try {
+      const res = await fetch(`/api/admin/notifications/unsubscribes/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        alert({ title: "Success", message: "User re-subscribed!", type: "success" });
+        fetchUnsubscribes();
+      } else {
+        const err = await res.json();
+        alert({ title: "Error", message: err.error || "Failed to re-subscribe", type: "error" });
+      }
+    } catch (error) {
+      alert({ title: "Error", message: "Network error", type: "error" });
+    }
+  };
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -619,6 +648,11 @@ export default function AdminNotificationsPage() {
                       { id: "limitMode", label: "Limit Mode Only" },
                       { id: "active30d", label: "Active last 30d" },
                       { id: "newUsers", label: "New users (<7d)" },
+                      { id: "incomeNoExpenses", label: "Income but No Expenses" },
+                      { id: "noIncomeNoExpenses", label: "No Income & Expenses" },
+                      { id: "inactive2d", label: "Inactive 2+ Days" },
+                      { id: "inactive7d", label: "Inactive 1+ Week" },
+                      { id: "noPWA", label: "PWA Not Installed" },
                     ].map((f) => (
                       <label
                         key={f.id}
@@ -637,6 +671,19 @@ export default function AdminNotificationsPage() {
                         </span>
                       </label>
                     ))}
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={filters.onboarded === false}
+                        onChange={(e) =>
+                          setFilters({ ...filters, onboarded: e.target.checked ? false : null })
+                        }
+                        className="w-5 h-5 rounded-lg border-2 border-slate-200 dark:border-slate-700 checked:bg-teal-500 transition-all cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-slate-500 group-hover:text-slate-700">
+                        Not Onboarded Only
+                      </span>
+                    </label>
                   </div>
                 )}
 
@@ -981,7 +1028,10 @@ export default function AdminNotificationsPage() {
                       {u.reason || "Not specified"}
                     </td>
                     <td className="py-4 px-8 text-right">
-                      <button className="text-[10px] font-black uppercase text-red-500 hover:text-red-600 transition-colors px-3 py-1 bg-red-500/10 rounded-lg">
+                      <button 
+                        onClick={() => resubscribeUser(u.id)}
+                        className="text-[10px] font-black uppercase text-teal-500 hover:text-teal-600 transition-colors px-3 py-1 bg-teal-500/10 rounded-lg"
+                      >
                         Re-subscribe
                       </button>
                     </td>

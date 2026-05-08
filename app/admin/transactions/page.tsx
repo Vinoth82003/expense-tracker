@@ -303,14 +303,14 @@ export default function AdminTransactionsPage() {
                   </td>
                   <td className="py-4 px-6">
                     {tx.isFlagged ? (
-                      <div className="flex items-center gap-1 text-amber-500" title="Outlier detected">
-                        <AlertTriangle size={14} />
-                        <span className="text-[10px] font-black uppercase">Flagged</span>
+                      <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-500 rounded-lg w-fit border border-amber-500/20" title="Outlier detected">
+                        <AlertTriangle size={12} />
+                        <span className="text-[10px] font-black uppercase tracking-tight">Flagged</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-emerald-500" title="Regular transaction">
-                        <CheckCircle2 size={14} />
-                        <span className="text-[10px] font-black uppercase">Normal</span>
+                      <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-lg w-fit border border-emerald-500/20" title="Regular transaction">
+                        <CheckCircle2 size={12} />
+                        <span className="text-[10px] font-black uppercase tracking-tight">Normal</span>
                       </div>
                     )}
                   </td>

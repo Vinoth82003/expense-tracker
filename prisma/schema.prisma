@@ -53,6 +53,8 @@ model User {
   readNotificationIds     String[]  @default([])
   deletedNotificationIds  String[]  @default([])
 
+  lastBudgetAlertMonth String?  // "YYYY-MM" format
+
   createdAt        DateTime?   @default(now())
   updatedAt        DateTime    @updatedAt
 }
@@ -95,6 +97,7 @@ model Notification {
   recipientCount Int
   recipientFilter String? // JSON stringified filter
   status         String   // "SENT", "FAILED"
+  error          String?  // Error message if failed
   adminName      String
   createdAt      DateTime @default(now())
 }

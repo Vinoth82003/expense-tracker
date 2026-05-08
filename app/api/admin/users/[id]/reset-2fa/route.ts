@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
+import { sendAutomatedEmail } from "@/lib/mail";
 
 async function isAdmin() {
   const cookieStore = await cookies();
@@ -27,6 +28,14 @@ export async function PATCH(
         twoFactorOTPExpires: null,
       },
     });
+
+    const user = await prisma.user.findUnique({ where: { id }, select: { email: true, name: true } });
+    if (user) {
+      await sendAutomatedEmail(user.email, "twoFactorOverride", {
+        userName: user.name || "User",
+        reason: "Administrative Reset"
+      });
+    }
 
     return NextResponse.json({ message: "2FA reset successfully" });
   } catch (error) {

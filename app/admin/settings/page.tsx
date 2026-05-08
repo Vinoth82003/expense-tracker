@@ -18,7 +18,9 @@ import {
   Server,
   Code,
   Zap,
-  UserX
+  UserX,
+  Unlock,
+  ShieldCheck
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
@@ -34,7 +36,10 @@ export default function AdminSettingsPage() {
   const [systemTemplates, setSystemTemplates] = useState<any>({
     maintenanceAnnouncement: "",
     twoFactorOverride: "",
-    accountLockout: ""
+    accountLockout: "",
+    accountUnlock: "",
+    accountSuspension: "",
+    accountReactivation: ""
   });
   const [allTemplates, setAllTemplates] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
@@ -58,7 +63,10 @@ export default function AdminSettingsPage() {
         setSystemTemplates(data.systemTemplates || {
           maintenanceAnnouncement: "",
           twoFactorOverride: "",
-          accountLockout: ""
+          accountLockout: "",
+          accountUnlock: "",
+          accountSuspension: "",
+          accountReactivation: ""
         });
       }
 
@@ -406,6 +414,72 @@ export default function AdminSettingsPage() {
                     value={systemTemplates.accountLockout} 
                     onChange={e => setSystemTemplates({...systemTemplates, accountLockout: e.target.value})}
                     className="w-full p-4 bg-white dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 appearance-none"
+                  >
+                    <option value="">Select a template...</option>
+                    {allTemplates.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                      <Unlock size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold dark:text-white">Account Unlock</h3>
+                      <p className="text-[10px] text-slate-500">Email sent when an admin unlocks a user account.</p>
+                    </div>
+                  </div>
+                  <select 
+                    value={systemTemplates.accountUnlock} 
+                    onChange={e => setSystemTemplates({...systemTemplates, accountUnlock: e.target.value})}
+                    className="w-full p-4 bg-white dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 appearance-none"
+                  >
+                    <option value="">Select a template...</option>
+                    {allTemplates.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                      <ShieldAlert size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold dark:text-white">Account Suspension</h3>
+                      <p className="text-[10px] text-slate-500">Email sent when a user account is suspended.</p>
+                    </div>
+                  </div>
+                  <select 
+                    value={systemTemplates.accountSuspension} 
+                    onChange={e => setSystemTemplates({...systemTemplates, accountSuspension: e.target.value})}
+                    className="w-full p-4 bg-white dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 appearance-none"
+                  >
+                    <option value="">Select a template...</option>
+                    {allTemplates.map(t => (
+                      <option key={t.id} value={t.name}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                      <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold dark:text-white">Account Reactivation</h3>
+                      <p className="text-[10px] text-slate-500">Email sent when an admin reactivates a user.</p>
+                    </div>
+                  </div>
+                  <select 
+                    value={systemTemplates.accountReactivation} 
+                    onChange={e => setSystemTemplates({...systemTemplates, accountReactivation: e.target.value})}
+                    className="w-full p-4 bg-white dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 appearance-none"
                   >
                     <option value="">Select a template...</option>
                     {allTemplates.map(t => (

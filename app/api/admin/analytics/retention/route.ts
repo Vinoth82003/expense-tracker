@@ -27,32 +27,46 @@ export async function GET() {
         where: {
           createdAt: { gte: monthStart, lte: monthEnd }
         },
-        select: { id: true }
+        select: { id: true, createdAt: true }
       });
 
       const userIds = cohortUsers.map((u: any) => u.id);
       if (userIds.length === 0) continue;
 
-      const getRetention = async (start: Date, end: Date) => {
-        if (isAfter(start, now)) return null;
-        const activeUsers = await (prisma as any).loginHistory.groupBy({
-          by: ['userId'],
-          where: {
-            userId: { in: userIds },
-            createdAt: { gte: start, lte: end },
-            status: "SUCCESS"
-          }
-        });
-        return ((activeUsers.length / userIds.length) * 100).toFixed(1);
+      const getRetentionForDay = async (dayOffset: number) => {
+        const results = await Promise.all(cohortUsers.map(async (user: any) => {
+          const targetDayStart = new Date(user.createdAt);
+          targetDayStart.setDate(targetDayStart.getDate() + dayOffset);
+          targetDayStart.setHours(0, 0, 0, 0);
+          
+          const targetDayEnd = new Date(targetDayStart);
+          targetDayEnd.setHours(23, 59, 59, 999);
+
+          if (isAfter(targetDayStart, now)) return null;
+
+          const active = await prisma.pageView.findFirst({
+            where: {
+              userId: user.id,
+              createdAt: { gte: targetDayStart, lte: targetDayEnd }
+            }
+          });
+
+          return active ? 1 : 0;
+        }));
+
+        const filtered = results.filter(r => r !== null);
+        if (filtered.length === 0) return null;
+        const activeCount = filtered.reduce((acc: number, val: any) => acc + val, 0);
+        return ((activeCount / filtered.length) * 100).toFixed(1);
       };
 
       cohorts.push({
-        month: format(monthStart, "MMMM yyyy"),
+        month: format(monthStart, "MMM"),
         users: userIds.length,
-        week1: await getRetention(addWeeks(monthStart, 1), addWeeks(monthStart, 2)),
-        week2: await getRetention(addWeeks(monthStart, 2), addWeeks(monthStart, 3)),
-        month1: await getRetention(addMonths(monthStart, 1), addMonths(monthStart, 2)),
-        month3: await getRetention(addMonths(monthStart, 3), addMonths(monthStart, 4))
+        d1: await getRetentionForDay(1),
+        d7: await getRetentionForDay(7),
+        d14: await getRetentionForDay(14),
+        d30: await getRetentionForDay(30)
       });
     }
 

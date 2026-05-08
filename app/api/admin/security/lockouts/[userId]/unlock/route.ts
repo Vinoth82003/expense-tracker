@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
+import { sendAutomatedEmail } from "@/lib/mail";
 
 async function isAdmin() {
   const cookieStore = await cookies();
@@ -18,13 +19,18 @@ export async function PATCH(
 
   try {
     const { userId } = await params;
-    await (prisma as any).user.update({
+    const user = await prisma.user.update({
       where: { id: userId },
       data: { 
         isLocked: false, 
         lockedAt: null, 
         lockReason: null 
-      }
+      },
+      select: { email: true, name: true }
+    });
+
+    await sendAutomatedEmail(user.email, "accountUnlock", {
+      userName: user.name || "User"
     });
 
     return NextResponse.json({ message: "Account unlocked successfully" });

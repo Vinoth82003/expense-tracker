@@ -539,6 +539,32 @@ export default function AdminReportsPage() {
                       {(() => {
                         try {
                           const data = JSON.parse(selectedReport.content || "{}");
+                          
+                          const renderValue = (val: any): React.ReactNode => {
+                            if (typeof val === 'string') return val;
+                            if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+                            if (Array.isArray(val)) {
+                              return (
+                                <ul className="list-disc pl-5 mt-2 space-y-1">
+                                  {val.map((item, idx) => <li key={idx}>{renderValue(item)}</li>)}
+                                </ul>
+                              );
+                            }
+                            if (typeof val === 'object' && val !== null) {
+                              return (
+                                <div className="mt-2 space-y-2 pl-4 border-l-2 border-teal-500/20">
+                                  {Object.entries(val).map(([k, v]) => (
+                                    <div key={k}>
+                                      <span className="font-bold text-slate-700 dark:text-slate-300 capitalize">{k.replace(/([A-Z])/g, ' $1').trim()}: </span>
+                                      <span className="text-slate-600 dark:text-slate-400">{renderValue(v)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return String(val);
+                          };
+
                           return Object.entries(data).map(([key, val]: any) => (
                             <motion.section 
                               initial={{ opacity: 0, y: 10 }}
@@ -551,9 +577,9 @@ export default function AdminReportsPage() {
                                 <CheckCircle2 size={14} />
                                 {key.replace(/([A-Z])/g, ' $1').trim()}
                               </h3>
-                              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
-                                {val}
-                              </p>
+                              <div className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">
+                                {renderValue(val)}
+                              </div>
                             </motion.section>
                           ));
                         } catch {

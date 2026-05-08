@@ -1,7 +1,14 @@
 import nodemailer from "nodemailer";
 
+// Stored on `global` so it survives Next.js hot-reloads in dev.
+// A module-scope variable gets reset on every hot-reload, causing stale pool
+// connections to accumulate and Gmail SMTP to silently drop concurrent sends.
+const globalForMail = global as unknown as { _smtpTransporter: nodemailer.Transporter };
+
 const getTransporter = () => {
-  return nodemailer.createTransport({
+  if (globalForMail._smtpTransporter) return globalForMail._smtpTransporter;
+
+  globalForMail._smtpTransporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: Number(process.env.SMTP_PORT) || 465,
     secure: true,
@@ -10,6 +17,7 @@ const getTransporter = () => {
       pass: process.env.SMTP_PASS,
     },
   });
+  return globalForMail._smtpTransporter;
 };
 
 /**
@@ -27,7 +35,7 @@ export const replaceVariables = (text: string, variables: Record<string, string>
 /**
  * Wraps content in a beautiful SpendWise branded layout
  */
-export const wrapLayout = (content: string) => {
+export const wrapLayout = (content: string, recipientEmail = "") => {
   return `
     <!DOCTYPE html>
     <html>
@@ -67,6 +75,8 @@ export const wrapLayout = (content: string) => {
               You received this because you are a registered user.
               <br/>
               <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/settings" style="color: #0d9488; text-decoration: none;">Manage Notifications</a>
+              &nbsp;·&nbsp;
+              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/unsubscribe?email=${encodeURIComponent(recipientEmail)}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
             </p>
           </div>
         </div>
@@ -87,7 +97,7 @@ export const sendWelcomeEmail = async (email: string, name: string) => {
     <p style="margin-top: 30px;">Best Regards,<br/> <strong>The SpendWise Team</strong></p>
   `;
 
-  return sendEmail(email, subject, wrapLayout(content));
+  return sendEmail(email, subject, wrapLayout(content, email));
 };
 
 export const send2FAToggleEmail = async (email: string, status: boolean, systemInfo: any) => {
@@ -108,7 +118,7 @@ export const send2FAToggleEmail = async (email: string, status: boolean, systemI
     <p style="margin-top: 30px;">Best,<br/> <strong>The SpendWise Team</strong></p>
   `;
 
-  return sendEmail(email, subject, wrapLayout(content));
+  return sendEmail(email, subject, wrapLayout(content, email));
 };
 
 export const send2FACodeEmail = async (email: string, code: string) => {
@@ -124,7 +134,65 @@ export const send2FACodeEmail = async (email: string, code: string) => {
     </div>
   `;
 
-  return sendEmail(email, subject, wrapLayout(content));
+  return sendEmail(email, subject, wrapLayout(content, email));
+};
+
+export const sendBudgetAlertEmail = async (email: string, name: string, spentPercent: number, spent: number, limit: number) => {
+  const subject = `⚠️ SpendWise: You've reached ${spentPercent}% of your monthly budget`;
+  const content = `
+    <h2>Budget Alert, ${name || "there"}!</h2>
+    <p>You've used <strong>${spentPercent}%</strong> of your monthly budget limit.</p>
+    <div class="security-box">
+      <p style="margin: 0 0 10px 0; font-weight: bold; color: #111827;">This month so far:</p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b5563;">
+        <li><strong>Amount Spent:</strong> ₹${spent.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</li>
+        <li><strong>Monthly Limit:</strong> ₹${limit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</li>
+        <li><strong>Remaining:</strong> ₹${(limit - spent).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</li>
+      </ul>
+    </div>
+    <p>Review your spending patterns and adjust your budget if needed.</p>
+    <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard" class="button">View Dashboard</a>
+    <p style="margin-top: 30px;">Best,<br/> <strong>The SpendWise Team</strong></p>
+  `;
+  return sendEmail(email, subject, wrapLayout(content, email));
+};
+
+/**
+ * Sends an automated system email based on a configured template key
+ */
+export const sendAutomatedEmail = async (email: string, templateKey: string, variables: Record<string, string>) => {
+  try {
+    const { prisma } = await import("./prisma");
+    
+    // 1. Get the systemTemplates setting
+    const setting = await (prisma as any).settings.findUnique({
+      where: { key: "systemTemplates" }
+    });
+
+    if (!setting) return { success: false, error: "Settings not found" };
+    
+    const templatesMap = JSON.parse(setting.value);
+    const templateName = templatesMap[templateKey];
+
+    if (!templateName) return { success: false, error: `No template mapped for ${templateKey}` };
+
+    // 2. Fetch the actual template content
+    const template = await (prisma as any).emailTemplate.findUnique({
+      where: { name: templateName }
+    });
+
+    if (!template) return { success: false, error: "Template content not found" };
+
+    // 3. Process and send
+    const subject = replaceVariables(template.subject, variables);
+    const body = replaceVariables(template.body, variables);
+    const html = wrapLayout(body.replace(/\n/g, '<br/>'), email);
+
+    return sendEmail(email, subject, html);
+  } catch (err: any) {
+    console.error("Failed to send automated email:", err);
+    return { success: false, error: err.message };
+  }
 };
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
