@@ -29,6 +29,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import Link from "next/link";
+import { useModal } from "@/components/providers/ModalProvider";
 
 interface User {
   id: string;
@@ -57,6 +58,7 @@ interface UserDetail extends User {
 }
 
 export default function AdminUsersPage() {
+  const { confirm } = useModal();
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, twoFAEnabled: 0 });
@@ -181,7 +183,12 @@ export default function AdminUsersPage() {
 
   const handleReset2FA = async () => {
     if (!selectedUser) return;
-    if (!confirm("Are you sure you want to reset 2FA for this user?")) return;
+    const isConfirmed = await confirm({
+      title: "Reset 2FA",
+      message: "Are you sure you want to reset 2FA for this user?",
+      danger: true
+    });
+    if (!isConfirmed) return;
     setActionLoading(true);
     try {
       const res = await fetch(`/api/admin/users/${selectedUser.id}/reset-2fa`, {

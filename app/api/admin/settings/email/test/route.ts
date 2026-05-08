@@ -34,15 +34,15 @@ export async function POST(req: NextRequest) {
 
     await transporter.verify();
 
-    await logger.info("MAIL", "SMTP Test Connection Successful", { host: config.host, port: config.port });
+    await logger.info("SMTP Test Connection Successful", { host: config.host, port: config.port }, "MAIL");
     return NextResponse.json({ message: "SMTP connection successful!" });
   } catch (error: any) {
     console.error("SMTP Test Failed:", error);
-    await logger.error("MAIL", `SMTP Test Failed: ${error.message}`, { 
+    await logger.error(`SMTP Test Failed: ${error.message}`, { 
       host: config?.host, 
       port: config?.port,
       code: error.code 
-    });
+    }, "MAIL");
     return NextResponse.json({ 
       error: error.message || "Connection failed", 
       details: error.code || "UNKNOWN_ERROR"

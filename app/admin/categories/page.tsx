@@ -25,14 +25,16 @@ import {
   Briefcase,
   ShoppingBag,
   Zap,
+  Cpu,
+  Activity,
   Car,
   Heart,
   Music,
   Globe,
   Lock,
   Gift,
-  Activity
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 import { 
   BarChart, 
   Bar, 
@@ -73,6 +75,7 @@ interface Subcategory {
 }
 
 export default function AdminCategoriesPage() {
+  const { alert, confirm } = useModal();
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [totalSub, setTotalSub] = useState(0);
@@ -155,7 +158,12 @@ export default function AdminCategoriesPage() {
   };
 
   const deleteCategory = async (id: string) => {
-    if (!confirm("Are you sure?")) return;
+    const isConfirmed = await confirm({
+      title: "Delete Category",
+      message: "Are you sure you want to delete this category? This will affect all transactions using it.",
+      danger: true
+    });
+    if (!isConfirmed) return;
     try {
       const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -163,7 +171,11 @@ export default function AdminCategoriesPage() {
         fetchData();
       } else {
         const err = await res.json();
-        alert(err.error);
+        await alert({
+          title: "Error",
+          message: err.error,
+          type: "error"
+        });
       }
     } catch (error) {
       console.error("Failed to delete", error);

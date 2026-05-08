@@ -216,10 +216,10 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
       html,
     });
 
-    await logger.info("MAIL", `Email sent successfully: ${subject}`, { to, messageId: info.messageId });
+    await logger.info(`Email sent successfully: ${subject}`, { to, messageId: info.messageId }, "MAIL");
     return { success: true, messageId: info.messageId };
   } catch (err: any) {
-    await logger.error("MAIL", `SMTP error sending email: ${err.message}`, { to, subject });
+    await logger.error(`SMTP error sending email: ${err.message}`, { to, subject }, "MAIL");
     return { success: false, error: err.message };
   }
 };

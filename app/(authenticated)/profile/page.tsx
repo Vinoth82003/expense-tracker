@@ -21,10 +21,12 @@ import {
   CreditCard,
   Calendar,
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 
 export default function ProfilePage() {
   const { data: session, update: updateSession } = useSession();
   const router = useRouter();
+  const { alert, confirm } = useModal();
   const user = session?.user as any;
 
   // Name edit state
@@ -33,15 +35,11 @@ export default function ProfilePage() {
   const [nameSaving, setNameSaving] = useState(false);
   const [nameError, setNameError] = useState("");
   const [nameSuccess, setNameSuccess] = useState(false);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
-
   // 2FA state
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
   const [twoFALoading, setTwoFALoading] = useState(false);
   const [twoFAError, setTwoFAError] = useState("");
-  const [showConfirm2FA, setShowConfirm2FA] = useState(false);
-  const [pendingTwoFA, setPendingTwoFA] = useState<boolean | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -88,22 +86,25 @@ export default function ProfilePage() {
     setIsEditingName(false);
   };
 
-  // --- 2FA Toggle ---
-  const handleTwoFAToggle = () => {
-    setPendingTwoFA(!twoFAEnabled);
-    setShowConfirm2FA(true);
-  };
+  const handleTwoFAToggle = async () => {
+    const nextState = !twoFAEnabled;
+    const isConfirmed = await confirm({
+      title: nextState ? "Enable 2FA?" : "Disable 2FA?",
+      message: nextState 
+        ? "Future logins will require a 6-digit email code. A confirmation email will be sent to you."
+        : "This will remove the extra layer of protection from your account. A confirmation email will be sent to you.",
+      danger: !nextState
+    });
 
-  const confirmTwoFAToggle = async () => {
-    if (pendingTwoFA === null) return;
+    if (!isConfirmed) return;
+
     setTwoFALoading(true);
     setTwoFAError("");
-    setShowConfirm2FA(false);
     try {
       const res = await fetch("/api/2fa/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: pendingTwoFA }),
+        body: JSON.stringify({ enabled: nextState }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -116,24 +117,39 @@ export default function ProfilePage() {
       setTwoFAError("Network error. Please try again.");
     } finally {
       setTwoFALoading(false);
-      setPendingTwoFA(null);
     }
   };
 
   const handleDeleteAccount = async () => {
+    const isConfirmed = await confirm({
+      title: "Delete Account?",
+      message: "This action is PERMANENT. All your data will be erased forever. Are you sure?",
+      danger: true,
+      confirmText: "Delete Permanently"
+    });
+
+    if (!isConfirmed) return;
+
     setIsDeletingAccount(true);
     try {
       const res = await fetch("/api/user/delete", { method: "DELETE" });
       if (res.ok) {
         signOut({ callbackUrl: "/login" });
       } else {
-        alert("Failed to delete account. Please try again.");
+        await alert({
+          title: "Error",
+          message: "Failed to delete account. Please try again.",
+          type: "error"
+        });
       }
     } catch {
-      alert("Network error.");
+      await alert({
+        title: "Network Error",
+        message: "Failed to reach server.",
+        type: "error"
+      });
     } finally {
       setIsDeletingAccount(false);
-      setShowConfirmDelete(false);
     }
   };
 
@@ -405,7 +421,7 @@ export default function ProfilePage() {
                 <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </button>
               <button
-                onClick={() => setShowConfirmDelete(true)}
+                onClick={handleDeleteAccount}
                 className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-error text-white font-bold hover:shadow-lg hover:shadow-error/20 transition-all group"
               >
                 <div className="flex items-center gap-3">
@@ -418,102 +434,6 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       </div>
-
-      {/* 2FA Confirm Dialog */}
-      <AnimatePresence>
-        {showConfirm2FA && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-surface border border-border-subtle rounded-3xl p-8 shadow-2xl max-w-sm w-full"
-            >
-              <div className="flex justify-center mb-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${pendingTwoFA ? "bg-primary-500/10" : "bg-error/10"}`}>
-                  {pendingTwoFA ? (
-                    <Shield size={28} className="text-primary-500" />
-                  ) : (
-                    <ShieldOff size={28} className="text-error" />
-                  )}
-                </div>
-              </div>
-              <h3 className="text-xl font-black text-center mb-2">
-                {pendingTwoFA ? "Enable 2FA?" : "Disable 2FA?"}
-              </h3>
-              <p className="text-secondary text-center text-sm mb-8">
-                {pendingTwoFA
-                  ? "Future logins will require a 6-digit email code. A confirmation email will be sent to you."
-                  : "This will remove the extra layer of protection from your account. A confirmation email will be sent to you."}
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setShowConfirm2FA(false); setPendingTwoFA(null); }}
-                  className="flex-1 py-3 rounded-xl bg-surface-variant font-bold text-secondary hover:bg-surface-variant/80 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmTwoFAToggle}
-                  className={`flex-1 py-3 rounded-xl font-bold text-white transition-colors
-                    ${pendingTwoFA ? "bg-primary-500 hover:bg-primary-600" : "bg-error hover:bg-error/80"}`}
-                >
-                  {pendingTwoFA ? "Enable" : "Disable"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Delete Account Confirm Dialog */}
-      <AnimatePresence>
-        {showConfirmDelete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-surface border border-border-subtle rounded-3xl p-8 shadow-2xl max-w-sm w-full"
-            >
-              <div className="flex justify-center mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-error/10 flex items-center justify-center">
-                  <Trash2 size={28} className="text-error" />
-                </div>
-              </div>
-              <h3 className="text-xl font-black text-center mb-2">Delete Account?</h3>
-              <p className="text-secondary text-center text-sm mb-8 leading-relaxed">
-                This action is <span className="text-error font-black uppercase">permanent</span>. All your data, including expenses, incomes, and settings, will be erased forever.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowConfirmDelete(false)}
-                  className="flex-1 py-3 rounded-xl bg-surface-variant font-bold text-secondary hover:bg-surface-variant/80 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteAccount}
-                  disabled={isDeletingAccount}
-                  className="flex-1 py-3 rounded-xl bg-error hover:bg-error/80 font-bold text-white transition-colors disabled:opacity-50"
-                >
-                  {isDeletingAccount ? "Deleting..." : "Delete Permanently"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }

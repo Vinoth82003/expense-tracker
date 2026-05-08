@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies, headers } from "next/headers";
 import { sendEmail } from "@/lib/mail";
+import { logger } from "@/lib/logger";
 
 async function isAdmin() {
   const cookieStore = await cookies();
@@ -11,6 +12,7 @@ async function isAdmin() {
 
 export async function POST(req: NextRequest) {
   if (!(await isAdmin())) {
+    logger.warn("Unauthorized 2FA override attempt", { ip: req.headers.get("x-forwarded-for") });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -19,8 +21,9 @@ export async function POST(req: NextRequest) {
     const headerList = await headers();
     const ip = headerList.get("x-forwarded-for") || "127.0.0.1";
 
-    // 1. Verify admin password (using env for now as admin has no DB password)
+    // 1. Verify admin password
     if (adminPassword !== (process.env.ADMIN_OVERRIDE_PASSWORD || "admin123")) {
+      logger.error("Invalid admin password for 2FA override", { userId, ip });
       return NextResponse.json({ error: "Invalid admin password" }, { status: 403 });
     }
 
@@ -29,6 +32,8 @@ export async function POST(req: NextRequest) {
       where: { id: userId },
       data: { twoFactorEnabled: false }
     });
+
+    logger.info("Admin disabled 2FA for user", { targetEmail: user.email, reason });
 
     // 3. Log to audit trail
     await (prisma as any).auditLog.create({
@@ -83,13 +88,12 @@ export async function POST(req: NextRequest) {
         );
       }
     } catch (err) {
-      console.error("Failed to send templated override email:", err);
-      // Even if email fails, 2FA was disabled
+      logger.error("Failed to send 2FA override email", { error: err, email: user.email });
     }
 
     return NextResponse.json({ message: "2FA has been disabled and user notified." });
   } catch (error) {
-    console.error("Failed to override 2FA:", error);
+    logger.error("2FA Override API internal error", { error });
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -20,6 +20,7 @@ import {
   Monitor,
   Activity
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 
 interface Log {
   id: string;
@@ -39,6 +40,7 @@ interface Pagination {
 }
 
 export default function LogsPage() {
+  const { confirm } = useModal();
   const [logs, setLogs] = useState<Log[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,12 @@ export default function LogsPage() {
   };
 
   const clearLogs = async (all = false) => {
-    if (!confirm(`Are you sure you want to ${all ? 'clear ALL logs' : 'clear logs older than 30 days'}?`)) return;
+    const isConfirmed = await confirm({
+      title: "Clear Logs",
+      message: `Are you sure you want to ${all ? 'clear ALL logs' : 'clear logs older than 30 days'}?`,
+      danger: true
+    });
+    if (!isConfirmed) return;
     
     try {
       const res = await fetch(`/api/admin/logs?all=${all}`, { method: "DELETE" });

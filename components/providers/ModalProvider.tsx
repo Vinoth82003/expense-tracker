@@ -18,9 +18,20 @@ interface AlertOptions {
   type?: "info" | "success" | "error" | "warning";
 }
 
+interface PromptOptions {
+  title: string;
+  message: string;
+  placeholder?: string;
+  defaultValue?: string;
+  type?: string;
+  confirmText?: string;
+  cancelText?: string;
+}
+
 interface ModalContextType {
-  confirm: (options: ConfirmOptions) => Promise<boolean>;
-  alert: (options: AlertOptions) => Promise<void>;
+  confirm: (options: ConfirmOptions | string) => Promise<boolean>;
+  alert: (options: AlertOptions | string) => Promise<void>;
+  prompt: (options: PromptOptions | string) => Promise<string | null>;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -46,15 +57,33 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     resolve: () => void;
   } | null>(null);
 
-  const confirm = (options: ConfirmOptions) => {
+  const [promptState, setPromptState] = useState<{
+    isOpen: boolean;
+    options: PromptOptions;
+    resolve: (value: string | null) => void;
+  } | null>(null);
+
+  const [promptValue, setPromptValue] = useState("");
+
+  const confirm = (options: ConfirmOptions | string) => {
+    const opts = typeof options === "string" ? { title: "Confirm", message: options } : options;
     return new Promise<boolean>((resolve) => {
-      setConfirmState({ isOpen: true, options, resolve });
+      setConfirmState({ isOpen: true, options: opts, resolve });
     });
   };
 
-  const alert = (options: AlertOptions) => {
+  const alert = (options: AlertOptions | string) => {
+    const opts = typeof options === "string" ? { title: "Alert", message: options } : options;
     return new Promise<void>((resolve) => {
-      setAlertState({ isOpen: true, options, resolve });
+      setAlertState({ isOpen: true, options: opts, resolve });
+    });
+  };
+
+  const prompt = (options: PromptOptions | string) => {
+    const opts = typeof options === "string" ? { title: "Input Required", message: options } : options;
+    setPromptValue(opts.defaultValue || "");
+    return new Promise<string | null>((resolve) => {
+      setPromptState({ isOpen: true, options: opts, resolve });
     });
   };
 
@@ -74,8 +103,19 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handlePromptAction = (result: boolean) => {
+    if (promptState) {
+      promptState.resolve(result ? promptValue : null);
+      setPromptState({ ...promptState, isOpen: false });
+      setTimeout(() => {
+        setPromptState(null);
+        setPromptValue("");
+      }, 300);
+    }
+  };
+
   return (
-    <ModalContext.Provider value={{ confirm, alert }}>
+    <ModalContext.Provider value={{ confirm, alert, prompt }}>
       {children}
 
       <AnimatePresence>
@@ -160,6 +200,61 @@ export function ModalProvider({ children }: { children: ReactNode }) {
                 >
                   Okay
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {promptState?.isOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-[#161B27] rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-slate-200 dark:border-slate-800"
+            >
+              <div className="flex flex-col gap-4">
+                <div className="flex gap-4 items-start">
+                  <div className="p-3 rounded-2xl bg-teal-500/10 text-teal-500">
+                    <Info size={24} />
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight">
+                      {promptState.options.title}
+                    </h3>
+                    <p className="text-sm font-medium text-slate-500 mt-2 leading-relaxed">
+                      {promptState.options.message}
+                    </p>
+                  </div>
+                </div>
+                
+                <input
+                  type={promptState.options.type || "text"}
+                  value={promptValue}
+                  onChange={(e) => setPromptValue(e.target.value)}
+                  placeholder={promptState.options.placeholder}
+                  autoFocus
+                  className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 mt-2"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handlePromptAction(true);
+                    if (e.key === 'Escape') handlePromptAction(false);
+                  }}
+                />
+
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={() => handlePromptAction(false)}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    {promptState.options.cancelText || "Cancel"}
+                  </button>
+                  <button
+                    onClick={() => handlePromptAction(true)}
+                    className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-teal-500 hover:bg-teal-600 transition-all shadow-lg shadow-teal-500/20"
+                  >
+                    {promptState.options.confirmText || "Submit"}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

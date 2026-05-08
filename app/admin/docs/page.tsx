@@ -14,6 +14,7 @@ import {
   Type,
   Link2
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 import { ThemedMarkdown } from "@/components/ui/ThemedMarkdown";
 
 interface Doc {
@@ -26,6 +27,7 @@ interface Doc {
 }
 
 export default function AdminDocs() {
+  const { confirm } = useModal();
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -96,7 +98,12 @@ export default function AdminDocs() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this document?")) return;
+    const isConfirmed = await confirm({
+      title: "Delete Document",
+      message: "Are you sure you want to delete this document?",
+      danger: true
+    });
+    if (!isConfirmed) return;
     try {
       const res = await fetch(`/api/docs/${id}`, { method: "DELETE" });
       if (res.ok) fetchDocs();

@@ -22,8 +22,10 @@ import {
   Unlock,
   ShieldCheck
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 
 export default function AdminSettingsPage() {
+  const { confirm } = useModal();
   const [activeTab, setActiveTab] = useState("flags");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,7 +95,12 @@ export default function AdminSettingsPage() {
 
   const toggleFlag = async (key: string, enabled: boolean) => {
     if (key === "aiAnalysis" && !enabled) {
-      if (!confirm("This will prevent all users from generating AI reports. Are you sure?")) return;
+      const isConfirmed = await confirm({
+        title: "Disable AI Analysis?",
+        message: "This will prevent all users from generating AI reports. Are you sure?",
+        danger: true
+      });
+      if (!isConfirmed) return;
     }
 
     setFeatureFlags((prev: any) => ({ ...prev, [key]: enabled }));
@@ -137,7 +144,14 @@ export default function AdminSettingsPage() {
   };
 
   const toggleMaintenance = async (enabled: boolean) => {
-    if (enabled && !confirm("This will block all non-admin users from accessing SpendWise. Continue?")) return;
+    if (enabled) {
+      const isConfirmed = await confirm({
+        title: "Enable Maintenance Mode?",
+        message: "This will block all non-admin users from accessing SpendWise. Continue?",
+        danger: true
+      });
+      if (!isConfirmed) return;
+    }
     
     const newSettings = { ...maintenance, enabled };
     setMaintenance(newSettings);
@@ -216,7 +230,12 @@ export default function AdminSettingsPage() {
   };
 
   const revokeAdmin = async (userId: string) => {
-    if (!confirm("Revoke admin access for this user?")) return;
+    const isConfirmed = await confirm({
+      title: "Revoke Admin?",
+      message: "Revoke admin access for this user?",
+      danger: true
+    });
+    if (!isConfirmed) return;
     const res = await fetch(`/api/admin/roles/${userId}`, {
       method: "PATCH",
       body: JSON.stringify({ revoke: true })
@@ -662,7 +681,14 @@ export default function AdminSettingsPage() {
                 </table>
               </div>
               
-              <button onClick={() => {if(confirm('Clear all system caches?')) invalidateCache('all')}} className="px-6 py-3 bg-rose-50 dark:bg-rose-500/10 text-rose-600 rounded-xl text-xs font-black uppercase hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all w-full">
+              <button onClick={async () => {
+                const isConfirmed = await confirm({
+                  title: "Clear Caches?",
+                  message: "Clear all system caches? This may temporarily slow down initial requests.",
+                  danger: true
+                });
+                if(isConfirmed) invalidateCache('all')
+              }} className="px-6 py-3 bg-rose-50 dark:bg-rose-500/10 text-rose-600 rounded-xl text-xs font-black uppercase hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-all w-full">
                 Clear All Caches (Danger)
               </button>
             </div>

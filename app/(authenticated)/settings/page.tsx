@@ -24,9 +24,11 @@ import {
   LayoutGrid
 } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { useModal } from "@/components/providers/ModalProvider";
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
+  const { alert, confirm } = useModal();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -104,9 +106,14 @@ export default function SettingsPage() {
   };
 
   const handleWipe = async () => {
-    if (!confirm("Are you ABSOLUTELY sure? This will delete ALL your transactions permanently. This action cannot be undone.")) {
-      return;
-    }
+    const isConfirmed = await confirm({
+      title: "Wipe All Data?",
+      message: "Are you ABSOLUTELY sure? This will delete ALL your transactions permanently. This action cannot be undone.",
+      danger: true,
+      confirmText: "Wipe Data"
+    });
+    
+    if (!isConfirmed) return;
 
     setDataLoading(true);
     try {

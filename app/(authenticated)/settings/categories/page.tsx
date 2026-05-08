@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Edit2, Trash2, X, Save, ShieldCheck, User, LayoutGrid } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 
 interface Category {
   id: string;
@@ -13,6 +14,7 @@ interface Category {
 }
 
 export default function MyCategoriesPage() {
+  const { confirm } = useModal();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -74,7 +76,12 @@ export default function MyCategoriesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this custom category?")) return;
+    const isConfirmed = await confirm({
+      title: "Delete Category",
+      message: "Are you sure you want to delete this custom category?",
+      danger: true
+    });
+    if (!isConfirmed) return;
     
     try {
       await fetch("/api/categories", {

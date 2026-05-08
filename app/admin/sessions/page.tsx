@@ -23,6 +23,7 @@ import {
   ArrowRight,
   ShieldAlert
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 
 interface User {
   name: string | null;
@@ -69,6 +70,7 @@ interface LoginHistory {
 }
 
 export default function AdminSessionsPage() {
+  const { confirm } = useModal();
   const [activeTab, setActiveTab] = useState<"sessions" | "otp" | "history">("sessions");
   const [sessions, setSessions] = useState<Session[]>([]);
   const [otpLogs, setOtpLogs] = useState<OTPLog[]>([]);
@@ -106,7 +108,12 @@ export default function AdminSessionsPage() {
   }, [fetchData]);
 
   const revokeSession = async (id: string) => {
-    if (!confirm("Are you sure you want to end this session?")) return;
+    const isConfirmed = await confirm({
+      title: "End Session",
+      message: "Are you sure you want to end this session?",
+      danger: true
+    });
+    if (!isConfirmed) return;
     try {
       const res = await fetch(`/api/admin/sessions/active?id=${id}`, { method: "DELETE" });
       if (res.ok) fetchData();
@@ -117,7 +124,12 @@ export default function AdminSessionsPage() {
 
   const revokeAllSessions = async (userId?: string) => {
     const msg = userId ? "Revoke all sessions for this user?" : "Revoke ALL active sessions for ALL users?";
-    if (!confirm(msg)) return;
+    const isConfirmed = await confirm({
+      title: "Revoke Sessions",
+      message: msg,
+      danger: true
+    });
+    if (!isConfirmed) return;
     try {
       const url = userId ? `/api/admin/sessions/active?userId=${userId}` : `/api/admin/sessions/active?all=true`;
       const res = await fetch(url, { method: "DELETE" });

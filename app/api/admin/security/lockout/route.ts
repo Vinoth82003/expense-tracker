@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { sendAutomatedEmail } from "@/lib/mail";
+import { logger } from "@/lib/logger";
 
 async function isAdmin() {
   const cookieStore = await cookies();
@@ -11,6 +12,7 @@ async function isAdmin() {
 
 export async function POST(req: NextRequest) {
   if (!(await isAdmin())) {
+    logger.warn("Unauthorized attempt to access lockout API", { ip: req.headers.get("x-forwarded-for") });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -21,8 +23,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // 1. Verify Admin Password (simplified for demo, usually use bcrypt)
+    // 1. Verify Admin Password
     if (adminPassword !== "admin123") {
+      logger.error("Invalid admin password for security action", { action, userId });
       return NextResponse.json({ error: "Invalid administrator password" }, { status: 403 });
     }
 
@@ -46,6 +49,8 @@ export async function POST(req: NextRequest) {
         lockReason: isLocked ? reason : null
       }
     });
+
+    logger.info(`Admin performed ${action} on user`, { targetEmail: user.email, reason });
 
     // 4. Log to Audit Trail
     const headerList = await req.headers;
@@ -75,12 +80,12 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch (err) {
-      console.error("Failed to send lockout/unlock email:", err);
+      logger.error("Failed to send lockout/unlock email", { error: err, email: user.email });
     }
 
     return NextResponse.json({ message: `Account ${isLocked ? 'locked' : 'unlocked'} successfully.` });
   } catch (error) {
-    console.error("Lockout error:", error);
+    logger.error("Lockout API internal error", { error });
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

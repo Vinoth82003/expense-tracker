@@ -30,34 +30,39 @@ class Logger {
 
     // Log to database asynchronously (don't await to avoid blocking)
     try {
-      await (prisma as any).systemLog.create({
-        data: {
-          level,
-          service,
-          message,
-          details: details ? (typeof details === "string" ? details : JSON.stringify(details)) : null,
-          ip,
-          userId,
-        },
-      });
+      // Check if we are in an environment that can access Prisma (standard Node runtime)
+      if (typeof process !== 'undefined' && (prisma as any).systemLog) {
+        await (prisma as any).systemLog.create({
+          data: {
+            level,
+            service,
+            message,
+            details: details ? (typeof details === "string" ? details : JSON.stringify(details)) : null,
+            ip,
+            userId,
+          },
+        });
+      }
     } catch (err) {
+      // Silent error for database logging to prevent crashing the app
+      // but console.error it for debugging
       console.error("[Logger] Failed to write to database:", err);
     }
   }
 
-  async info(service: LogService, message: string, details?: any, ip?: string, userId?: string) {
+  async info(message: string, details?: any, service: LogService = "API", ip?: string, userId?: string) {
     await this.createLog({ level: "INFO", service, message, details, ip, userId });
   }
 
-  async warn(service: LogService, message: string, details?: any, ip?: string, userId?: string) {
+  async warn(message: string, details?: any, service: LogService = "API", ip?: string, userId?: string) {
     await this.createLog({ level: "WARN", service, message, details, ip, userId });
   }
 
-  async error(service: LogService, message: string, details?: any, ip?: string, userId?: string) {
+  async error(message: string, details?: any, service: LogService = "API", ip?: string, userId?: string) {
     await this.createLog({ level: "ERROR", service, message, details, ip, userId });
   }
 
-  async critical(service: LogService, message: string, details?: any, ip?: string, userId?: string) {
+  async critical(message: string, details?: any, service: LogService = "API", ip?: string, userId?: string) {
     await this.createLog({ level: "CRITICAL", service, message, details, ip, userId });
   }
 }

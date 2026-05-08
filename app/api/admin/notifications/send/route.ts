@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     const { subject, body, recipientFilter } = await req.json();
     
-    await logger.info("API", `Starting mass notification send: ${subject}`, { recipientFilter });
+    await logger.info(`Starting mass notification send: ${subject}`, { recipientFilter }, "API");
 
     if (!subject || !body) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         
         // Log every 10 seconds if still waiting
         if (Date.now() - lastLogTime > 10000) {
-          console.log(`[Send] Still waiting for job ${job.id}. Current state: ${state}`);
+          logger.info(`Still waiting for job ${job.id}. Current state: ${state}`);
           lastLogTime = Date.now();
         }
 
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      console.log(`[Send] Waiting for ${enqueuedJobs.length} jobs to finish...`);
+      logger.info(`Waiting for ${enqueuedJobs.length} jobs to finish...`);
       const results = await Promise.all(
         enqueuedJobs.map(job => waitForJobCompletion(job))
       );
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
         throw new Error(`${failedJobs.length} jobs failed to complete successfully.`);
       }
 
-      console.log(`[Send] All ${enqueuedJobs.length} jobs have finished.`);
+      logger.info(`All ${enqueuedJobs.length} jobs have finished successfully.`);
 
       // Update status to SUCCESS (initial dispatch complete)
       await (prisma as any).notification.update({
@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
       });
 
     } catch (jobErr: any) {
-      await logger.error("API", `Error during mass notification send`, { error: jobErr.message, subject });
+      await logger.error(`Error during mass notification send`, { error: jobErr.message, subject }, "API");
       
       // Update notification status to FAILED
       await (prisma as any).notification.update({
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
           status: "FAILED",
           error: jobErr.message
         }
-      }).catch((err:any) => console.error("[Send] Failed to update notification error status:", err));
+      }).catch((err:any) => logger.error("Failed to update notification error status", { error: err }));
       
       return NextResponse.json(
         { error: "Jobs failed to complete: " + jobErr.message },
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error("[Send-API] Error:", error);
+    logger.error("Notification Send-API Error", { error: error.message });
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
   }
 }
@@ -217,6 +217,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(notification);
   } catch (error: any) {
+    logger.error("Notification GET-API Error", { error: error.message });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

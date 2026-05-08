@@ -28,8 +28,9 @@ import {
   Info,
   Clock,
   Globe,
-  X
+  X,
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 
 interface Alert {
   id: string;
@@ -70,6 +71,7 @@ interface AuditLog {
 }
 
 export default function AdminSecurityPage() {
+  const { alert, confirm, prompt } = useModal();
   const [activeTab, setActiveTab] = useState("alerts");
   const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -145,9 +147,18 @@ export default function AdminSecurityPage() {
   };
 
   const unlockAccount = async (userId: string) => {
-    const reason = prompt("Reason for unlocking?");
+    const reason = await prompt({
+      title: "Unlock Account",
+      message: "Please provide a reason for unlocking this account.",
+      placeholder: "e.g. User verified via support"
+    });
     if (!reason) return;
-    const pwd = prompt("Confirm Admin Password:");
+
+    const pwd = await prompt({
+      title: "Confirm Admin Password",
+      message: "Please enter your administrator password to continue.",
+      type: "password"
+    });
     if (!pwd) return;
     
     setLoading(true);
@@ -157,18 +168,32 @@ export default function AdminSecurityPage() {
     });
 
     if (res.ok) {
-      alert("Account unlocked successfully.");
+      await alert({
+        title: "Success",
+        message: "Account unlocked successfully.",
+        type: "success"
+      });
       fetchLockouts();
       fetchAudit();
     } else {
       const data = await res.json();
-      alert(data.error || "Unlock failed");
+      await alert({
+        title: "Error",
+        message: data.error || "Unlock failed",
+        type: "error"
+      });
     }
     setLoading(false);
   };
 
   const banAccount = async (userId: string) => {
-    if (!confirm("Banning is permanent. Continue?")) return;
+    const isConfirmed = await confirm({
+      title: "Permanent Ban",
+      message: "Banning is permanent and cannot be undone. Are you sure you want to proceed?",
+      danger: true,
+      confirmText: "Yes, Ban User"
+    });
+    if (!isConfirmed) return;
     const res = await fetch(`/api/admin/security/lockouts/${userId}/ban`, { method: 'PATCH' });
     if (res.ok) fetchLockouts();
   };
@@ -203,7 +228,11 @@ export default function AdminSecurityPage() {
   const handleSecurityAction = async (action: 'override' | 'lock' | 'unlock', userId?: string) => {
     const targetId = userId || foundUser?.id;
     if (!targetId || !adminPassword || !overrideReason) {
-      alert("Please fill all required fields including admin password and reason.");
+      await alert({
+        title: "Missing Information",
+        message: "Please fill all required fields including admin password and reason.",
+        type: "warning"
+      });
       return;
     }
     
@@ -219,7 +248,11 @@ export default function AdminSecurityPage() {
     });
 
     if (res.ok) {
-      alert(`${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully.`);
+      await alert({
+        title: "Action Complete",
+        message: `${action.charAt(0).toUpperCase() + action.slice(1)} completed successfully.`,
+        type: "success"
+      });
       setFoundUser(null);
       setAdminPassword("");
       setOverrideReason("");
@@ -228,7 +261,11 @@ export default function AdminSecurityPage() {
       fetchLockouts();
     } else {
       const data = await res.json();
-      alert(data.error || "Action failed");
+      await alert({
+        title: "Action Failed",
+        message: data.error || "Action failed",
+        type: "error"
+      });
     }
     setLoading(false);
   };

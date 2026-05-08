@@ -2,6 +2,7 @@ import { Queue, Worker, QueueEvents, Job } from "bullmq";
 import { sendEmail, replaceVariables, wrapLayout } from "./mail";
 import { prisma } from "./prisma";
 import IORedis from "ioredis";
+import { logger } from "./logger";
 
 /**
  * REDIS CONFIGURATION
@@ -63,10 +64,10 @@ if (process.env.NODE_ENV !== "production") globalForBull.emailQueue = emailQueue
 if (!globalForBull.emailEvents) {
   globalForBull.emailEvents = new QueueEvents("emailQueue", { connection: getEventsConn() });
   
-  globalForBull.emailEvents.on('waiting', ({ jobId }) => console.log(`[Queue] Job ${jobId} is waiting`));
-  globalForBull.emailEvents.on('active', ({ jobId }) => console.log(`[Queue] Job ${jobId} is active`));
-  globalForBull.emailEvents.on('completed', ({ jobId }) => console.log(`[Queue] Job ${jobId} completed`));
-  globalForBull.emailEvents.on('failed', ({ jobId, failedReason }) => console.error(`[Queue] Job ${jobId} failed: ${failedReason}`));
+  globalForBull.emailEvents.on('waiting', ({ jobId }) => logger.info(`[Queue] Job ${jobId} is waiting`, null, "QUEUE"));
+  globalForBull.emailEvents.on('active', ({ jobId }) => logger.info(`[Queue] Job ${jobId} is active`, null, "QUEUE"));
+  globalForBull.emailEvents.on('completed', ({ jobId }) => logger.info(`[Queue] Job ${jobId} completed`, null, "QUEUE"));
+  globalForBull.emailEvents.on('failed', ({ jobId, failedReason }) => logger.error(`[Queue] Job ${jobId} failed: ${failedReason}`, null, "QUEUE"));
 }
 
 export const emailEvents = globalForBull.emailEvents;
@@ -75,9 +76,9 @@ export const emailEvents = globalForBull.emailEvents;
  * WORKER PROCESSOR
  */
 async function jobProcessor(job: Job) {
-  console.log(`[Worker] Job ${job.id} picked up for processing`);
+  logger.info(`[Worker] Job ${job.id} picked up for processing`, null, "QUEUE");
   const { userEmail, userName, subject, body, notificationId, ...extra } = job.data;
-  console.log(`[Worker] Processing ${job.id} for ${userEmail}`);
+  logger.info(`[Worker] Processing ${job.id} for ${userEmail}`, null, "QUEUE");
 
   try {
     const variables = { 
@@ -106,10 +107,10 @@ async function jobProcessor(job: Job) {
       } catch (e) {}
     }
 
-    console.log(`[Worker] Job ${job.id} finished`);
+    logger.info(`[Worker] Job ${job.id} finished`, null, "QUEUE");
     return result;
   } catch (error) {
-    console.error(`[Worker] Job ${job.id} error:`, error);
+    logger.error(`[Worker] Job ${job.id} error:`, error, "QUEUE");
     throw error;
   }
 }
@@ -122,18 +123,8 @@ if (!globalForBull.emailWorker) {
   });
 
   globalForBull.emailWorker.on("failed", (job, err) => {
-    if (job) console.error(`[Worker] Job ${job.id} definitively failed: ${err.message}`);
+    if (job) logger.error(`[Worker] Job ${job.id} definitively failed: ${err.message}`, null, "QUEUE");
   });
 }
 
 export const emailWorker = globalForBull.emailWorker;
-
-/**
- * UTILS
- */
-export const logger = {
-  info: (msg: any, data?: any) => console.log(msg, data || ''),
-  error: (msg: any, data?: any) => console.error(msg, data || ''),
-  warn: (msg: any, data?: any) => console.warn(msg, data || ''),
-  debug: (msg: any, data?: any) => console.log(msg, data || ''),
-};

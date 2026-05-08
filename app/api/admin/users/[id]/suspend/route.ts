@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { sendAutomatedEmail } from "@/lib/mail";
+import { logger } from "@/lib/logger";
 
 async function isAdmin() {
   const cookieStore = await cookies();
@@ -45,6 +46,13 @@ export async function PATCH(
         details: `Reason: ${reason || 'N/A'}`,
         ip: req.headers.get("x-forwarded-for") || "127.0.0.1",
       }
+    });
+
+    // Log to SystemLog
+    await logger.info(`User ${user.email} ${(updatedUser as any).isSuspended ? 'suspended' : 'activated'} by Admin`, {
+      userId: user.id,
+      reason,
+      action: (updatedUser as any).isSuspended ? "SUSPEND" : "ACTIVATE"
     });
     
     // 3. Send Email

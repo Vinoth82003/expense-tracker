@@ -13,6 +13,7 @@ import {
   HelpCircle,
   AlertCircle
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 
 interface FAQ {
   id: string;
@@ -23,6 +24,7 @@ interface FAQ {
 }
 
 export default function AdminFAQ() {
+  const { confirm } = useModal();
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,7 +80,12 @@ export default function AdminFAQ() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this FAQ?")) return;
+    const isConfirmed = await confirm({
+      title: "Delete FAQ",
+      message: "Are you sure you want to delete this FAQ?",
+      danger: true
+    });
+    if (!isConfirmed) return;
     try {
       const res = await fetch(`/api/faq/${id}`, { method: "DELETE" });
       if (res.ok) fetchFaqs();

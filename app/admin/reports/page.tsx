@@ -24,8 +24,9 @@ import {
   Calendar,
   IndianRupee,
   Cpu,
-  Activity
+  Activity,
 } from "lucide-react";
+import { useModal } from "@/components/providers/ModalProvider";
 import { 
   AreaChart, 
   Area, 
@@ -55,6 +56,7 @@ interface Report {
 }
 
 export default function AdminReportsPage() {
+  const { alert, confirm } = useModal();
   const [reports, setReports] = useState<Report[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState<any>(null);
@@ -115,7 +117,11 @@ export default function AdminReportsPage() {
         method: "PATCH",
         body: JSON.stringify({ maxPerDay: maxReports })
       });
-      if (res.ok) alert("Rate limit updated!");
+      if (res.ok) await alert({
+        title: "Updated",
+        message: "Rate limit updated!",
+        type: "success"
+      });
     } catch (error) {
       console.error("Failed to update rate limit", error);
     } finally {
@@ -124,7 +130,12 @@ export default function AdminReportsPage() {
   };
 
   const cleanupReports = async () => {
-    if (!confirm(`Are you sure you want to delete reports older than ${cleanupDays} days?`)) return;
+    const isConfirmed = await confirm({
+      title: "Cleanup Reports",
+      message: `Are you sure you want to delete reports older than ${cleanupDays} days?`,
+      danger: true
+    });
+    if (!isConfirmed) return;
     setActionLoading(true);
     try {
       const res = await fetch("/api/admin/reports/cleanup", {
@@ -133,7 +144,11 @@ export default function AdminReportsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        alert(data.message);
+        await alert({
+          title: "Cleanup Complete",
+          message: data.message,
+          type: "success"
+        });
         fetchReports();
       }
     } catch (error) {
@@ -144,7 +159,12 @@ export default function AdminReportsPage() {
   };
 
   const deleteReport = async (id: string) => {
-    if (!confirm("Delete this report?")) return;
+    const isConfirmed = await confirm({
+      title: "Delete Report",
+      message: "Are you sure you want to delete this report?",
+      danger: true
+    });
+    if (!isConfirmed) return;
     try {
       const res = await fetch(`/api/admin/reports/${id}`, { method: "DELETE" });
       if (res.ok) {
