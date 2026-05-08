@@ -124,8 +124,17 @@ export async function POST(req: NextRequest) {
     // 6. Wait for all jobs to complete using polling (most reliable in dev/hot-reload)
     async function waitForJobCompletion(job: any, timeout = 120000) {
       const startTime = Date.now();
+      let lastLogTime = startTime;
+
       while (Date.now() - startTime < timeout) {
         const state = await job.getState();
+        
+        // Log every 10 seconds if still waiting
+        if (Date.now() - lastLogTime > 10000) {
+          console.log(`[Send] Still waiting for job ${job.id}. Current state: ${state}`);
+          lastLogTime = Date.now();
+        }
+
         if (state === 'completed') return { success: true };
         if (state === 'failed') {
           const reason = await job.getFailedReason();
@@ -134,7 +143,9 @@ export async function POST(req: NextRequest) {
         // Poll every 200ms
         await new Promise(resolve => setTimeout(resolve, 200));
       }
-      throw new Error(`Job ${job.id} timed out after ${timeout}ms`);
+      
+      const finalState = await job.getState();
+      throw new Error(`Job ${job.id} timed out after ${timeout}ms (Final state: ${finalState})`);
     }
 
     try {

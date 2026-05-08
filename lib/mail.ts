@@ -8,15 +8,26 @@ const globalForMail = global as unknown as { _smtpTransporter: nodemailer.Transp
 const getTransporter = () => {
   if (globalForMail._smtpTransporter) return globalForMail._smtpTransporter;
 
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const isSecure = port === 465;
+
   globalForMail._smtpTransporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: Number(process.env.SMTP_PORT) || 465,
-    secure: true,
+    port: port,
+    secure: isSecure,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    // Pool configuration is critical for mass emails to avoid connection overhead/timeouts
+    pool: true,
+    maxConnections: 3,
+    maxMessages: 100,
+    connectionTimeout: 20000, // 20 seconds
+    greetingTimeout: 20000,   // 20 seconds
+    socketTimeout: 30000,     // 30 seconds
   });
+  
   return globalForMail._smtpTransporter;
 };
 
