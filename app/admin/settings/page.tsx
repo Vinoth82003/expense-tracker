@@ -164,13 +164,24 @@ export default function AdminSettingsPage() {
   };
 
   const testSmtp = async () => {
+    setSaving(true);
     showToast("Testing connection...");
-    const res = await fetch("/api/admin/settings/email/test", {
-      method: "POST",
-      body: JSON.stringify(smtp)
-    });
-    if (res.ok) showToast("SMTP connection successful!");
-    else showToast("Connection failed. Check credentials.", "error");
+    try {
+      const res = await fetch("/api/admin/settings/email/test", {
+        method: "POST",
+        body: JSON.stringify(smtp)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast("SMTP connection successful!");
+      } else {
+        showToast(`Test failed: ${data.error || 'Check credentials'}`, "error");
+      }
+    } catch (err: any) {
+      showToast("Network error during test", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const invalidateCache = async (tag: string) => {
@@ -573,6 +584,26 @@ export default function AdminSettingsPage() {
                 <button onClick={testSmtp} className="px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black uppercase hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
                   Test Connection
                 </button>
+              </div>
+
+              {/* SMTP Diagnostics Advisory */}
+              <div className="p-6 bg-amber-50 dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/20 rounded-3xl space-y-3">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm">
+                  <Info size={18} />
+                  SMTP Diagnostic Advisory
+                </div>
+                <p className="text-xs text-amber-600 dark:text-amber-500/80 leading-relaxed">
+                  If you are hosting on <strong>Render, Vercel, or DigitalOcean</strong>, outbound SMTP traffic on ports <strong>25, 465, and 587</strong> is often blocked by default to prevent spam.
+                </p>
+                <ul className="text-[10px] space-y-1 text-amber-700 dark:text-amber-500/70 list-disc pl-4 font-medium">
+                  <li><strong>Connection Timeout:</strong> Usually means the port is blocked by the host's firewall.</li>
+                  <li><strong>Self-Signed Certificate:</strong> Try changing the port or toggling the secure option.</li>
+                  <li><strong>Gmail Tip:</strong> Use an "App Password" if you have 2FA enabled.</li>
+                </ul>
+                <div className="pt-2">
+                  <p className="text-[10px] font-black uppercase text-amber-800 dark:text-amber-400">Recommendation:</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-500/80">Use an HTTP-based mail provider or a service that supports port <strong>2525</strong> if standard ports are timed out.</p>
+                </div>
               </div>
             </div>
           )}

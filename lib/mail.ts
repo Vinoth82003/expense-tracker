@@ -10,14 +10,20 @@ const getTransporter = () => {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_PORT === "465",
+    secure: process.env.SMTP_PORT === "465", // true for 465, false for other ports
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    pool: true, // Enable connection pooling for better performance on bulk sends
+    pool: true,
     maxConnections: 5,
     maxMessages: 100,
+    // Add timeouts to prevent hanging on blocked ports
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+    debug: true, // Show debug output in console
+    logger: true, // Log to console
   });
 
   globalForMail._transporter = transporter;
