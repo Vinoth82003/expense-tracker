@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Send,
   ShieldAlert,
-  History
+  History,
+  Terminal
 } from "lucide-react";
 import {
   AreaChart,
@@ -388,6 +389,18 @@ export default function AdminDashboard() {
             <div className="text-left">
               <p className="font-bold text-lg leading-none mb-1">Review lockouts</p>
               <p className="text-white/70 text-xs font-medium">Manage restricted user access</p>
+            </div>
+          </div>
+          <ChevronRight size={24} className="opacity-50 group-hover:translate-x-1 transition-transform" />
+        </Link>
+        <Link href="/admin/logs" className="p-6 bg-slate-100 dark:bg-[#1E2536] hover:bg-slate-200 dark:hover:bg-[#252D41] rounded-3xl text-slate-900 dark:text-white shadow-lg shadow-slate-200/20 dark:shadow-none transition-all flex items-center justify-between group border border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-slate-200 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-400">
+              <Terminal size={24} />
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-lg leading-none mb-1">System logs</p>
+              <p className="text-slate-500 dark:text-slate-400 text-xs font-medium">Track API events & errors</p>
             </div>
           </div>
           <ChevronRight size={24} className="opacity-50 group-hover:translate-x-1 transition-transform" />

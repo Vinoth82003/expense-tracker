@@ -1,17 +1,27 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
+import { logger } from "./logger";
 
 // Stored on `global` so it survives Next.js hot-reloads in dev.
-const globalForMail = global as unknown as { _resend: Resend };
+const globalForMail = global as unknown as { _transporter: nodemailer.Transporter };
 
-const getResend = () => {
-  if (globalForMail._resend) return globalForMail._resend;
+const getTransporter = () => {
+  if (globalForMail._transporter) return globalForMail._transporter;
   
-  if (!process.env.RESEND) {
-    console.error("[Mail] RESEND API key is missing from environment variables");
-  }
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_PORT === "465",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    pool: true, // Enable connection pooling for better performance on bulk sends
+    maxConnections: 5,
+    maxMessages: 100,
+  });
 
-  globalForMail._resend = new Resend(process.env.RESEND);
-  return globalForMail._resend;
+  globalForMail._transporter = transporter;
+  return transporter;
 };
 
 /**
@@ -190,24 +200,20 @@ export const sendAutomatedEmail = async (email: string, templateKey: string, var
 };
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
-  const resend = getResend();
+  const transporter = getTransporter();
   
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'SpendWise <onboarding@resend.dev>', // Update this with your verified domain in production
-      to: [to],
+    const info = await transporter.sendMail({
+      from: `"SpendWise" <${process.env.SMTP_USER}>`,
+      to,
       subject,
       html,
     });
 
-    if (error) {
-      console.error("[Mail] Resend error:", error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true, messageId: data?.id };
+    await logger.info("MAIL", `Email sent successfully: ${subject}`, { to, messageId: info.messageId });
+    return { success: true, messageId: info.messageId };
   } catch (err: any) {
-    console.error("Failed to send email via Resend:", err);
+    await logger.error("MAIL", `SMTP error sending email: ${err.message}`, { to, subject });
     return { success: false, error: err.message };
   }
 };

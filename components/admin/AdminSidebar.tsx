@@ -17,7 +17,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Wallet
+  Wallet,
+  Terminal
 } from "lucide-react";
 
 const MENU_ITEMS = [
@@ -48,6 +49,7 @@ const MENU_ITEMS = [
       { name: "App analytics", href: "/admin/analytics", icon: BarChart2 },
       { name: "Notifications", href: "/admin/notifications", icon: Bell },
       { name: "Security & 2FA", href: "/admin/security", icon: Lock },
+      { name: "System logs", href: "/admin/logs", icon: Terminal },
       { name: "System settings", href: "/admin/settings", icon: Settings },
     ]
   }

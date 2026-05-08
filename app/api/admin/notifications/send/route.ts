@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { emailQueue } from "@/lib/queue";
 import { subDays } from "date-fns";
+import { logger } from "@/lib/logger";
 
 async function isAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -17,6 +18,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { subject, body, recipientFilter } = await req.json();
+    
+    await logger.info("API", `Starting mass notification send: ${subject}`, { recipientFilter });
 
     if (!subject || !body) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -174,7 +177,7 @@ export async function POST(req: NextRequest) {
       });
 
     } catch (jobErr: any) {
-      console.error(`[Send] Error waiting for jobs to finish:`, jobErr);
+      await logger.error("API", `Error during mass notification send`, { error: jobErr.message, subject });
       
       // Update notification status to FAILED
       await (prisma as any).notification.update({

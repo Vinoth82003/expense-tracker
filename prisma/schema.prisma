@@ -261,3 +261,17 @@ model Doc {
 
   updatedAt DateTime @updatedAt
 }
+
+model SystemLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  level     String   // "INFO", "WARN", "ERROR", "CRITICAL"
+  service   String   // "API", "WORKER", "AUTH", etc.
+  message   String
+  details   String?  // JSON string or long text
+  ip        String?
+  userId    String?  @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@index([level, createdAt])
+  @@index([service, createdAt])
+}
