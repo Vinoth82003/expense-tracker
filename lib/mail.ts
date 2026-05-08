@@ -1,34 +1,17 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 // Stored on `global` so it survives Next.js hot-reloads in dev.
-// A module-scope variable gets reset on every hot-reload, causing stale pool
-// connections to accumulate and Gmail SMTP to silently drop concurrent sends.
-const globalForMail = global as unknown as { _smtpTransporter: nodemailer.Transporter };
+const globalForMail = global as unknown as { _resend: Resend };
 
-const getTransporter = () => {
-  if (globalForMail._smtpTransporter) return globalForMail._smtpTransporter;
-
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const isSecure = port === 465;
-
-  globalForMail._smtpTransporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: port,
-    secure: isSecure,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    // Pool configuration is critical for mass emails to avoid connection overhead/timeouts
-    pool: true,
-    maxConnections: 3,
-    maxMessages: 100,
-    connectionTimeout: 20000, // 20 seconds
-    greetingTimeout: 20000,   // 20 seconds
-    socketTimeout: 30000,     // 30 seconds
-  });
+const getResend = () => {
+  if (globalForMail._resend) return globalForMail._resend;
   
-  return globalForMail._smtpTransporter;
+  if (!process.env.RESEND) {
+    console.error("[Mail] RESEND API key is missing from environment variables");
+  }
+
+  globalForMail._resend = new Resend(process.env.RESEND);
+  return globalForMail._resend;
 };
 
 /**
@@ -207,19 +190,24 @@ export const sendAutomatedEmail = async (email: string, templateKey: string, var
 };
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
-  const transporter = getTransporter();
-  const mailOptions = {
-    from: `"SpendWise" <${process.env.SMTP_USER}>`,
-    to,
-    subject,
-    html,
-  };
-
+  const resend = getResend();
+  
   try {
-    const info = await transporter.sendMail(mailOptions);
-    return { success: true, messageId: info.messageId };
+    const { data, error } = await resend.emails.send({
+      from: 'SpendWise <onboarding@resend.dev>', // Update this with your verified domain in production
+      to: [to],
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error("[Mail] Resend error:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, messageId: data?.id };
   } catch (err: any) {
-    console.error("Failed to send email:", err);
+    console.error("Failed to send email via Resend:", err);
     return { success: false, error: err.message };
   }
 };
