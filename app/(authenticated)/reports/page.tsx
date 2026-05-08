@@ -18,6 +18,7 @@ import {
   BarChart2,
   Filter,
   Eye,
+  Triangle
 } from "lucide-react";
 import { useDashboard } from "@/context/DashboardContext";
 import {
@@ -395,9 +396,9 @@ export default function ReportsPage() {
 
   // ── Radar Data (50/30/20 Comparison) ──────────────────────────────────────
   const radarData = [
-    { subject: "Needs (50%)", A: needsPercentage, B: 50, fullMark: 100 },
-    { subject: "Wants (30%)", A: wantsPercentage, B: 30, fullMark: 100 },
-    { subject: "Savings (20%)", A: Math.max(0, savingsPercentage), B: 20, fullMark: 100 },
+    { subject: `Needs (50%)`, A: Number(needsPercentage.toFixed(1)), B: 50 },
+    { subject: `Wants (30%)`, A: Number(wantsPercentage.toFixed(1)), B: 30 },
+    { subject: `Savings (20%)`, A: Number(Math.max(0, savingsPercentage).toFixed(1)), B: 20 },
   ];
 
   // ── Trend Data (Daily, Cumulative, or Stacked) ─────────────────────────────
@@ -895,16 +896,15 @@ export default function ReportsPage() {
                         fillOpacity={0.3}
                         strokeDasharray="4 4"
                       />
-                      <Tooltip />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-subtle)', borderRadius: '1rem', fontWeight: 'bold' }}
+                        itemStyle={{ color: 'var(--foreground)' }}
+                      />
                     </RadarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="text-muted font-bold italic text-sm">No data to compare.</div>
                 )}
-              </div>
-              <div className="flex justify-center gap-4 text-[10px] font-black uppercase tracking-widest mt-2">
-                 <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-primary-500" /> Actual</div>
-                 <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded bg-tertiary-500 opacity-50 border border-dashed border-tertiary-500" /> Suggested</div>
               </div>
             </div>
           </div>

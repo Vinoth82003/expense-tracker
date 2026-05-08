@@ -31,6 +31,13 @@ interface DashboardContextType {
   isTogglingMode: boolean;
   refreshData: () => Promise<void>;
   toggleExpenseMode: () => Promise<void>;
+  stats: {
+    totalSpent: number;
+    totalIncome: number;
+    netBalance: number;
+    dailyAverage: number;
+    remaining: number;
+  };
 }
 
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
@@ -45,6 +52,19 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [expenseMode, setExpenseMode] = useState<string>("no-limit");
   const [loading, setLoading] = useState(true);
   const [isTogglingMode, setIsTogglingMode] = useState(false);
+
+  const stats = React.useMemo(() => {
+    const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const totalIncome = incomes.reduce((sum, inc) => sum + inc.amount, 0);
+    const netBalance = totalIncome - totalSpent;
+    const remaining = monthlyLimit - totalSpent;
+    
+    const today = new Date();
+    const currentDay = today.getDate();
+    const dailyAverage = totalSpent / (currentDay || 1);
+
+    return { totalSpent, totalIncome, netBalance, dailyAverage, remaining };
+  }, [expenses, incomes, monthlyLimit]);
 
   const fetchDashboardData = useCallback(async () => {
     if (!session) return;
@@ -136,7 +156,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       loading, 
       isTogglingMode,
       refreshData: fetchDashboardData,
-      toggleExpenseMode
+      toggleExpenseMode,
+      stats
     }}>
       {children}
     </DashboardContext.Provider>

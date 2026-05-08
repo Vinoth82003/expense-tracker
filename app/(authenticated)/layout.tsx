@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -19,10 +19,14 @@ import {
   Sun,
   Moon,
   Banknote,
-  Sparkles,
   LayoutGrid,
   Bell,
-  BrainCog
+  BrainCog,
+  ChevronRight,
+  ShieldCheck,
+  HelpCircle,
+  ExternalLink,
+  Sparkles
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
@@ -33,17 +37,32 @@ import { ActivityTracker } from "@/components/activity/ActivityTracker";
 import { SystemStatusChecker } from "@/components/layout/SystemStatusChecker";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 import { SuspendedOverlay } from "@/components/layout/SuspendedOverlay";
+import { useModal } from "@/components/providers/ModalProvider";
 
-const navItems = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Expenses", href: "/expenses", icon: ReceiptIndianRupee },
-  { name: "Income", href: "/income", icon: Banknote },
-  { name: "Reports", href: "/reports", icon: PieChart },
-  { name: "AI Analyze", href: "/analyze", icon: BrainCog },
-  { name: "Categories", href: "/settings/categories", icon: LayoutGrid },
-  { name: "Notifications", href: "/notifications", icon: Bell },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Profile", href: "/profile", icon: User },
+const navGroups = [
+  {
+    title: "Intelligence",
+    items: [
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Forensic Analysis", href: "/analyze", icon: BrainCog, premium: true },
+      { name: "Visual Reports", href: "/reports", icon: PieChart },
+    ]
+  },
+  {
+    title: "Transactions",
+    items: [
+      { name: "Expenses", href: "/expenses", icon: ReceiptIndianRupee },
+      { name: "Income", href: "/income", icon: Banknote },
+      { name: "Category Map", href: "/settings/categories", icon: LayoutGrid },
+    ]
+  },
+  {
+    title: "Preferences",
+    items: [
+      { name: "Announcements", href: "/notifications", icon: Bell },
+      { name: "System Settings", href: "/settings", icon: Settings },
+    ]
+  }
 ];
 
 export default function DashboardLayout({
@@ -54,6 +73,7 @@ export default function DashboardLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const { confirm } = useModal();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [featureFlags, setFeatureFlags] = useState<any>({ aiAnalysis: true });
@@ -69,7 +89,6 @@ export default function DashboardLayout({
       })
       .catch(console.error);
 
-    // Track PWA Installation
     const handleAppInstalled = () => {
       fetch("/api/user/pwa", {
         method: "POST",
@@ -79,8 +98,6 @@ export default function DashboardLayout({
     };
 
     window.addEventListener("appinstalled", handleAppInstalled);
-    
-    // Also check if already running as PWA
     if (window.matchMedia("(display-mode: standalone)").matches) {
       handleAppInstalled();
     }
@@ -99,7 +116,6 @@ export default function DashboardLayout({
       router.push("/onboarding");
       return;
     }
-    // If 2FA is enabled, check if the session is already 2FA-verified via cookie
     if (status === "authenticated" && (session?.user as any)?.twoFactorEnabled) {
       const cookies = document.cookie.split(";").map((c) => c.trim());
       const is2faVerified = cookies.some((c) => c.startsWith("2fa_verified="));
@@ -109,10 +125,22 @@ export default function DashboardLayout({
     }
   }, [session, status, router, pathname]);
 
+  const handleLogout = async () => {
+    const isConfirmed = await confirm({
+      title: "Logout?",
+      message: "Are you sure you want to end your session? You'll need to log in again to access your forensic insights.",
+      confirmText: "Logout",
+      danger: true
+    });
+
+    if (isConfirmed) {
+      signOut({ callbackUrl: "/login" });
+    }
+  };
+
   if (status === "loading" || !session) {
     return (
       <div className="min-h-screen flex bg-background text-foreground animate-pulse">
-        {/* Skeleton Sidebar - Desktop */}
         <aside className="hidden lg:flex flex-col w-72 bg-surface/50 border-r border-border-subtle p-6 h-screen">
           <div className="flex items-center gap-3 mb-10 px-2">
             <div className="w-10 h-10 bg-surface-variant rounded-xl"></div>
@@ -126,7 +154,6 @@ export default function DashboardLayout({
           <div className="mt-auto h-12 w-full bg-surface-variant rounded-2xl"></div>
         </aside>
 
-        {/* Skeleton Main Area */}
         <div className="flex-1 flex flex-col min-h-0 min-w-0">
           <header className="flex items-center justify-between p-4 lg:p-6 border-b border-border-subtle lg:border-none">
             <div className="h-8 w-40 lg:w-48 bg-surface-variant rounded-lg"></div>
@@ -142,11 +169,6 @@ export default function DashboardLayout({
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  {[1, 2, 3].map((i) => (
                    <div key={i} className="h-32 w-full bg-surface-variant rounded-[2rem]"></div>
-                 ))}
-               </div>
-               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                 {[1, 2].map((i) => (
-                   <div key={i} className="h-64 w-full bg-surface-variant rounded-[2.5rem]"></div>
                  ))}
                </div>
              </div>
@@ -169,39 +191,66 @@ export default function DashboardLayout({
           </span>
         </Link>
 
-        <nav className="flex-1 space-y-2">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
-                  isActive 
-                    ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" 
-                    : "text-secondary hover:bg-surface-variant hover:text-foreground"
-                }`}
-              >
-                <item.icon size={20} className={isActive ? "" : "group-hover:scale-110 transition-transform"} />
-                <span className="font-bold">{item.name}</span>
-                {isActive && (
-                  <motion.div 
-                    layoutId="nav-active" 
-                    className="ml-auto w-1.5 h-1.5 rounded-full bg-current opacity-60" 
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="flex-1 space-y-8 overflow-y-auto no-scrollbar pr-2">
+          {navGroups.map((group) => (
+            <div key={group.title} className="space-y-3">
+              <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">{group.title}</h3>
+              <nav className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
+                        isActive 
+                          ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" 
+                          : "text-secondary hover:bg-surface-variant hover:text-foreground"
+                      }`}
+                    >
+                      <item.icon size={18} className={isActive ? "" : "group-hover:scale-110 transition-transform"} />
+                      <span className="font-bold text-sm">{item.name}</span>
+                      {item.premium && !isActive && (
+                        <div className="ml-auto w-4 h-4 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center">
+                          <Sparkles size={10} />
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          ))}
+        </div>
 
-        <button 
-          onClick={() => router.push("/api/auth/signout")}
-          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold mt-auto"
-        >
-          <LogOut size={20} />
-          <span>Logout</span>
-        </button>
+        <div className="mt-8 pt-6 border-t border-border-subtle space-y-4">
+          <Link href="/profile" className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+            pathname === "/profile" ? "bg-surface-variant text-foreground shadow-sm" : "text-secondary hover:text-foreground"
+          }`}>
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-500/10 border border-primary-500/20 flex items-center justify-center">
+              {session.user?.image ? (
+                <img src={session.user.image} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User size={16} className="text-primary-600" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-black truncate">{session.user?.name || "Profile"}</p>
+              <p className="text-[10px] text-muted font-bold truncate">{session.user?.email}</p>
+            </div>
+            <ChevronRight size={14} className="text-muted" />
+          </Link>
+
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-error/5 text-error flex items-center justify-center group-hover:scale-110 transition-transform">
+              <LogOut size={18} />
+            </div>
+            <span className="text-sm">Sign Out</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main Content Area */}
@@ -216,7 +265,7 @@ export default function DashboardLayout({
               <Menu size={24} />
             </button>
             <h1 className="text-xl lg:text-3xl font-black tracking-tight">
-              {navItems.find(item => item.href === pathname)?.name || "Dashboard"}
+              {navGroups.flatMap(g => g.items).find(item => item.href === pathname)?.name || "Dashboard"}
             </h1>
           </div>
 
@@ -234,17 +283,24 @@ export default function DashboardLayout({
             <button
               onClick={toggleTheme}
               className="p-2.5 lg:p-3 rounded-xl bg-surface border border-border-subtle text-secondary hover:text-foreground transition-all active:scale-95 shadow-sm"
-              title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            <Link href="/profile" className="w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 border-border-subtle overflow-hidden bg-surface-variant flex items-center justify-center font-bold text-secondary shadow-sm hover:border-primary-500/50 transition-all active:scale-95">
-              {session.user?.image ? (
-                <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
-              ) : (
-                session.user?.name?.charAt(0) || "U"
-              )}
+            <Link 
+              href="/profile"
+              className="relative group active:scale-95 transition-transform"
+            >
+              <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full overflow-hidden border-2 border-background shadow-md flex items-center justify-center transition-all group-hover:ring-2 group-hover:ring-primary-500/50">
+                {session.user?.image ? (
+                  <img src={session.user.image} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-lime-500 to-green-600 flex items-center justify-center text-white font-black text-lg">
+                    {session.user?.name?.charAt(0) || "U"}
+                  </div>
+                )}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success border-2 border-background rounded-full shadow-sm"></div>
             </Link>
           </div>
         </header>
@@ -283,53 +339,61 @@ export default function DashboardLayout({
                 </button>
               </div>
 
-              <nav className="flex-1 space-y-2">
-                {navItems.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-                        isActive 
-                          ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" 
-                          : "text-secondary hover:bg-surface-variant hover:text-foreground"
-                      }`}
-                    >
-                      <item.icon size={20} />
-                      <span className="font-bold">{item.name}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
+              <div className="flex-1 space-y-8 overflow-y-auto pr-2">
+                {navGroups.map((group) => (
+                  <div key={group.title} className="space-y-3">
+                    <h3 className="px-4 text-[10px] font-black uppercase tracking-widest text-muted">{group.title}</h3>
+                    <nav className="space-y-1">
+                      {group.items.map((item) => {
+                        const isActive = pathname === item.href;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+                              isActive 
+                                ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" 
+                                : "text-secondary hover:bg-surface-variant hover:text-foreground"
+                            }`}
+                          >
+                            <item.icon size={20} />
+                            <span className="font-bold">{item.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </nav>
+                  </div>
+                ))}
+              </div>
 
-              <button 
-                onClick={() => router.push("/api/auth/signout")}
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold mt-auto"
-              >
-                <LogOut size={20} />
-                <span>Logout</span>
-              </button>
+              <div className="mt-auto pt-6 border-t border-border-subtle">
+                 <button 
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-error/5 text-error flex items-center justify-center">
+                    <LogOut size={20} />
+                  </div>
+                  <span>Sign Out Session</span>
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Floating Add Button for Mobile */}
       <button 
         onClick={() => setIsAddExpenseOpen(true)}
-        className="sm:hidden fixed bottom-6 right-6 w-12 h-12 rounded-full bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"
+        className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-2xl bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"
       >
-        <Plus size={28} />
+        <Plus size={32} />
       </button>
 
-      {/* Add Expense Modal */}
       <AddExpenseModal
         isOpen={isAddExpenseOpen}
         onClose={() => setIsAddExpenseOpen(false)}
         onSuccess={() => {
-          // You could trigger a global re-fetch or event here. For now, a router.refresh() handles most Server Component updates.
           router.refresh();
         }}
       />
@@ -349,5 +413,4 @@ export default function DashboardLayout({
       </DashboardProvider>
     </UIProvider>
   );
-       
 }

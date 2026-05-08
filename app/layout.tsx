@@ -78,6 +78,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { Toaster } from "react-hot-toast";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -143,6 +145,7 @@ export default function RootLayout({
         <PublicMaintenanceBanner />
         <PageLoader />
         <OfflineIndicator />
+        <Toaster position="top-center" reverseOrder={false} />
         <AuthProvider>
           <ThemeProvider>
             <ModalProvider>{children}</ModalProvider>

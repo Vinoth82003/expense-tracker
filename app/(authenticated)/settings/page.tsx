@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useModal } from "@/components/providers/ModalProvider";
+import { OTPActionModal } from "@/components/modals/OTPActionModal";
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
@@ -34,6 +35,7 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const { toast } = useUI();
+  const [isWipeModalOpen, setIsWipeModalOpen] = useState(false);
 
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState("general");
@@ -106,22 +108,17 @@ export default function SettingsPage() {
   };
 
   const handleWipe = async () => {
-    const isConfirmed = await confirm({
-      title: "Wipe All Data?",
-      message: "Are you ABSOLUTELY sure? This will delete ALL your transactions permanently. This action cannot be undone.",
-      danger: true,
-      confirmText: "Wipe Data"
-    });
-    
-    if (!isConfirmed) return;
+    setIsWipeModalOpen(true);
+  };
 
+  const onWipeSuccess = async () => {
+    setIsWipeModalOpen(false);
     setDataLoading(true);
     try {
       const res = await fetch("/api/user/wipe", { method: "DELETE" });
       if (res.ok) {
         toast.success("All data has been wiped.");
         setForm({ ...form, monthlyLimit: "0" });
-        // Refresh session/data
         await update();
       } else {
         toast.error("Failed to wipe data.");
@@ -389,6 +386,15 @@ export default function SettingsPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      <OTPActionModal
+        isOpen={isWipeModalOpen}
+        onClose={() => setIsWipeModalOpen(false)}
+        onSuccess={onWipeSuccess}
+        title="Wipe All Data?"
+        description="Are you ABSOLUTELY sure? This will delete ALL your transactions permanently. This action cannot be undone and requires verification."
+        actionButtonText="Wipe All Data"
+      />
     </div>
   );
 }

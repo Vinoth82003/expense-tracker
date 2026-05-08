@@ -22,6 +22,8 @@ import {
   Calendar,
 } from "lucide-react";
 import { useModal } from "@/components/providers/ModalProvider";
+import { OTPActionModal } from "@/components/modals/OTPActionModal";
+import { toast } from "react-hot-toast";
 
 export default function ProfilePage() {
   const { data: session, update: updateSession } = useSession();
@@ -40,6 +42,7 @@ export default function ProfilePage() {
   const [twoFALoading, setTwoFALoading] = useState(false);
   const [twoFAError, setTwoFAError] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -121,35 +124,37 @@ export default function ProfilePage() {
   };
 
   const handleDeleteAccount = async () => {
-    const isConfirmed = await confirm({
-      title: "Delete Account?",
-      message: "This action is PERMANENT. All your data will be erased forever. Are you sure?",
-      danger: true,
-      confirmText: "Delete Permanently"
-    });
+    setIsDeleteModalOpen(true);
+  };
 
-    if (!isConfirmed) return;
-
+  const onDeleteSuccess = async () => {
+    setIsDeleteModalOpen(false);
     setIsDeletingAccount(true);
     try {
       const res = await fetch("/api/user/delete", { method: "DELETE" });
       if (res.ok) {
+        toast.success("Account deleted. Farewell!");
         signOut({ callbackUrl: "/login" });
       } else {
-        await alert({
-          title: "Error",
-          message: "Failed to delete account. Please try again.",
-          type: "error"
-        });
+        toast.error("Failed to delete account.");
       }
     } catch {
-      await alert({
-        title: "Network Error",
-        message: "Failed to reach server.",
-        type: "error"
-      });
+      toast.error("Network error.");
     } finally {
       setIsDeletingAccount(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    const isConfirmed = await confirm({
+      title: "Logout?",
+      message: "Are you sure you want to end your session? You'll need to log in again to access your forensic insights.",
+      confirmText: "Logout",
+      danger: true
+    });
+
+    if (isConfirmed) {
+      signOut({ callbackUrl: "/login" });
     }
   };
 
@@ -411,7 +416,7 @@ export default function ProfilePage() {
             <h3 className="text-xl font-black text-error mb-6">Danger Zone</h3>
             <div className="space-y-3">
               <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={handleLogout}
                 className="w-full flex items-center justify-between px-5 py-4 rounded-2xl bg-surface text-error border border-error/20 hover:bg-error/5 transition-all group font-bold"
               >
                 <div className="flex items-center gap-3">
@@ -434,6 +439,14 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       </div>
+      <OTPActionModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onSuccess={onDeleteSuccess}
+        title="Delete Account?"
+        description="This action is PERMANENT and cannot be undone. All your data will be erased forever. Please verify your identity to proceed."
+        actionButtonText="Delete My Account Permanently"
+      />
     </motion.div>
   );
 }

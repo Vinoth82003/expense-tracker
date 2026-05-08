@@ -163,6 +163,7 @@ export async function POST(req: NextRequest) {
       3. Income Insights: Track the savings rate trend over the months and analyze the income vs expense gap.
       4. Finance Advice: Provide longitudinal advice based on the entire history. specifically focus on Emergency Fund status (suggesting 6 months of expenses if not already met).
       5. Hypothetical Scenario: Include a "What If" analysis (e.g., response to a 25% income dip) with specific spending cuts.
+      6. Suggestions: Provide a list of 3-5 concrete, actionable suggestions to save money based on their specific spending habits. For each, specify the category, the suggestion text, and estimated potential monthly savings.
 
       Output Requirements:
       - Use professional language.
@@ -254,9 +255,21 @@ export async function POST(req: NextRequest) {
                 }
               },
               required: ["longTermAdvice", "emergencyFundStatus", "hypotheticalScenario"]
+            },
+            suggestions: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  category: { type: "string" },
+                  suggestion: { type: "string" },
+                  potentialSavings: { type: "string" }
+                },
+                required: ["category", "suggestion", "potentialSavings"]
+              }
             }
           },
-          required: ["spendingAnalysis", "budgetIntelligence", "incomeInsights", "financeAdvice"]
+          required: ["spendingAnalysis", "budgetIntelligence", "incomeInsights", "financeAdvice", "suggestions"]
         }
       }
     });

@@ -14,7 +14,9 @@ import {
   TrendingUp,
   Banknote,
   Scale,
-  Settings2
+  Settings2,
+  AlertTriangle,
+  Triangle
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
@@ -24,7 +26,12 @@ import {
   Pie, 
   Cell, 
   ResponsiveContainer, 
-  Tooltip 
+  Tooltip,
+  Radar, 
+  RadarChart, 
+  PolarGrid, 
+  PolarAngleAxis, 
+  PolarRadiusAxis
 } from "recharts";
 
 interface Expense {
@@ -62,23 +69,63 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
   const stats = useMemo(() => {
     const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
     const totalIncome = incomes.reduce((sum, inc) => sum + inc.amount, 0);
     const netBalance = totalIncome - totalSpent;
+    const remaining = monthlyLimit - totalSpent;
+    const dailyAverage = totalSpent / (new Date().getDate() || 1);
 
-    const currentDate = new Date();
-    const daysElapsed = currentDate.getDate() || 1;
-    const dailyAverage = totalSpent / daysElapsed;
-    const remaining = expenseMode === "limit" ? monthlyLimit - totalSpent : null;
+    // Daily Limit Logic
+    const today = new Date();
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const currentDay = today.getDate();
+    const daysLeft = daysInMonth - currentDay + 1;
+    
+    const todayStr = today.toISOString().split('T')[0];
+    const todaySpend = expenses
+      .filter(e => e.date.startsWith(todayStr))
+      .reduce((sum, exp) => sum + exp.amount, 0);
+    
+    const dailyLimit = expenseMode === "limit" ? Math.max(0, (monthlyLimit - (totalSpent - todaySpend)) / daysLeft) : 0;
+    const todayUsagePercent = dailyLimit > 0 ? (todaySpend / dailyLimit) * 100 : 0;
+
+    // 50/30/20 Breakdown
+    const needs = expenses.filter(e => e.category === "Needs").reduce((sum, exp) => sum + exp.amount, 0);
+    const wants = expenses.filter(e => e.category === "Wants").reduce((sum, exp) => sum + exp.amount, 0);
+    const savings = Math.max(0, totalIncome - totalSpent);
+    
+    const totalAllocated = totalIncome || (totalSpent > 0 ? totalSpent : 1);
+    const needsPct = (needs / totalAllocated) * 100;
+    const wantsPct = (wants / totalAllocated) * 100;
+    const savingsPct = (savings / totalAllocated) * 100;
 
     // Category breakdown for chart
     const catMap = new Map<string, number>();
     expenses.forEach(e => catMap.set(e.category, (catMap.get(e.category) || 0) + e.amount));
     const chartData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value }));
 
-    return { totalSpent, totalIncome, netBalance, dailyAverage, remaining, chartData };
+    // Radar Data for Triangle Rule
+    const radarData = [
+      { subject: `Needs (50%)`, A: Number(needsPct.toFixed(1)), B: 50 },
+      { subject: `Wants (30%)`, A: Number(wantsPct.toFixed(1)), B: 30 },
+      { subject: `Savings (20%)`, A: Number(savingsPct.toFixed(1)), B: 20 },
+    ];
+
+    return { 
+      totalSpent, 
+      totalIncome, 
+      netBalance, 
+      dailyAverage, 
+      remaining, 
+      chartData,
+      radarData,
+      dailyLimit,
+      todaySpend,
+      todayUsagePercent,
+      daysLeft,
+      breakdown503020: { needs, wants, savings, needsPct, wantsPct, savingsPct }
+    };
   }, [expenses, incomes, expenseMode, monthlyLimit]);
 
   return (
@@ -202,6 +249,67 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </div>
+      
+      {/* Daily Limit Warning - Condition: limit mode active and budget set */}
+      {expenseMode === "limit" && monthlyLimit > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className={`p-6 rounded-[2.5rem] border shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group ${
+            stats.todayUsagePercent <= 25 ? "bg-success/5 border-success/20" :
+            stats.todayUsagePercent <= 50 ? "bg-warning/5 border-warning/20" :
+            stats.todayUsagePercent <= 75 ? "bg-orange-500/5 border-orange-500/20" :
+            "bg-error/5 border-error/20"
+          }`}
+        >
+          <div className="flex items-center gap-4 relative z-10">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${
+              stats.todayUsagePercent <= 25 ? "bg-success text-white" :
+              stats.todayUsagePercent <= 50 ? "bg-warning text-white" :
+              stats.todayUsagePercent <= 75 ? "bg-orange-500 text-white" :
+              "bg-error text-white"
+            }`}>
+              <AlertTriangle size={28} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black">Daily Spending Limit</h3>
+              <p className="text-secondary font-bold">
+                You have <span className="text-foreground">₹{Math.round(stats.dailyLimit).toLocaleString('en-IN')}</span> to spend today.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center md:items-end gap-1 relative z-10">
+            <div className="text-[10px] font-black uppercase tracking-widest text-muted">Today's Spend</div>
+            <div className={`text-3xl font-black ${
+              stats.todayUsagePercent <= 25 ? "text-success" :
+              stats.todayUsagePercent <= 50 ? "text-warning" :
+              stats.todayUsagePercent <= 75 ? "text-orange-500" :
+              "text-error"
+            }`}>
+              ₹{stats.todaySpend.toLocaleString('en-IN')}
+            </div>
+            <div className="text-xs font-bold text-secondary">
+              {stats.todayUsagePercent.toFixed(1)}% of daily quota used
+            </div>
+          </div>
+          
+          {/* Progress background bar */}
+          <div className="absolute bottom-0 left-0 h-1.5 bg-surface-variant w-full">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, stats.todayUsagePercent)}%` }}
+              className={`h-full transition-all duration-1000 ${
+                stats.todayUsagePercent <= 25 ? "bg-success" :
+                stats.todayUsagePercent <= 50 ? "bg-warning" :
+                stats.todayUsagePercent <= 75 ? "bg-orange-500" :
+                "bg-error"
+              }`}
+            />
+          </div>
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -316,6 +424,113 @@ export default function DashboardPage() {
           </div>
         </div>
       </motion.div>
+
+      {/* 50/30/20 Triangle Graph Section */}
+      <motion.section
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="bg-surface rounded-[3rem] border border-border-subtle p-8 sm:p-12 shadow-sm overflow-hidden relative"
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 blur-[100px] rounded-full -mr-32 -mt-32" />
+        
+        <div className="flex flex-col items-center text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px] font-black uppercase tracking-widest mb-4">
+            <Triangle size={14} />
+            Budget Strategy
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-2">50/30/20 Rule Analysis</h2>
+          <p className="text-secondary font-medium max-w-xl">
+            Comparing your actual spending habits with the ideal financial health triangle for current month.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Triangle Visualization */}
+          <div className="relative flex justify-center">
+              <div className="w-full h-[400px] relative flex items-center justify-center">
+                <ResponsiveContainer width="100%" height={250} minWidth={100} minHeight={100}>
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={stats.radarData}>
+                    <PolarGrid stroke="#6366f120" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: "currentColor", fontSize: 10, fontWeight: 800 }} className="text-secondary" />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} axisLine={false} tick={false} />
+                    <Radar
+                      name="Actual"
+                      dataKey="A"
+                      stroke="#6366f1"
+                      fill="#6366f1"
+                      fillOpacity={0.6}
+                    />
+                    <Radar
+                      name="Suggested"
+                      dataKey="B"
+                      stroke="#06b6d4"
+                      fill="#06b6d4"
+                      fillOpacity={0.3}
+                      strokeDasharray="4 4"
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-subtle)', borderRadius: '1rem', fontWeight: 'bold' }}
+                      itemStyle={{ color: 'var(--foreground)' }}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+          </div>
+
+          {/* Text Breakdown */}
+          <div className="space-y-6">
+            <div className="p-6 rounded-3xl bg-surface-variant/30 border border-border-subtle hover:border-primary-500/50 transition-colors">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-primary-500" />
+                  <span className="font-black uppercase tracking-widest text-xs">Essential Needs</span>
+                </div>
+                <span className={`font-black ${stats.breakdown503020.needsPct > 50 ? "text-error" : "text-success"}`}>
+                  {stats.breakdown503020.needsPct.toFixed(1)}%
+                </span>
+              </div>
+              <p className="text-sm text-secondary font-medium leading-relaxed">
+                Your actual spending on essentials like Rent, Utilities, and Groceries is 
+                <span className="text-foreground font-bold"> ₹{stats.breakdown503020.needs.toLocaleString('en-IN')}</span>. 
+                {stats.breakdown503020.needsPct > 50 ? " You are exceeding the recommended 50% limit." : " You are well within the 50% target."}
+              </p>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-surface-variant/30 border border-border-subtle hover:border-cyan-500/50 transition-colors">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-cyan-500" />
+                  <span className="font-black uppercase tracking-widest text-xs">Lifestyle Wants</span>
+                </div>
+                <span className={`font-black ${stats.breakdown503020.wantsPct > 30 ? "text-error" : "text-success"}`}>
+                  {stats.breakdown503020.wantsPct.toFixed(1)}%
+                </span>
+              </div>
+              <p className="text-sm text-secondary font-medium leading-relaxed">
+                You spent <span className="text-foreground font-bold">₹{stats.breakdown503020.wants.toLocaleString('en-IN')}</span> on 
+                discretionary items. {stats.breakdown503020.wantsPct > 30 ? " Try to reduce lifestyle inflation." : " Excellent control over discretionary spending!"}
+              </p>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-surface-variant/30 border border-border-subtle hover:border-success/50 transition-colors">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-success" />
+                  <span className="font-black uppercase tracking-widest text-xs">Financial Savings</span>
+                </div>
+                <span className={`font-black ${stats.breakdown503020.savingsPct < 20 ? "text-warning" : "text-success"}`}>
+                  {stats.breakdown503020.savingsPct.toFixed(1)}%
+                </span>
+              </div>
+              <p className="text-sm text-secondary font-medium leading-relaxed">
+                Your net savings for this month is <span className="text-foreground font-bold">₹{stats.breakdown503020.savings.toLocaleString('en-IN')}</span>. 
+                {stats.breakdown503020.savingsPct < 20 ? " Aim to increase your savings rate to reach the 20% milestone." : " You've hit your financial freedom target!"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.section>
     </div>
   );
 }
