@@ -1,33 +1,28 @@
 import nodemailer from "nodemailer";
+import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { logger } from "./logger";
 
-// Stored on `global` so it survives Next.js hot-reloads in dev.
-const globalForMail = global as unknown as { _transporter: nodemailer.Transporter };
-
-const getTransporter = () => {
-  if (globalForMail._transporter) return globalForMail._transporter;
-  
-  const transporter = nodemailer.createTransport({
+/**
+ * Creates a fresh non-pooled SMTP transporter for each send.
+ * Pooled connections time out on Gmail after ~60s of idle,
+ * causing "Connection timeout" on the 3rd+ email in a burst.
+ * A fresh connection per email is more reliable for low-volume bulk sends.
+ */
+const createTransporter = () => {
+  const options: SMTPTransport.Options = {
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_PORT === "465", // true for 465, false for other ports
+    port: parseInt(process.env.SMTP_PORT || "465"),
+    secure: process.env.SMTP_PORT === "465",
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
-    // Add timeouts to prevent hanging on blocked ports
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-    debug: true, // Show debug output in console
-    logger: true, // Log to console
-  });
-
-  globalForMail._transporter = transporter;
-  return transporter;
+    // No pooling – avoids idle connection timeouts on Gmail (default for SMTPTransport)
+    connectionTimeout: 30000, // 30s to connect
+    greetingTimeout: 30000,   // 30s for SMTP greeting
+    socketTimeout: 60000,     // 60s per message
+  };
+  return nodemailer.createTransport(options);
 };
 
 /**
@@ -82,7 +77,7 @@ export const wrapLayout = (content: string, recipientEmail = "") => {
             <p>© ${new Date().getFullYear()} SpendWise Inc. All rights reserved.</p>
             <p>Financial forensics at your fingertips.</p>
             <p style="margin-top: 10px;">
-              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/profile" style="color: #0d9488; text-decoration: none; font-weight: bold;">Share Feedback</a>
+              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/feedback" style="color: #0d9488; text-decoration: none; font-weight: bold;">Share Feedback</a>
               &nbsp;·&nbsp;
               <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/settings" style="color: #9ca3af; text-decoration: none;">Manage Notifications</a>
               &nbsp;·&nbsp;
@@ -174,7 +169,7 @@ export const sendFeedbackRequestEmail = async (email: string, name: string) => {
     <p>We've been working hard to make SpendWise the best forensic financial tool for you.</p>
     <p>Could you spare a minute to share your feedback? Your insights help us prioritize features that matter most to you.</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/profile" class="button">Share My Experience</a>
+      <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/feedback" class="button">Share My Experience</a>
     </div>
     <p>Thank you for being a valued member of the SpendWise community!</p>
     <p style="margin-top: 30px;">Best Regards,<br/> <strong>The SpendWise Team</strong></p>
@@ -222,8 +217,9 @@ export const sendAutomatedEmail = async (email: string, templateKey: string, var
 };
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
-  const transporter = getTransporter();
-  
+  // Fresh transporter per send — avoids Gmail idle-pool connection timeouts
+  const transporter = createTransporter();
+
   try {
     const info = await transporter.sendMail({
       from: `"SpendWise" <${process.env.SMTP_USER}>`,
@@ -237,5 +233,8 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
   } catch (err: any) {
     await logger.error(`SMTP error sending email: ${err.message}`, { to, subject }, "MAIL");
     return { success: false, error: err.message };
+  } finally {
+    // Close the connection cleanly after each send
+    transporter.close();
   }
 };

@@ -15,7 +15,9 @@ import {
   Clock,
   ThumbsUp,
   ThumbsDown,
-  ChevronLeft
+  ChevronLeft,
+  Send,
+  Mail
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -41,6 +43,24 @@ export default function AdminReviewsPage() {
   const [filter, setFilter] = useState<"all" | "APPROVED" | "PENDING" | "REJECTED">("all");
 
   const [mounted, setMounted] = useState(false);
+
+  // Request Feedback Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [recipientType, setRecipientType] = useState<"all" | "filter" | "specific">("all");
+  const [specificEmail, setSpecificEmail] = useState("");
+  const [filterSegment, setFilterSegment] = useState({
+    twoFactorEnabled: false,
+    limitMode: false,
+    active30d: false,
+    newUsers: false,
+    incomeNoExpenses: false,
+    noIncomeNoExpenses: false,
+    inactive2d: false,
+    inactive7d: false,
+    onboarded: undefined as boolean | undefined,
+    noPWA: undefined as boolean | undefined,
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -107,6 +127,42 @@ export default function AdminReviewsPage() {
   });
 
 
+  const handleRequestFeedback = async () => {
+    let finalFilter: any = null;
+
+    if (recipientType === "filter") {
+      finalFilter = { ...filterSegment };
+    } else if (recipientType === "specific") {
+      if (!specificEmail) {
+        toast.error("Please enter an email");
+        return;
+      }
+      finalFilter = { specificEmail };
+    }
+
+    setSending(true);
+    try {
+      const res = await fetch("/api/admin/reviews/request-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientFilter: finalFilter }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || "Feedback requests sent!");
+        setIsModalOpen(false);
+      } else {
+        toast.error(data.error || "Failed to send requests");
+      }
+    } catch (error) {
+      toast.error("An error occurred");
+    } finally {
+      setSending(false);
+    }
+  };
+
+
   if (!mounted) return null;
 
   return (
@@ -123,6 +179,12 @@ export default function AdminReviewsPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 hover:shadow-lg hover:shadow-primary-500/20 transition-all font-bold text-sm"
+          >
+            <Mail size={18} /> Request Feedback
+          </button>
           <button 
             onClick={fetchReviews}
             className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -271,6 +333,134 @@ export default function AdminReviewsPage() {
           </div>
         )}
       </div>
+
+      {/* Request Feedback Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-xl bg-white dark:bg-[#161B27] rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
+            >
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary-50 dark:bg-primary-500/10 text-primary-500 rounded-xl">
+                    <Mail size={20} />
+                  </div>
+                  <h3 className="text-xl font-bold">Request Feedback</h3>
+                </div>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl transition-colors"
+                >
+                  <XCircle size={24} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                {/* Recipient Type */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Recipients</label>
+                  <select
+                    value={recipientType}
+                    onChange={(e) => setRecipientType(e.target.value as any)}
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-primary-500 outline-none font-medium"
+                  >
+                    <option value="all">All Users</option>
+                    <option value="filter">Filtered Segment</option>
+                    <option value="specific">Specific User</option>
+                  </select>
+                </div>
+
+                {/* Specific Email */}
+                {recipientType === "specific" && (
+                  <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Email Address</label>
+                    <input
+                      type="email"
+                      value={specificEmail}
+                      onChange={(e) => setSpecificEmail(e.target.value)}
+                      placeholder="user@example.com"
+                      className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-primary-500 outline-none font-medium"
+                    />
+                  </div>
+                )}
+
+                {/* Filters */}
+                {recipientType === "filter" && (
+                  <div className="space-y-4">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Target Audience</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {Object.entries(filterSegment).map(([key, value]) => {
+                        const labelMap: Record<string, string> = {
+                          twoFactorEnabled: "2FA Enabled",
+                          limitMode: "Limit Mode Users",
+                          active30d: "Active Last 30d",
+                          newUsers: "Joined Last 7d",
+                          incomeNoExpenses: "Has Income, No Expenses",
+                          noIncomeNoExpenses: "No Income or Expenses",
+                          inactive2d: "Inactive > 2 days",
+                          inactive7d: "Inactive > 7 days",
+                        };
+
+                        if (!labelMap[key]) return null;
+
+                        return (
+                          <label key={key} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors border border-slate-100 dark:border-slate-800">
+                            <div className="relative flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={value as boolean}
+                                onChange={(e) => setFilterSegment({ ...filterSegment, [key]: e.target.checked })}
+                                className="peer sr-only"
+                              />
+                              <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded-md peer-checked:bg-primary-500 peer-checked:border-primary-500 transition-colors flex items-center justify-center">
+                                <CheckCircle2 size={12} className="text-white opacity-0 peer-checked:opacity-100" />
+                              </div>
+                            </div>
+                            <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{labelMap[key]}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 py-4 font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRequestFeedback}
+                  disabled={sending}
+                  className="flex-1 py-4 bg-primary-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-primary-600 hover:shadow-lg hover:shadow-primary-500/20 transition-all disabled:opacity-50"
+                >
+                  {sending ? (
+                    <RefreshCcw size={18} className="animate-spin" />
+                  ) : (
+                    <>
+                      <Send size={18} /> Send Requests
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
