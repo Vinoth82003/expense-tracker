@@ -82,9 +82,9 @@ export const wrapLayout = (content: string, recipientEmail = "") => {
             <p>© ${new Date().getFullYear()} SpendWise Inc. All rights reserved.</p>
             <p>Financial forensics at your fingertips.</p>
             <p style="margin-top: 10px;">
-              You received this because you are a registered user.
-              <br/>
-              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/settings" style="color: #0d9488; text-decoration: none;">Manage Notifications</a>
+              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/profile" style="color: #0d9488; text-decoration: none; font-weight: bold;">Share Feedback</a>
+              &nbsp;·&nbsp;
+              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/settings" style="color: #9ca3af; text-decoration: none;">Manage Notifications</a>
               &nbsp;·&nbsp;
               <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/unsubscribe?email=${encodeURIComponent(recipientEmail)}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
             </p>
@@ -164,6 +164,22 @@ export const sendBudgetAlertEmail = async (email: string, name: string, spentPer
     <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard" class="button">View Dashboard</a>
     <p style="margin-top: 30px;">Best,<br/> <strong>The SpendWise Team</strong></p>
   `;
+  return sendEmail(email, subject, wrapLayout(content, email));
+};
+
+export const sendFeedbackRequestEmail = async (email: string, name: string) => {
+  const subject = "Help us improve SpendWise! ⭐";
+  const content = `
+    <h2>Hi ${name || "User"},</h2>
+    <p>We've been working hard to make SpendWise the best forensic financial tool for you.</p>
+    <p>Could you spare a minute to share your feedback? Your insights help us prioritize features that matter most to you.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/profile" class="button">Share My Experience</a>
+    </div>
+    <p>Thank you for being a valued member of the SpendWise community!</p>
+    <p style="margin-top: 30px;">Best Regards,<br/> <strong>The SpendWise Team</strong></p>
+  `;
+
   return sendEmail(email, subject, wrapLayout(content, email));
 };
 

@@ -19,7 +19,8 @@ import {
   Send,
   ShieldAlert,
   History,
-  Terminal
+  Terminal,
+  Star
 } from "lucide-react";
 import {
   AreaChart,
@@ -401,6 +402,18 @@ export default function AdminDashboard() {
             <div className="text-left">
               <p className="font-bold text-lg leading-none mb-1">System logs</p>
               <p className="text-slate-500 dark:text-slate-400 text-xs font-medium">Track API events & errors</p>
+            </div>
+          </div>
+          <ChevronRight size={24} className="opacity-50 group-hover:translate-x-1 transition-transform" />
+        </Link>
+        <Link href="/admin/reviews" className="p-6 bg-amber-500 hover:bg-amber-600 rounded-3xl text-white shadow-lg shadow-amber-500/20 transition-all flex items-center justify-between group">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/20 rounded-2xl">
+              <Star size={24} />
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-lg leading-none mb-1">Feedbacks</p>
+              <p className="text-white/70 text-xs font-medium">Approve & manage reviews</p>
             </div>
           </div>
           <ChevronRight size={24} className="opacity-50 group-hover:translate-x-1 transition-transform" />

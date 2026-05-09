@@ -176,7 +176,7 @@ export default function SettingsPage() {
                   {/* Tracking Mode */}
                   <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-sm space-y-6">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-primary-50 text- primary-500">
+                      <div className="p-2.5 rounded-xl bg-primary-50 text-primary-500">
                         <SettingsIcon size={24} />
                       </div>
                       <h2 className="text-xl font-black">Tracking Preferences</h2>

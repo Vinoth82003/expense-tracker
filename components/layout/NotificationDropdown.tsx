@@ -167,7 +167,7 @@ export function NotificationDropdown() {
                       <p className={`text-sm font-medium leading-relaxed line-clamp-2 transition-all ${!notif.isRead ? "text-secondary" : "text-muted"}`}>
                         {notif.body}
                       </p>
-                      <div className="flex items-center gap-3 mt-3 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                      <div className="flex items-center gap-3 mt-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity justify-end">
                         {!notif.isRead && (
                           <button 
                             onClick={() => markAsRead(notif.id)}

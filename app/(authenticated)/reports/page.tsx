@@ -142,7 +142,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
 
   // ── Filter state ──────────────────────────────────────────────────────────
-  const [viewMode, setViewMode] = useState<"day" | "week" | "month" | "range">("month");
+  const [viewMode, setViewMode] = useState<"day" | "week" | "month" | "range" | "3M" | "6M" | "1Y" | "3Y" | "5Y" | "all">("month");
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -165,7 +165,7 @@ export default function ReportsPage() {
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const modeRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const trendRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const modes = ["day", "week", "month", "range"] as const;
+  const modes = ["day", "week", "month", "3M", "6M", "1Y", "3Y", "5Y", "all", "range"] as const;
   const trendModes = ["daily", "cumulative", "stacked", "cashflow"] as const;
 
   const monthlyLimit = contextMonthlyLimit;
@@ -223,6 +223,26 @@ export default function ReportsPage() {
         const prevStartStr = `${prevStart.getFullYear()}-${String(prevStart.getMonth() + 1).padStart(2, "0")}-${String(prevStart.getDate()).padStart(2, "0")}`;
         const prevEndStr = `${prevEnd.getFullYear()}-${String(prevEnd.getMonth() + 1).padStart(2, "0")}-${String(prevEnd.getDate()).padStart(2, "0")}`;
         prevQuery = `?fromDate=${prevStartStr}&toDate=${prevEndStr}`;
+      } else if (["3M", "6M", "1Y", "3Y", "5Y"].includes(viewMode)) {
+        const months = viewMode === "3M" ? 3 : viewMode === "6M" ? 6 : viewMode === "1Y" ? 12 : viewMode === "3Y" ? 36 : 60;
+        const end = new Date();
+        const start = new Date();
+        start.setMonth(start.getMonth() - months);
+        
+        const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+        const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+        query = `?fromDate=${startStr}&toDate=${endStr}`;
+
+        const prevEnd = new Date(start);
+        prevEnd.setDate(prevEnd.getDate() - 1);
+        const prevStart = new Date(prevEnd);
+        prevStart.setMonth(prevStart.getMonth() - months);
+        const prevStartStr = `${prevStart.getFullYear()}-${String(prevStart.getMonth() + 1).padStart(2, "0")}-${String(prevStart.getDate()).padStart(2, "0")}`;
+        const prevEndStr = `${prevEnd.getFullYear()}-${String(prevEnd.getMonth() + 1).padStart(2, "0")}-${String(prevEnd.getDate()).padStart(2, "0")}`;
+        prevQuery = `?fromDate=${prevStartStr}&toDate=${prevEndStr}`;
+      } else if (viewMode === "all") {
+        query = "";
+        prevQuery = ""; // No comparison for all time
       } else {
         setLoading(false);
         return;
@@ -258,9 +278,7 @@ export default function ReportsPage() {
       setPrevRawExpenses(contextPrevExpenses);
       setLoading(contextLoading);
     } else {
-      if (viewMode === "month" || viewMode === "day" || viewMode === "week" || (viewMode === "range" && dateRange.from && dateRange.to)) {
-        fetchExpenses();
-      }
+      fetchExpenses();
     }
 
     const handleRefresh = () => {
@@ -342,6 +360,16 @@ export default function ReportsPage() {
     const end = new Date(start);
     end.setDate(end.getDate() + 6);
     return `${start.toLocaleDateString("en-IN", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}`;
+  };
+
+  const getRangeName = () => {
+    if (viewMode === "3M") return "Last 3 Months";
+    if (viewMode === "6M") return "Last 6 Months";
+    if (viewMode === "1Y") return "Last Year";
+    if (viewMode === "3Y") return "Last 3 Years";
+    if (viewMode === "5Y") return "Last 5 Years";
+    if (viewMode === "all") return "All Time History";
+    return "Custom Date Range";
   };
 
   // ── Client-side filtering ─────────────────────────────────────────────────
@@ -540,7 +568,10 @@ export default function ReportsPage() {
                     : "text-secondary hover:text-foreground"
                 }`}
               >
-                {mode === "range" ? "Range" : `By ${mode.charAt(0).toUpperCase() + mode.slice(1)}`}
+                {mode === "range" ? "Range" : 
+                 mode === "all" ? "All Time" :
+                 ["3M", "6M", "1Y", "3Y", "5Y"].includes(mode) ? mode :
+                 `By ${mode.charAt(0).toUpperCase() + mode.slice(1)}`}
               </button>
             ))}
           </div>
@@ -660,7 +691,7 @@ export default function ReportsPage() {
               <ChevronRight size={20} />
             </button>
           </div>
-        ) : (
+        ) : viewMode === "range" ? (
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
               <CalendarDays size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
@@ -680,6 +711,10 @@ export default function ReportsPage() {
                 className="w-full bg-surface-variant/30 border border-border-subtle rounded-2xl py-3.5 px-4 font-black text-xs focus:outline-none focus:border-primary-500 transition-all"
               />
             </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center bg-surface-variant/30 border border-border-subtle p-4 rounded-2xl">
+            <span className="font-black tracking-tight text-lg text-primary-500">{getRangeName()}</span>
           </div>
         )}
 

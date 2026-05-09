@@ -384,7 +384,7 @@ export default function DashboardPage() {
                 <div className="h-64 sm:h-72 w-full mt-4 relative">
                   {mounted && !loading && stats.chartData.length > 0 && (
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
+                      <PieChart key={`pie-${stats.chartData.length}-${stats.totalSpent}`}>
                         <Pie
                           data={stats.chartData}
                           cx="50%"
@@ -450,7 +450,7 @@ export default function DashboardPage() {
           <div className="relative flex justify-center">
               <div className="w-full h-[400px] relative flex items-center justify-center">
                 <ResponsiveContainer width="100%" height={250} minWidth={100} minHeight={100}>
-                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={stats.radarData}>
+                  <RadarChart key={`radar-${stats.radarData[0].A}-${stats.radarData[1].A}-${stats.radarData[2].A}`} cx="50%" cy="50%" outerRadius="70%" data={stats.radarData}>
                     <PolarGrid stroke="#6366f120" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: "currentColor", fontSize: 10, fontWeight: 800 }} className="text-secondary" />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} axisLine={false} tick={false} />

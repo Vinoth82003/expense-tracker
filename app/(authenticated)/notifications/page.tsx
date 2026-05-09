@@ -10,10 +10,13 @@ import {
   Trash2, 
   CheckCircle, 
   Clock, 
-  MoreVertical,
   CheckCircle2,
   Inbox,
-  Sparkles
+  Sparkles,
+  ChevronDown,
+  Mail,
+  User,
+  Trash
 } from "lucide-react";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { toast } from "react-hot-toast";
@@ -31,6 +34,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchNotifications = async () => {
     try {
@@ -72,24 +76,37 @@ export default function NotificationsPage() {
     }
   };
 
-  const markAsRead = async (id: string) => {
+  const toggleReadStatus = async (e: React.MouseEvent, id: string, currentStatus: boolean) => {
+    e.stopPropagation();
     try {
-      const res = await fetch("/api/user/notifications/mark-read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notificationId: id })
-      });
-
-      if (res.ok) {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-        setUnreadCount(prev => Math.max(0, prev - 1));
+      if (!currentStatus) {
+        // Mark as read
+        const res = await fetch("/api/user/notifications/mark-read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notificationId: id })
+        });
+        if (res.ok) {
+          setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      } else {
+        // Mark as unread
+        const res = await fetch(`/api/user/notifications/${id}/unread`, {
+          method: "PATCH",
+        });
+        if (res.ok) {
+          setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: false } : n));
+          setUnreadCount(prev => prev + 1);
+        }
       }
     } catch (error) {
-      console.error("Failed to mark as read:", error);
+      console.error("Failed to toggle read status:", error);
     }
   };
 
-  const deleteNotification = async (id: string) => {
+  const deleteNotification = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     try {
       const res = await fetch(`/api/user/notifications/${id}`, {
         method: "DELETE"
@@ -99,6 +116,7 @@ export default function NotificationsPage() {
         const wasUnread = notifications.find(n => n.id === id)?.isRead === false;
         setNotifications(prev => prev.filter(n => n.id !== id));
         if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
+        if (expandedId === id) setExpandedId(null);
         toast.success("Notification removed");
       }
     } catch (error) {
@@ -139,13 +157,13 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-32">
+    <div className="max-w-4xl mx-auto space-y-8 pb-32 px-4 sm:px-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="flex items-center gap-5">
           <div className="relative">
-            <div className="w-16 h-16 rounded-[1.5rem] bg-indigo-500/10 text-indigo-600 flex items-center justify-center shadow-sm border border-indigo-500/20">
-              <Bell size={32} />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-[1.5rem] bg-indigo-500/10 text-indigo-600 flex items-center justify-center shadow-sm border border-indigo-500/20">
+              <Bell size={28} className="sm:w-8 sm:h-8" />
             </div>
             {unreadCount > 0 && (
               <motion.div 
@@ -158,15 +176,15 @@ export default function NotificationsPage() {
             )}
           </div>
           <div>
-            <h1 className="text-4xl font-black text-foreground tracking-tighter">Announcements</h1>
-            <p className="text-secondary font-medium mt-0.5">Stay updated with SpendWise intelligence</p>
+            <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tighter">Announcements</h1>
+            <p className="text-secondary font-medium text-sm sm:text-base mt-0.5">Manage your system updates</p>
           </div>
         </div>
 
         {unreadCount > 0 && (
           <button 
             onClick={markAllAsRead}
-            className="flex items-center gap-2 px-6 py-3 bg-surface border border-border-subtle hover:bg-surface-variant rounded-2xl text-xs font-black uppercase tracking-widest transition-all text-secondary hover:text-foreground"
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-surface border border-border-subtle hover:bg-surface-variant rounded-2xl text-xs font-black uppercase tracking-widest transition-all text-secondary hover:text-foreground w-full sm:w-auto"
           >
             <CheckCircle2 size={16} />
             Mark all as read
@@ -182,8 +200,8 @@ export default function NotificationsPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-surface border border-border-subtle rounded-[3rem] p-16 sm:p-24 flex flex-col items-center text-center shadow-sm"
           >
-            <div className="w-24 h-24 rounded-full bg-surface-variant/50 flex items-center justify-center mb-8 relative">
-              <Inbox size={40} className="text-muted" />
+            <div className="w-20 h-20 rounded-full bg-surface-variant/50 flex items-center justify-center mb-8 relative">
+              <Inbox size={32} className="text-muted" />
               <motion.div 
                 animate={{ 
                   scale: [1, 1.2, 1],
@@ -193,89 +211,99 @@ export default function NotificationsPage() {
                 className="absolute inset-0 bg-primary-500/10 rounded-full"
               />
             </div>
-            <h3 className="text-2xl font-black text-foreground mb-3">All Caught Up!</h3>
+            <h3 className="text-2xl font-black text-foreground mb-3">All Clear!</h3>
             <p className="text-secondary font-medium max-w-sm">
-              Your inbox is clear. We'll notify you here when there's a new update or important alert.
+              No announcements for you right now. Check back later for updates.
             </p>
           </motion.div>
         ) : (
           Object.entries(groupedNotifications).map(([groupName, items]) => (
             items.length > 0 && (
-              <div key={groupName} className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <h3 className="text-xs font-black text-muted uppercase tracking-[0.2em]">{groupName}</h3>
-                  <div className="h-px flex-1 bg-border-subtle" />
+              <div key={groupName} className="space-y-4">
+                <div className="flex items-center gap-4 px-2">
+                  <h3 className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">{groupName}</h3>
+                  <div className="h-px flex-1 bg-border-subtle/50" />
                 </div>
 
-                <div className="space-y-4">
-                  <AnimatePresence mode="popLayout">
-                    {items.map((notif, index) => (
-                      <motion.div
-                        layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        key={notif.id}
-                        onMouseEnter={() => !notif.isRead && markAsRead(notif.id)}
-                        className={`group relative bg-surface border rounded-[2rem] p-6 sm:p-8 transition-all hover:shadow-xl ${
-                          notif.isRead 
-                            ? "border-border-subtle opacity-70 grayscale-[0.5]" 
-                            : "border-primary-500/30 shadow-lg shadow-primary-500/5 ring-1 ring-primary-500/10"
-                        }`}
+                <div className="bg-surface border border-border-subtle rounded-[2rem] overflow-hidden divide-y divide-border-subtle/50">
+                  {items.map((notif) => (
+                    <div key={notif.id} className="group flex flex-col">
+                      <div 
+                        onClick={() => setExpandedId(expandedId === notif.id ? null : notif.id)}
+                        className={`flex items-center gap-4 p-4 sm:p-6 cursor-pointer hover:bg-surface-variant/30 transition-all ${!notif.isRead ? "bg-primary-500/5" : ""}`}
                       >
-                        <div className="flex gap-6">
-                          {/* Left Icon Area */}
-                          <div className={`hidden sm:flex w-12 h-12 shrink-0 rounded-2xl items-center justify-center ${
-                            notif.isRead ? "bg-surface-variant text-muted" : "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                          notif.isRead ? "bg-surface-variant text-muted" : "bg-primary-500 text-white"
+                        }`}>
+                          {notif.isRead ? <MailOpen size={18} /> : <Mail size={18} />}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`text-sm sm:text-base truncate transition-colors ${
+                            !notif.isRead ? "font-black text-foreground" : "font-bold text-secondary group-hover:text-foreground"
                           }`}>
-                            {notif.isRead ? <MailOpen size={20} /> : <Sparkles size={20} />}
-                          </div>
+                            {notif.subject}
+                          </h4>
+                          <p className="text-[10px] font-black text-muted uppercase tracking-wider mt-0.5">
+                            {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {notif.adminName}
+                          </p>
+                        </div>
 
-                          {/* Content Area */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                              <div className="space-y-1">
-                                <h2 className="text-xl font-black text-foreground group-hover:text-primary-600 transition-colors tracking-tight">
-                                  {notif.subject}
-                                </h2>
-                                <div className="flex items-center gap-3 text-[10px] font-black text-muted uppercase tracking-wider">
-                                  <span className="flex items-center gap-1">
-                                    <Clock size={12} />
-                                    {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                  <span className="w-1 h-1 bg-muted rounded-full" />
-                                  <span>{notif.adminName}</span>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                <button 
-                                  onClick={() => deleteNotification(notif.id)}
-                                  className="p-2.5 rounded-xl bg-surface-variant/50 text-secondary hover:text-error hover:bg-error/10 transition-all opacity-0 group-hover:opacity-100"
-                                  title="Delete announcement"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="prose prose-slate dark:prose-invert max-w-none">
-                              <p className="text-secondary font-bold leading-relaxed whitespace-pre-wrap text-sm sm:text-md">
-                                {notif.body}
-                              </p>
-                            </div>
-
-                            {!notif.isRead && (
-                              <div className="mt-6 flex items-center gap-2 text-[10px] font-black text-primary-600 uppercase tracking-widest">
-                                <span className="w-2 h-2 rounded-full bg-primary-600 animate-pulse" />
-                                New Announcement
-                              </div>
-                            )}
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <button
+                            onClick={(e) => toggleReadStatus(e, notif.id, notif.isRead)}
+                            className={`p-2 rounded-lg transition-all ${
+                              notif.isRead 
+                                ? "text-muted hover:text-primary-500 hover:bg-primary-500/10" 
+                                : "text-primary-500 hover:bg-primary-500/10"
+                            }`}
+                            title={notif.isRead ? "Mark as unread" : "Mark as read"}
+                          >
+                            {notif.isRead ? <Mail size={16} /> : <CheckCircle size={16} />}
+                          </button>
+                          <button
+                            onClick={(e) => deleteNotification(e, notif.id)}
+                            className="p-2 rounded-lg text-muted hover:text-error hover:bg-error/10 transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                          <div className={`p-1.5 transition-transform duration-300 ${expandedId === notif.id ? "rotate-180" : ""}`}>
+                            <ChevronDown size={16} className="text-muted" />
                           </div>
                         </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
+                      </div>
+
+                      <AnimatePresence>
+                        {expandedId === notif.id && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden bg-surface-variant/20"
+                          >
+                            <div className="p-6 sm:p-8 sm:pl-20 space-y-4">
+                              <div className="prose prose-slate dark:prose-invert max-w-none">
+                                <p className="text-secondary font-bold leading-relaxed whitespace-pre-wrap text-sm sm:text-base">
+                                  {notif.body}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-border-subtle/30">
+                                <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
+                                  <User size={12} />
+                                  From: {notif.adminName}
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
+                                  <Clock size={12} />
+                                  Sent: {new Date(notif.createdAt).toLocaleString("en-IN", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))}
                 </div>
               </div>
             )
@@ -283,29 +311,27 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {/* Quick Tips */}
-      {notifications.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-16">
-          <div className="p-6 bg-surface-variant/30 rounded-3xl border border-border-subtle flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-600 flex items-center justify-center shrink-0">
-              <Info size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-foreground mb-1">Stay Notified</p>
-              <p className="text-[10px] font-medium text-secondary">Check back often for important system updates and financial tips.</p>
-            </div>
+      {/* Footer Info */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-16">
+        <div className="p-6 bg-surface-variant/30 rounded-3xl border border-border-subtle flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-600 flex items-center justify-center shrink-0">
+            <Info size={18} />
           </div>
-          <div className="p-6 bg-surface-variant/30 rounded-3xl border border-border-subtle flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center shrink-0">
-              <CheckCircle size={20} />
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-foreground mb-1">Clear Inbox</p>
-              <p className="text-[10px] font-medium text-secondary">Keep your announcements tidy by deleting old updates you no longer need.</p>
-            </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-foreground mb-1">Intelligence Alerts</p>
+            <p className="text-[10px] font-medium text-secondary">Get real-time insights on your spending habits and system updates.</p>
           </div>
         </div>
-      )}
+        <div className="p-6 bg-surface-variant/30 rounded-3xl border border-border-subtle flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center shrink-0">
+            <CheckCircle size={18} />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-foreground mb-1">Stay Organized</p>
+            <p className="text-[10px] font-medium text-secondary">Archive old announcements to keep your financial pulse clean.</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
