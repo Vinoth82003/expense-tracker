@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Wallet,
-  Terminal
+  Terminal,
+  MessageSquare
 } from "lucide-react";
 
 const MENU_ITEMS = [
@@ -33,6 +34,7 @@ const MENU_ITEMS = [
     items: [
       { name: "User management", href: "/admin/users", icon: Users },
       { name: "Sessions & auth", href: "/admin/sessions", icon: Shield },
+      { name: "User Feedbacks", href: "/admin/reviews", icon: MessageSquare },
     ]
   },
   {

@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("admin_session");
 
-    // Basic admin check
-    const user = await prisma.user.findUnique({
-      where: { email: session?.user?.email || "" },
-      select: { isAdmin: true }
-    });
-
-    if (!user?.isAdmin) {
+    if (!adminSession || adminSession.value !== "true") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -36,3 +30,4 @@ export async function GET() {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

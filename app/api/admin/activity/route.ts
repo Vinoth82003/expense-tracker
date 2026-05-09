@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
-
-const prisma = new PrismaClient();
 
 export async function GET() {
   const cookieStore = await cookies();
@@ -67,7 +65,6 @@ export async function GET() {
   } catch (error) {
     console.error("Activity feed error:", error);
     return NextResponse.json({ message: "Failed to fetch activity" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
+

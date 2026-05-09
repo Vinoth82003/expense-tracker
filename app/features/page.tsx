@@ -103,7 +103,7 @@ const features = [
     description: "Your financial privacy is our obsession. We use bank-grade encryption and never sell your data. You are the owner of your data.",
     details: [
       "Google OAuth 2.0 secure authentication",
-      "End-to-end data encryption at rest",
+      // "End-to-end data encryption at rest",
       "No manual password storage",
       "GDPR & DPDP compliant data handling"
     ],
@@ -198,13 +198,13 @@ const FeatureMockup = ({ index }: { index: number }) => {
         <div className="bg-surface rounded-[2rem] border border-border-subtle p-6 shadow-sm flex flex-col h-full w-full">
           <h3 className="text-xl font-black mb-6">Category Split</h3>
           <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="w-32 h-32 rounded-full relative mb-8 shadow-inner" style={{ background: "conic-gradient(#6366f1 0% 60%, #8b5cf6 60% 100%" }}>
+            <div className="w-32 h-32 rounded-full relative mb-8 shadow-inner" style={{ background: "conic-gradient(#6366f1 0% 60%, #5cf6f4ff 60% 100%" }}>
                <div className="absolute inset-[18px] bg-surface rounded-full shadow-sm" />
             </div>
             <div className="w-full grid grid-cols-1 gap-3">
               {[
                 { name: "Needs", val: "₹24,500", color: "#6366f1" },
-                { name: "Wants", val: "₹18,000", color: "#8b5cf6" },
+                { name: "Wants", val: "₹18,000", color: "#5cf6f4ff" },
                 // { name: "Investments", val: "₹12,000", color: "#ec4899" }
               ].map((entry) => (
                 <div key={entry.name} className="flex items-center gap-3 bg-surface-variant/30 p-3 rounded-2xl border border-border-subtle">
@@ -250,7 +250,7 @@ const FeatureMockup = ({ index }: { index: number }) => {
             <div className="space-y-4 w-full">
                <div className="flex items-center gap-4 p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm">
                   <ShieldCheck size={20} className="text-success" />
-                  <span className="text-sm font-bold text-secondary">End-to-End Encrypted</span>
+                  <span className="text-sm font-bold text-secondary">Secure 2FA Login option</span>
                </div>
                <div className="flex items-center gap-4 p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm">
                   <Globe size={20} className="text-success" />

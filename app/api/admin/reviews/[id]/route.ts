@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 export async function PATCH(
@@ -9,22 +8,22 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("admin_session");
 
-    const user = await prisma.user.findUnique({
-      where: { email: session?.user?.email || "" },
-      select: { isAdmin: true }
-    });
-
-    if (!user?.isAdmin) {
+    if (!adminSession || adminSession.value !== "true") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { isApproved } = await request.json();
+    const { status } = await request.json();
+
+    if (!["PENDING", "APPROVED", "REJECTED"].includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
 
     const review = await prisma.review.update({
       where: { id },
-      data: { isApproved },
+      data: { status },
     });
 
     return NextResponse.json(review);
@@ -40,14 +39,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
+    const cookieStore = await cookies();
+    const adminSession = cookieStore.get("admin_session");
 
-    const user = await prisma.user.findUnique({
-      where: { email: session?.user?.email || "" },
-      select: { isAdmin: true }
-    });
-
-    if (!user?.isAdmin) {
+    if (!adminSession || adminSession.value !== "true") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -61,3 +56,4 @@ export async function DELETE(
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

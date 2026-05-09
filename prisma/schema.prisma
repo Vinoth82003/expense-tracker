@@ -64,7 +64,7 @@ model Review {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   rating      Int      @default(5)
   comment     String
-  isApproved  Boolean  @default(false)
+  status      String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
   createdAt   DateTime @default(now())
 
   userId      String   @db.ObjectId

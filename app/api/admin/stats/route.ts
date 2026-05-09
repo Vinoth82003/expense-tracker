@@ -119,7 +119,6 @@ export async function GET() {
   } catch (error) {
     console.error("Dashboard stats error:", error);
     return NextResponse.json({ message: "Failed to fetch stats" }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
+

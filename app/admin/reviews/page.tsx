@@ -24,7 +24,7 @@ interface Review {
   id: string;
   rating: number;
   comment: string;
-  isApproved: boolean;
+  status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: string;
   user: {
     name: string;
@@ -33,11 +33,13 @@ interface Review {
   };
 }
 
+
 export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "approved" | "pending">("all");
+  const [filter, setFilter] = useState<"all" | "APPROVED" | "PENDING" | "REJECTED">("all");
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -60,22 +62,23 @@ export default function AdminReviewsPage() {
     }
   };
 
-  const handleToggleApproval = async (id: string, currentStatus: boolean) => {
+  const handleUpdateStatus = async (id: string, newStatus: "APPROVED" | "REJECTED" | "PENDING") => {
     try {
       const res = await fetch(`/api/admin/reviews/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isApproved: !currentStatus }),
+        body: JSON.stringify({ status: newStatus }),
       });
 
       if (res.ok) {
-        setReviews(reviews.map(r => r.id === id ? { ...r, isApproved: !currentStatus } : r));
-        toast.success(!currentStatus ? "Review approved!" : "Review unapproved");
+        setReviews(reviews.map(r => r.id === id ? { ...r, status: newStatus } : r));
+        toast.success(`Review ${newStatus.toLowerCase()}!`);
       }
     } catch (error) {
       toast.error("Action failed");
     }
   };
+
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this review?")) return;
@@ -99,10 +102,10 @@ export default function AdminReviewsPage() {
                          r.comment.toLowerCase().includes(search.toLowerCase()) ||
                          r.user.email.toLowerCase().includes(search.toLowerCase());
     
-    if (filter === "approved") return matchesSearch && r.isApproved;
-    if (filter === "pending") return matchesSearch && !r.isApproved;
-    return matchesSearch;
+    if (filter === "all") return matchesSearch;
+    return matchesSearch && r.status === filter;
   });
+
 
   if (!mounted) return null;
 
@@ -137,8 +140,9 @@ export default function AdminReviewsPage() {
         </div>
         <div className="p-6 bg-white dark:bg-[#161B27] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Pending Approval</p>
-          <h2 className="text-3xl font-bold text-amber-500">{reviews.filter(r => !r.isApproved).length}</h2>
+          <h2 className="text-3xl font-bold text-amber-500">{reviews.filter(r => r.status === "PENDING").length}</h2>
         </div>
+
         <div className="p-6 bg-white dark:bg-[#161B27] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Average Rating</p>
           <h2 className="text-3xl font-bold text-primary-500">
@@ -161,17 +165,18 @@ export default function AdminReviewsPage() {
           />
         </div>
         <div className="flex items-center bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-800 rounded-2xl p-1">
-          {(["all", "pending", "approved"] as const).map((f) => (
+          {(["all", "PENDING", "APPROVED", "REJECTED"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all
                 ${filter === f ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"}`}
             >
-              {f}
+              {f.toLowerCase()}
             </button>
           ))}
         </div>
+
       </div>
 
       {/* Reviews List */}
@@ -228,19 +233,22 @@ export default function AdminReviewsPage() {
 
                 {/* Actions */}
                 <div className="flex flex-row md:flex-col justify-end gap-2 shrink-0">
-                  <button
-                    onClick={() => handleToggleApproval(review.id, review.isApproved)}
-                    className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs transition-all
-                      ${review.isApproved 
-                        ? "bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20" 
-                        : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20"}`}
-                  >
-                    {review.isApproved ? (
-                      <><XCircle size={16} /> Unapprove</>
-                    ) : (
-                      <><CheckCircle2 size={16} /> Approve</>
-                    )}
-                  </button>
+                  {review.status !== "APPROVED" && (
+                    <button
+                      onClick={() => handleUpdateStatus(review.id, "APPROVED")}
+                      className="flex items-center gap-2 px-5 py-3 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-2xl font-bold text-xs transition-all"
+                    >
+                      <CheckCircle2 size={16} /> Approve
+                    </button>
+                  )}
+                  {review.status !== "REJECTED" && (
+                    <button
+                      onClick={() => handleUpdateStatus(review.id, "REJECTED")}
+                      className="flex items-center gap-2 px-5 py-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 rounded-2xl font-bold text-xs transition-all"
+                    >
+                      <XCircle size={16} /> Reject
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDelete(review.id)}
                     className="p-3 text-red-500 hover:bg-red-500/10 rounded-2xl transition-colors"
@@ -249,6 +257,7 @@ export default function AdminReviewsPage() {
                     <Trash2 size={18} />
                   </button>
                 </div>
+
               </div>
             </motion.div>
           ))

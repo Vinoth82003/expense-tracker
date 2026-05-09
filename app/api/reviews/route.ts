@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const reviews = await prisma.review.findMany({
-      where: { isApproved: true },
+      where: { status: "APPROVED" },
       include: {
         user: {
           select: {
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if user already has a review (optional, but good practice)
+    // Check if user already has a review
     const existingReview = await prisma.review.findFirst({
       where: { userId: user.id }
     });
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         data: {
           rating: Number(rating),
           comment,
-          isApproved: false // Reset approval on update
+          status: "PENDING" // Reset to pending on update
         }
       });
       return NextResponse.json(updatedReview);
@@ -72,6 +72,7 @@ export async function POST(request: Request) {
         rating: Number(rating),
         comment,
         userId: user.id,
+        status: "PENDING"
       },
     });
 
@@ -81,3 +82,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
