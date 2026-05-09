@@ -7,6 +7,7 @@ import {
   Activity, 
   Zap, 
   Brain, 
+  Download,
   ArrowUpRight, 
   RefreshCcw, 
   Search, 
@@ -42,6 +43,7 @@ interface Stats {
   aiReports: number;
   tokensUsed: string;
   tokenPercentage: number;
+  pwaInstalls: number;
   systemHealth: Record<string, { status: string, color: string }>;
   charts: {
     registrations: Array<{ date: string, count: number }>;
@@ -164,14 +166,13 @@ export default function AdminDashboard() {
           iconBg="bg-purple-50 dark:bg-purple-500/10"
         />
         <KPICard 
-          title="Gemini tokens used"
-          value={stats?.tokensUsed || "0M"}
-          trend={`${stats?.tokenPercentage || 0}% of daily quota`}
-          trendColor={stats && stats.tokenPercentage > 80 ? "text-amber-500" : "text-slate-500"}
-          icon={Zap}
-          iconColor="text-amber-500"
-          iconBg="bg-amber-50 dark:bg-amber-500/10"
-          warning={stats && stats.tokenPercentage > 80}
+          title="PWA Downloads"
+          value={stats?.pwaInstalls || 0}
+          trend={`${stats?.totalUsers ? Math.round(((stats?.pwaInstalls || 0) / stats.totalUsers) * 100) : 0}% of total users`}
+          trendColor="text-blue-500"
+          icon={Download}
+          iconColor="text-blue-500"
+          iconBg="bg-blue-50 dark:bg-blue-500/10"
         />
       </div>
 

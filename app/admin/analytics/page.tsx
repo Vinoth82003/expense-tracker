@@ -325,6 +325,7 @@ export default function AdminAnalyticsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-3xl font-black text-slate-900 dark:text-white">{rates?.twoFactor.percent}%</span>
+                  <span className="text-sm font-bold text-slate-500 block">{rates?.twoFactor.count} users</span>
                 </div>
               </div>
               <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -353,6 +354,7 @@ export default function AdminAnalyticsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-3xl font-black text-slate-900 dark:text-white">{rates?.pwa.percent}%</span>
+                  <span className="text-sm font-bold text-slate-500 block">{rates?.pwa.count} installs</span>
                 </div>
               </div>
               <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">

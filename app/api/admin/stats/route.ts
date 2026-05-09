@@ -22,7 +22,8 @@ export async function GET() {
       aiReports,
       registrations,
       reportVolume,
-      totalTokensAgg
+      totalTokensAgg,
+      pwaInstalls
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({
@@ -41,6 +42,9 @@ export async function GET() {
       }),
       prisma.report.aggregate({
         _sum: { tokens: true }
+      }),
+      prisma.user.count({
+        where: { isPWAInstalled: true }
       })
     ]);
 
@@ -109,6 +113,7 @@ export async function GET() {
       aiReports,
       tokensUsed,
       tokenPercentage,
+      pwaInstalls,
       systemHealth,
       charts: {
         registrations: registrationsData,

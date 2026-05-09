@@ -22,39 +22,26 @@ export async function GET(req: NextRequest) {
     const startDate = new Date(from);
     const endDate = new Date(to);
 
-    const featureUsage = await (prisma as any).pageView.groupBy({
-      by: ['page'],
-      where: {
-        createdAt: { gte: startDate, lte: endDate }
-      },
-      _count: {
-        id: true
-      },
-      orderBy: {
-        _count: {
-          id: 'desc'
-        }
-      }
-    });
+    const [expensesCount, incomesCount, reportsCount, loginsCount] = await Promise.all([
+      prisma.expense.count({ where: { createdAt: { gte: startDate, lte: endDate } } }),
+      prisma.income.count({ where: { createdAt: { gte: startDate, lte: endDate } } }),
+      prisma.report.count({ where: { date: { gte: startDate, lte: endDate } } }),
+      prisma.loginHistory.count({ where: { createdAt: { gte: startDate, lte: endDate } } })
+    ]);
 
     const activeUsersCount = await prisma.user.count({
-      where: {
-        lastActive: { gte: startDate }
-      }
+      where: { lastActive: { gte: startDate } }
     });
 
-    // Features we want to track specifically
-    const features = ["Dashboard", "Expenses", "AI Analysis", "Reports", "Income", "Categories", "Settings", "Profile"];
-    
-    const data = features.map(f => {
-      const usage = featureUsage.find((u: any) => u.page === f);
-      const count = usage ? (usage as any)._count.id : 0;
-      return {
-        feature: f,
-        count: count,
-        percent: activeUsersCount > 0 ? ((count as number) / activeUsersCount * 100).toFixed(1) : 0
-      };
-    }).sort((a, b) => (b.count as number) - (a.count as number));
+    const data = [
+      { feature: "Dashboard (Logins)", count: loginsCount },
+      { feature: "Expenses", count: expensesCount },
+      { feature: "Income", count: incomesCount },
+      { feature: "AI Analysis", count: reportsCount }
+    ].map(item => ({
+      ...item,
+      percent: activeUsersCount > 0 ? ((item.count) / activeUsersCount * 100).toFixed(1) : 0
+    })).sort((a, b) => b.count - a.count);
 
     return NextResponse.json(data);
   } catch (error) {
