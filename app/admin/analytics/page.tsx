@@ -107,17 +107,17 @@ export default function AdminAnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">App analytics</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Engagement, retention, and feature usage</p>
+          <h1 className="text-3xl font-bold text-[var(--admin-text-primary)] tracking-tight">App analytics</h1>
+          <p className="text-[var(--admin-text-secondary)] font-medium">Engagement, retention, and feature usage</p>
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
+          <div className="flex p-1 bg-[var(--admin-bg-surface-variant)] rounded-2xl w-fit">
             {["7", "30", "90"].map(r => (
               <button 
                 key={r} 
                 onClick={() => setRange(r)}
-                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${range === r ? 'bg-white dark:bg-slate-700 text-teal-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${range === r ? 'bg-[var(--admin-bg-card)] text-teal-500 shadow-sm' : 'text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)]'}`}
               >
                 Last {r} Days
               </button>
@@ -125,9 +125,9 @@ export default function AdminAnalyticsPage() {
           </div>
           <button 
             onClick={exportCSV}
-            className="p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-teal-500 transition-all group"
+            className="p-3 bg-[var(--admin-bg-card)] rounded-2xl border border-[var(--admin-border)] hover:border-teal-500 transition-all group"
           >
-            <Download size={20} className="text-slate-400 group-hover:text-teal-500" />
+            <Download size={20} className="text-[var(--admin-text-muted)] group-hover:text-teal-500" />
           </button>
         </div>
       </div>
@@ -135,12 +135,12 @@ export default function AdminAnalyticsPage() {
       {/* Row 1: DAU/MAU & Growth */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* DAU/MAU */}
-        <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-6">
+        <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-8 space-y-6">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-1">Stickiness (DAU/MAU)</h3>
+              <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-1">Stickiness (DAU/MAU)</h3>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-slate-900 dark:text-white">{dauMauRatio}%</span>
+                <span className="text-4xl font-black text-[var(--admin-text-primary)]">{dauMauRatio}%</span>
                 <span className="text-emerald-500 flex items-center text-sm font-bold">
                   <TrendingUp size={16} /> 4.2%
                 </span>
@@ -153,11 +153,11 @@ export default function AdminAnalyticsPage() {
           <div className="h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={dauData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--admin-border)" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--admin-text-muted)' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--admin-text-muted)' }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#1E2536', border: 'none', borderRadius: '12px', color: '#fff' }}
+                  contentStyle={{ backgroundColor: 'var(--admin-bg-card)', border: '1px solid var(--admin-border)', borderRadius: '12px', color: 'var(--admin-text-primary)' }}
                   itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
                 />
                 <Legend iconType="circle" />
@@ -169,15 +169,15 @@ export default function AdminAnalyticsPage() {
         </div>
 
         {/* Growth */}
-        <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-6">
+        <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-8 space-y-6">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-1">User Growth</h3>
+              <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-1">User Growth</h3>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-slate-900 dark:text-white">
+                <span className="text-4xl font-black text-[var(--admin-text-primary)]">
                   {growthData.length > 0 ? (growthData[growthData.length - 1] as any).users : 0}
                 </span>
-                <span className="text-slate-400 text-sm font-bold">Total registered</span>
+                <span className="text-[var(--admin-text-muted)] text-sm font-bold">Total registered</span>
               </div>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
@@ -193,11 +193,11 @@ export default function AdminAnalyticsPage() {
                     <stop offset="95%" stopColor="#00D4AA" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B' }} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--admin-border)" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--admin-text-muted)' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--admin-text-muted)' }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#1E2536', border: 'none', borderRadius: '12px', color: '#fff' }}
+                  contentStyle={{ backgroundColor: 'var(--admin-bg-card)', border: '1px solid var(--admin-border)', borderRadius: '12px', color: 'var(--admin-text-primary)' }}
                 />
                 <Area type="monotone" dataKey="users" stroke="#00D4AA" strokeWidth={3} fillOpacity={1} fill="url(#colorGrowth)" />
               </AreaChart>
@@ -207,10 +207,10 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {/* Row 2: Feature Usage */}
-      <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-8">
+      <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-8 space-y-8">
         <div>
-          <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-1">Feature Usage</h3>
-          <p className="text-2xl font-bold">Engagement across platform modules</p>
+          <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-1">Feature Usage</h3>
+          <p className="text-2xl font-bold text-[var(--admin-text-primary)]">Engagement across platform modules</p>
         </div>
         
         <div className="space-y-5">
@@ -222,9 +222,9 @@ export default function AdminAnalyticsPage() {
             return (
               <div key={item.feature} className="flex items-center gap-4 group">
                 <div className="w-24 text-right">
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{item.feature}</span>
+                  <span className="text-xs font-bold text-[var(--admin-text-secondary)] group-hover:text-[var(--admin-text-primary)] transition-colors">{item.feature}</span>
                 </div>
-                <div className="flex-1 h-6 bg-slate-100 dark:bg-slate-800/50 rounded-r-lg rounded-l-sm overflow-hidden relative">
+                <div className="flex-1 h-6 bg-[var(--admin-bg-surface-variant)]/50 rounded-r-lg rounded-l-sm overflow-hidden relative">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${percentage}%` }}
@@ -236,16 +236,16 @@ export default function AdminAnalyticsPage() {
                   </motion.div>
                 </div>
                 <div className="w-16">
-                  <span className="text-sm font-black text-slate-900 dark:text-white">{item.count}</span>
-                  <span className="text-[10px] text-slate-400 ml-1">hits</span>
+                  <span className="text-sm font-black text-[var(--admin-text-primary)]">{item.count}</span>
+                  <span className="text-[10px] text-[var(--admin-text-muted)] ml-1">hits</span>
                 </div>
               </div>
             );
           })}
           
           {featureUsage.length === 0 && (
-            <div className="py-10 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl">
-              <p className="text-sm font-bold text-slate-500">Not enough data to calculate engagement yet.</p>
+            <div className="py-10 text-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl">
+              <p className="text-sm font-bold text-[var(--admin-text-muted)]">Not enough data to calculate engagement yet.</p>
             </div>
           )}
         </div>
@@ -254,10 +254,10 @@ export default function AdminAnalyticsPage() {
       {/* Row 3: Splits */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Expense Mode Split */}
-        <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 flex flex-col items-center">
+        <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-8 flex flex-col items-center">
           <div className="w-full mb-8">
-            <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Expense Mode Split</h3>
-            <p className="text-xl font-bold">User preference distribution</p>
+            <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest">Expense Mode Split</h3>
+            <p className="text-xl font-bold text-[var(--admin-text-primary)]">User preference distribution</p>
           </div>
           <div className="relative h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -281,8 +281,8 @@ export default function AdminAnalyticsPage() {
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-3xl font-black text-slate-900 dark:text-white">{modes?.total || 0}</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Users</span>
+              <span className="text-3xl font-black text-[var(--admin-text-primary)]">{modes?.total || 0}</span>
+              <span className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase">Users</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-8 w-full mt-8">
@@ -293,10 +293,10 @@ export default function AdminAnalyticsPage() {
                 <ArrowUpRight size={12} /> +4% trend
               </p>
             </div>
-            <div className="p-4 bg-slate-500/5 rounded-2xl border border-slate-500/10">
-              <p className="text-[10px] font-black uppercase text-slate-600 mb-1">No Limit</p>
-              <p className="text-2xl font-black">{modes?.noLimitPercent}%</p>
-              <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1 mt-1">
+            <div className="p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border)]">
+              <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-1">No Limit</p>
+              <p className="text-2xl font-black text-[var(--admin-text-primary)]">{modes?.noLimitPercent}%</p>
+              <p className="text-[10px] text-[var(--admin-text-muted)] font-bold flex items-center gap-1 mt-1">
                 <TrendingDown size={12} /> Stable
               </p>
             </div>
@@ -304,10 +304,10 @@ export default function AdminAnalyticsPage() {
         </div>
 
         {/* 2FA & PWA Rates */}
-        <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-8">
+        <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-8 space-y-8">
           <div>
-            <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Adoption Rates</h3>
-            <p className="text-xl font-bold">Platform feature penetration</p>
+            <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest">Adoption Rates</h3>
+            <p className="text-xl font-bold text-[var(--admin-text-primary)]">Platform feature penetration</p>
           </div>
           
           <div className="space-y-12 py-4">
@@ -319,16 +319,16 @@ export default function AdminAnalyticsPage() {
                     <ShieldCheck size={20} />
                   </div>
                   <div>
-                    <p className="text-sm font-black text-slate-900 dark:text-white">2FA Security</p>
-                    <p className="text-xs text-slate-500">Users with OTP enabled</p>
+                    <p className="text-sm font-black text-[var(--admin-text-primary)]">2FA Security</p>
+                    <p className="text-xs text-[var(--admin-text-muted)]">Users with OTP enabled</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-3xl font-black text-slate-900 dark:text-white">{rates?.twoFactor.percent}%</span>
-                  <span className="text-sm font-bold text-slate-500 block">{rates?.twoFactor.count} users</span>
+                  <span className="text-3xl font-black text-[var(--admin-text-primary)]">{rates?.twoFactor.percent}%</span>
+                  <span className="text-sm font-bold text-[var(--admin-text-muted)] block">{rates?.twoFactor.count} users</span>
                 </div>
               </div>
-              <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-2 bg-[var(--admin-bg-surface-variant)] rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }} 
                   animate={{ width: `${rates?.twoFactor.percent}%` }}
@@ -348,23 +348,23 @@ export default function AdminAnalyticsPage() {
                     <Smartphone size={20} />
                   </div>
                   <div>
-                    <p className="text-sm font-black text-slate-900 dark:text-white">PWA Installs</p>
-                    <p className="text-xs text-slate-500">App installed on home screen</p>
+                    <p className="text-sm font-black text-[var(--admin-text-primary)]">PWA Installs</p>
+                    <p className="text-xs text-[var(--admin-text-muted)]">App installed on home screen</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-3xl font-black text-slate-900 dark:text-white">{rates?.pwa.percent}%</span>
-                  <span className="text-sm font-bold text-slate-500 block">{rates?.pwa.count} installs</span>
+                  <span className="text-3xl font-black text-[var(--admin-text-primary)]">{rates?.pwa.percent}%</span>
+                  <span className="text-sm font-bold text-[var(--admin-text-muted)] block">{rates?.pwa.count} installs</span>
                 </div>
               </div>
-              <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-2 bg-[var(--admin-bg-surface-variant)] rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }} 
                   animate={{ width: `${rates?.pwa.percent}%` }}
                   className="h-full bg-blue-500 rounded-full"
                 />
               </div>
-              <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+              <p className="text-[10px] text-[var(--admin-text-muted)] font-bold flex items-center gap-1">
                 <TrendingUp size={12} className="text-emerald-500" /> +12% this month
               </p>
             </div>
@@ -373,28 +373,28 @@ export default function AdminAnalyticsPage() {
       </div>
 
       {/* Row 4: Retention Cohorts */}
-      <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-slate-100 dark:border-slate-800">
-          <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-1">User Retention</h3>
-          <p className="text-xl font-bold">Signup cohort performance</p>
+      <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-[var(--admin-border-subtle)]">
+          <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-1">User Retention</h3>
+          <p className="text-xl font-bold text-[var(--admin-text-primary)]">Signup cohort performance</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Cohort</th>
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">Users</th>
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">D1</th>
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">D7</th>
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">D14</th>
-                <th className="py-6 px-8 border-b border-slate-100 dark:border-slate-800">D30</th>
+              <tr className="bg-[var(--admin-bg-surface-variant)] text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest">
+                <th className="py-6 px-8 border-b border-[var(--admin-border-subtle)]">Cohort</th>
+                <th className="py-6 px-8 border-b border-[var(--admin-border-subtle)]">Users</th>
+                <th className="py-6 px-8 border-b border-[var(--admin-border-subtle)]">D1</th>
+                <th className="py-6 px-8 border-b border-[var(--admin-border-subtle)]">D7</th>
+                <th className="py-6 px-8 border-b border-[var(--admin-border-subtle)]">D14</th>
+                <th className="py-6 px-8 border-b border-[var(--admin-border-subtle)]">D30</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+            <tbody className="divide-y divide-[var(--admin-border-subtle)]">
               {retention.map((row: any, i) => (
-                <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                  <td className="py-5 px-8 text-sm font-black text-slate-900 dark:text-white">{row.month}</td>
-                  <td className="py-5 px-8 text-sm font-bold text-slate-500">{row.users}</td>
+                <tr key={i} className="hover:bg-[var(--admin-bg-surface-variant)] transition-colors">
+                  <td className="py-5 px-8 text-sm font-black text-[var(--admin-text-primary)]">{row.month}</td>
+                  <td className="py-5 px-8 text-sm font-bold text-[var(--admin-text-muted)]">{row.users}</td>
                   <RetentionCell value={row.d1} />
                   <RetentionCell value={row.d7} />
                   <RetentionCell value={row.d14} />
@@ -410,7 +410,7 @@ export default function AdminAnalyticsPage() {
 }
 
 function RetentionCell({ value }: { value: string | null }) {
-  if (value === null) return <td className="py-5 px-8 text-xs text-slate-300 italic">-</td>;
+  if (value === null) return <td className="py-5 px-8 text-xs text-[var(--admin-text-muted)] opacity-50 italic">-</td>;
   const num = parseFloat(value);
   const color = num >= 50 ? "bg-emerald-500/10 text-emerald-600" : num >= 25 ? "bg-amber-500/10 text-amber-600" : "bg-red-500/10 text-red-600";
   return (

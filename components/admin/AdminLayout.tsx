@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { AdminSidebar } from "./AdminSidebar";
 import { AdminTopbar } from "./AdminTopbar";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
 
@@ -16,10 +17,14 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     
     // Auto-collapse on small screens
     const handleResize = () => {
-      if (window.innerWidth < 768) {
+      if (window.innerWidth < 1024) { // Increased threshold for collapse
         setIsCollapsed(true);
       } else {
         setIsCollapsed(false);
+      }
+      
+      if (window.innerWidth >= 768) {
+        setIsMobileOpen(false);
       }
     };
     
@@ -27,6 +32,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
 
   if (!mounted) {
     return null; // Prevent hydration flash
@@ -37,16 +47,36 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#161B27] flex font-sans text-slate-900 dark:text-slate-100">
-      <AdminSidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+    <div className="h-screen bg-[var(--admin-bg-primary)] flex font-sans text-[var(--admin-text-primary)] overflow-hidden">
+      {/* Mobile Backdrop */}
+      <AnimatePresence>
+        {isMobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsMobileOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[45] md:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      <AdminSidebar 
+        isCollapsed={isCollapsed} 
+        setIsCollapsed={setIsCollapsed} 
+        isMobileOpen={isMobileOpen} 
+        onMobileClose={() => setIsMobileOpen(false)} 
+      />
       
       <motion.main
         initial={false}
-        animate={{ marginLeft: isCollapsed ? 64 : 240 }}
-        className="flex-1 flex flex-col min-h-screen transition-all duration-300 w-full"
+        animate={{ 
+          marginLeft: (mounted && window.innerWidth >= 768) ? (isCollapsed ? 64 : 240) : 0 
+        }}
+        className="flex-1 flex flex-col h-screen transition-all duration-300 w-full min-w-0"
       >
-        <AdminTopbar />
-        <div className="flex-1 p-6 overflow-auto">
+        <AdminTopbar onMenuClick={() => setIsMobileOpen(true)} />
+        <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
           <div className="mx-auto max-w-7xl">
             {children}
           </div>

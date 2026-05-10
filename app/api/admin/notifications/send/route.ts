@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
         recipientCount: users.length,
         recipientFilter: JSON.stringify(recipientFilter || {}),
         status: "PROCESSING",
-        adminName: "Admin"
+        adminName: "SpendWise"
       }
     });
 

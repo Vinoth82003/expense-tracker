@@ -300,7 +300,7 @@ export default function AdminSecurityPage() {
       case "USER_DELETED": return "bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400";
       case "2FA_RESET": return "bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400";
       case "IP_BLOCKED": return "bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400";
-      default: return "bg-slate-100 text-slate-600 dark:bg-slate-500/10 dark:text-slate-400";
+      default: return "bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-muted)]";
     }
   };
 
@@ -309,12 +309,12 @@ export default function AdminSecurityPage() {
       {/* Audit Log Modal */}
       <AnimatePresence>
         {selectedAuditLog && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }} 
               animate={{ scale: 1, opacity: 1 }} 
               exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-lg bg-white dark:bg-[#161B27] rounded-[2.5rem] p-10 shadow-2xl space-y-6"
+              className="w-full max-w-lg bg-[var(--admin-bg-card)] rounded-[2.5rem] p-10 shadow-2xl space-y-6 border border-[var(--admin-border)]"
             >
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -322,35 +322,35 @@ export default function AdminSecurityPage() {
                     <FileText size={20} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Audit Details</h3>
-                    <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">{selectedAuditLog.id}</p>
+                    <h3 className="text-xl font-black text-[var(--admin-text-primary)] uppercase tracking-tight">Audit Details</h3>
+                    <p className="text-[10px] text-[var(--admin-text-muted)] font-bold tracking-widest uppercase">{selectedAuditLog.id}</p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedAuditLog(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                <button onClick={() => setSelectedAuditLog(null)} className="p-2 hover:bg-[var(--admin-bg-surface-variant)] rounded-full transition-colors text-[var(--admin-text-muted)]">
                   <X size={24} />
                 </button>
               </div>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Admin</p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{selectedAuditLog.adminName}</p>
+                  <div className="p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)]">
+                    <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-1">Admin</p>
+                    <p className="text-sm font-bold text-[var(--admin-text-primary)]">{selectedAuditLog.adminName}</p>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <p className="text-[10px] font-black uppercase text-slate-400 mb-1">IP Address</p>
-                    <p className="text-sm font-mono font-bold text-slate-900 dark:text-white">{selectedAuditLog.ip}</p>
+                  <div className="p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)]">
+                    <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-1">IP Address</p>
+                    <p className="text-sm font-mono font-bold text-[var(--admin-text-primary)]">{selectedAuditLog.ip}</p>
                   </div>
                 </div>
 
-                <div className="p-6 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Detailed Log</p>
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-slate-200 dark:border-slate-800/50">
+                <div className="p-6 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)]">
+                  <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-2">Detailed Log</p>
+                  <p className="text-sm font-medium text-[var(--admin-text-secondary)] leading-relaxed bg-[var(--admin-bg-card)] p-4 rounded-xl border border-[var(--admin-border-subtle)]">
                     {selectedAuditLog.details}
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] font-black uppercase text-slate-400 px-2">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-[var(--admin-text-muted)] px-2">
                   <span>Target: <span className="text-teal-500">{selectedAuditLog.target}</span></span>
                   <span>{new Date(selectedAuditLog.createdAt).toLocaleString()}</span>
                 </div>
@@ -358,7 +358,7 @@ export default function AdminSecurityPage() {
 
               <button 
                 onClick={() => setSelectedAuditLog(null)}
-                className="w-full py-4 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl font-black uppercase shadow-lg transition-all hover:bg-slate-800"
+                className="w-full py-4 bg-[var(--admin-text-primary)] text-[var(--admin-bg-card)] rounded-2xl font-black uppercase shadow-lg transition-all hover:opacity-90"
               >
                 Close Details
               </button>
@@ -370,10 +370,10 @@ export default function AdminSecurityPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Security</h1>
+          <h1 className="text-3xl font-bold text-[var(--admin-text-primary)] tracking-tight">Security</h1>
           <span className="px-3 py-1 bg-rose-500 text-white text-[10px] font-black uppercase rounded-full shadow-lg shadow-rose-500/20">Critical</span>
         </div>
-        <p className="text-slate-500 dark:text-slate-400 font-medium">2FA oversight, threat monitoring, audit trail</p>
+        <p className="text-[var(--admin-text-secondary)] font-medium">2FA oversight, threat monitoring, audit trail</p>
       </div>
 
       {/* Alerts Banner */}
@@ -400,7 +400,7 @@ export default function AdminSecurityPage() {
       </AnimatePresence>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800">
+      <div className="flex border-b border-[var(--admin-border)]">
         {[
           { id: "alerts", label: "Security alerts", icon: ShieldAlert, count: activeAlerts.length },
           { id: "lockouts", label: "Account lockouts", icon: Lock, count: lockouts.length },
@@ -410,12 +410,12 @@ export default function AdminSecurityPage() {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all relative ${activeTab === t.id ? 'text-teal-500' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all relative ${activeTab === t.id ? 'text-teal-500' : 'text-[var(--admin-text-secondary)] hover:text-[var(--admin-text-primary)]'}`}
           >
             <t.icon size={18} />
             {t.label}
             {t.count > 0 && (
-              <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black ${activeTab === t.id ? 'bg-teal-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+              <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black ${activeTab === t.id ? 'bg-teal-500 text-white' : 'bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-muted)]'}`}>
                 {t.count}
               </span>
             )}
@@ -442,7 +442,7 @@ export default function AdminSecurityPage() {
                   initial={{ opacity: 0, y: 10 }} 
                   animate={{ opacity: 1, y: 0 }}
                   key={alert.id} 
-                  className={`bg-white dark:bg-[#161B27] rounded-3xl border ${alert.severity === 'CRITICAL' ? 'border-rose-200 dark:border-rose-900/50 shadow-lg shadow-rose-500/5' : 'border-slate-200 dark:border-slate-800'} p-6 flex items-center justify-between gap-6 group`}
+                  className={`bg-[var(--admin-bg-card)] rounded-3xl border ${alert.severity === 'CRITICAL' ? 'border-rose-200 dark:border-rose-900/50 shadow-lg shadow-rose-500/5' : 'border-[var(--admin-border)]'} p-6 flex items-center justify-between gap-6 group`}
                 >
                   <div className="flex items-center gap-6">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${alert.severity === 'CRITICAL' ? 'bg-rose-500/10 text-rose-500' : 'bg-amber-500/10 text-amber-500'}`}>
@@ -453,23 +453,23 @@ export default function AdminSecurityPage() {
                         <span className={`text-[10px] font-black uppercase tracking-widest ${alert.severity === 'CRITICAL' ? 'text-rose-500' : 'text-amber-500'}`}>
                           {alert.type.replace('_', ' ')}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-bold">•</span>
-                        <span className="text-[10px] text-slate-400 font-bold">{new Date(alert.createdAt).toLocaleString()}</span>
+                        <span className="text-[10px] text-[var(--admin-text-muted)] font-bold">•</span>
+                        <span className="text-[10px] text-[var(--admin-text-muted)] font-bold">{new Date(alert.createdAt).toLocaleString()}</span>
                       </div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">{alert.description}</p>
+                      <p className="text-sm font-bold text-[var(--admin-text-primary)]">{alert.description}</p>
                       {alert.user && (
-                        <p className="text-xs text-slate-500 mt-1">Impacted user: <span className="text-teal-500 font-bold underline cursor-pointer">{alert.user.email}</span></p>
+                        <p className="text-xs text-[var(--admin-text-secondary)] mt-1">Impacted user: <span className="text-teal-500 font-bold underline cursor-pointer">{alert.user.email}</span></p>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={() => dismissAlert(alert.id)}
-                      className="px-4 py-2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 transition-colors"
+                      className="px-4 py-2 text-[10px] font-black uppercase text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] transition-colors"
                     >
                       Dismiss
                     </button>
-                    <button className="px-6 py-2 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase hover:bg-slate-800 transition-all">
+                    <button className="px-6 py-2 bg-[var(--admin-text-primary)] text-[var(--admin-bg-card)] rounded-xl text-[10px] font-black uppercase hover:opacity-90 transition-all">
                       Investigate
                     </button>
                   </div>
@@ -480,31 +480,31 @@ export default function AdminSecurityPage() {
         )}
 
         {activeTab === "lockouts" && (
-          <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-800">
+                <tr className="bg-[var(--admin-bg-surface-variant)] text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest border-b border-[var(--admin-border-subtle)]">
                   <th className="py-5 px-8">User</th>
                   <th className="py-5 px-8">Locked At</th>
                   <th className="py-5 px-8">Reason</th>
                   <th className="py-5 px-8 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+              <tbody className="divide-y divide-[var(--admin-border-subtle)]">
                 {lockouts.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-slate-400 font-bold italic">No accounts currently locked.</td>
+                    <td colSpan={4} className="py-12 text-center text-[var(--admin-text-muted)] font-bold italic">No accounts currently locked.</td>
                   </tr>
                 ) : (
                   lockouts.map(user => (
-                    <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={user.id} className="hover:bg-[var(--admin-bg-surface-variant)] transition-colors">
                       <td className="py-4 px-8">
                         <div className="flex flex-col">
-                          <span className="text-sm font-black text-slate-900 dark:text-white">{user.name || "Anonymous"}</span>
-                          <span className="text-xs text-slate-500">{user.email}</span>
+                          <span className="text-sm font-black text-[var(--admin-text-primary)]">{user.name || "Anonymous"}</span>
+                          <span className="text-xs text-[var(--admin-text-secondary)]">{user.email}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-8 text-xs font-bold text-slate-600">{new Date(user.lockedAt).toLocaleString()}</td>
+                      <td className="py-4 px-8 text-xs font-bold text-[var(--admin-text-secondary)]">{new Date(user.lockedAt).toLocaleString()}</td>
                       <td className="py-4 px-8">
                         <span className="px-2 py-0.5 bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 text-[10px] font-black uppercase rounded">
                           {user.lockReason || "Multiple failed attempts"}
@@ -536,26 +536,26 @@ export default function AdminSecurityPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Block Form */}
             <div className="lg:col-span-1">
-              <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-6">
-                <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Block new IP</h3>
+              <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-8 space-y-6">
+                <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest">Block new IP</h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400">IP Address</label>
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">IP Address</label>
                     <input 
                       type="text" 
                       placeholder="e.g. 192.168.1.1"
                       value={newIP}
                       onChange={(e) => setNewIP(e.target.value)}
-                      className="w-full p-4 bg-slate-50 dark:bg-[#1E2536] border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500"
+                      className="w-full p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 text-[var(--admin-text-primary)]"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400">Reason / Note</label>
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Reason / Note</label>
                     <textarea 
                       placeholder="e.g. Bot scraping detected"
                       value={ipNote}
                       onChange={(e) => setIpNote(e.target.value)}
-                      className="w-full h-24 p-4 bg-slate-50 dark:bg-[#1E2536] border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-rose-500 resize-none"
+                      className="w-full h-24 p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-rose-500 resize-none text-[var(--admin-text-primary)]"
                     />
                   </div>
                   <button 
@@ -570,29 +570,29 @@ export default function AdminSecurityPage() {
 
             {/* Blocklist Table */}
             <div className="lg:col-span-2">
-              <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                  <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">{blocklist.length} Blocked IPs</h3>
+              <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-[var(--admin-border-subtle)] flex justify-between items-center">
+                  <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest">{blocklist.length} Blocked IPs</h3>
                 </div>
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-800">
+                    <tr className="bg-[var(--admin-bg-surface-variant)] text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest border-b border-[var(--admin-border-subtle)]">
                       <th className="py-4 px-6">IP Address</th>
                       <th className="py-4 px-6">Added At</th>
                       <th className="py-4 px-6">Note</th>
                       <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                  <tbody className="divide-y divide-[var(--admin-border-subtle)]">
                     {blocklist.map(entry => (
-                      <tr key={entry.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3 px-6 text-sm font-black text-slate-900 dark:text-white">{entry.ip}</td>
-                        <td className="py-3 px-6 text-[10px] font-bold text-slate-500">{new Date(entry.createdAt).toLocaleDateString()}</td>
-                        <td className="py-3 px-6 text-xs text-slate-500 italic">{entry.note || "No note"}</td>
+                      <tr key={entry.id} className="hover:bg-[var(--admin-bg-surface-variant)] transition-colors">
+                        <td className="py-3 px-6 text-sm font-black text-[var(--admin-text-primary)]">{entry.ip}</td>
+                        <td className="py-3 px-6 text-[10px] font-bold text-[var(--admin-text-muted)]">{new Date(entry.createdAt).toLocaleDateString()}</td>
+                        <td className="py-3 px-6 text-xs text-[var(--admin-text-secondary)] italic">{entry.note || "No note"}</td>
                         <td className="py-3 px-6 text-right">
                           <button 
                             onClick={() => unblockIP(entry.ip)}
-                            className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"
+                            className="p-2 text-[var(--admin-text-muted)] hover:text-emerald-500 transition-colors"
                           >
                             <Unlock size={16} />
                           </button>
@@ -609,22 +609,22 @@ export default function AdminSecurityPage() {
         {activeTab === "audit" && (
           <div className="space-y-4">
             {/* Filter Bar */}
-            <div className="bg-white dark:bg-[#161B27] rounded-3xl border border-slate-200 dark:border-slate-800 p-4 flex flex-wrap items-center gap-4">
+            <div className="bg-[var(--admin-bg-card)] rounded-3xl border border-[var(--admin-border)] p-4 flex flex-wrap items-center gap-4">
               <div className="flex-1 min-w-[200px] relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]" size={18} />
                 <input 
                   type="text" 
                   placeholder="Search target user or resource..."
                   value={auditSearch}
                   onChange={(e) => setAuditSearch(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-xs font-bold outline-none"
+                  className="w-full pl-12 pr-4 py-3 bg-[var(--admin-bg-surface-variant)] rounded-2xl text-xs font-bold outline-none text-[var(--admin-text-primary)]"
                 />
               </div>
               <div className="flex gap-2">
                 <select 
                   value={auditType}
                   onChange={(e) => setAuditType(e.target.value)}
-                  className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-xs font-bold outline-none border-none"
+                  className="px-4 py-3 bg-[var(--admin-bg-surface-variant)] rounded-2xl text-xs font-bold outline-none border-none text-[var(--admin-text-primary)]"
                 >
                   <option value="All Actions">All Actions</option>
                   <option value="USER_LOCKED">User Locked</option>
@@ -635,7 +635,7 @@ export default function AdminSecurityPage() {
                 </select>
                 <button 
                   onClick={exportAuditCSV}
-                  className="px-6 py-3 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl text-xs font-bold flex items-center gap-2"
+                  className="px-6 py-3 bg-[var(--admin-text-primary)] text-[var(--admin-bg-card)] rounded-2xl text-xs font-bold flex items-center gap-2 hover:opacity-90 transition-all"
                 >
                   <Download size={16} /> Export CSV
                 </button>
@@ -643,10 +643,10 @@ export default function AdminSecurityPage() {
             </div>
 
             {/* Audit Log Table */}
-            <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-800">
+                  <tr className="bg-[var(--admin-bg-surface-variant)] text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest border-b border-[var(--admin-border-subtle)]">
                     <th className="py-5 px-8">Timestamp</th>
                     <th className="py-5 px-8">Admin</th>
                     <th className="py-5 px-8">Action</th>
@@ -655,22 +655,22 @@ export default function AdminSecurityPage() {
                     <th className="py-5 px-8 text-right">Details</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                <tbody className="divide-y divide-[var(--admin-border-subtle)]">
                   {auditLog.map(log => (
-                    <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-8 text-[10px] font-bold text-slate-500">{new Date(log.createdAt).toLocaleString()}</td>
-                      <td className="py-4 px-8 text-xs font-black text-slate-700 dark:text-slate-300">{log.adminName}</td>
+                    <tr key={log.id} className="hover:bg-[var(--admin-bg-surface-variant)] transition-colors">
+                      <td className="py-4 px-8 text-[10px] font-bold text-[var(--admin-text-muted)]">{new Date(log.createdAt).toLocaleString()}</td>
+                      <td className="py-4 px-8 text-xs font-black text-[var(--admin-text-primary)]">{log.adminName}</td>
                       <td className="py-4 px-8">
                         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${getActionBadgeColor(log.actionType)}`}>
                           {log.actionType.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="py-4 px-8 text-xs font-bold text-teal-600">{log.target}</td>
-                      <td className="py-4 px-8 text-[10px] font-mono text-slate-400">{log.ip}</td>
+                      <td className="py-4 px-8 text-[10px] font-mono text-[var(--admin-text-muted)]">{log.ip}</td>
                       <td className="py-4 px-8 text-right">
                         <button 
                           onClick={() => setSelectedAuditLog(log)}
-                          className="p-2 text-slate-400 hover:text-teal-500 transition-colors"
+                          className="p-2 text-[var(--admin-text-muted)] hover:text-teal-500 transition-colors"
                         >
                           <Eye size={16} />
                         </button>
@@ -685,18 +685,18 @@ export default function AdminSecurityPage() {
       </div>
 
       {/* User Security Actions Panel */}
-      <div className="bg-slate-900 dark:bg-slate-800/50 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+      <div className="bg-[var(--admin-bg-surface-variant)] rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden border border-[var(--admin-border)]">
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none text-[var(--admin-text-muted)]">
           <ShieldAlert size={120} />
         </div>
         
         <div className="max-w-4xl relative z-10 space-y-8">
           <div>
-            <h2 className="text-2xl font-black tracking-tight mb-2 flex items-center gap-3">
+            <h2 className="text-2xl font-black tracking-tight mb-2 flex items-center gap-3 text-[var(--admin-text-primary)]">
               <ShieldCheck size={28} className="text-teal-500" />
               User Security Actions
             </h2>
-            <p className="text-slate-400 text-sm font-bold max-w-xl">
+            <p className="text-[var(--admin-text-secondary)] text-sm font-bold max-w-xl">
               Perform administrative overrides for user security settings. All actions are logged and users will be notified.
             </p>
           </div>
@@ -704,18 +704,18 @@ export default function AdminSecurityPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400">Search User</label>
+                <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Search User</label>
                 <div className="flex gap-2">
                   <input 
                     type="text" 
                     placeholder="Enter user email..."
                     value={searchEmail}
                     onChange={(e) => setSearchEmail(e.target.value)}
-                    className="flex-1 p-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500"
+                    className="flex-1 p-4 bg-[var(--admin-bg-card)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 text-[var(--admin-text-primary)]"
                   />
                   <button 
                     onClick={findUser}
-                    className="px-6 py-4 bg-white/10 hover:bg-white/20 rounded-2xl transition-all"
+                    className="px-6 py-4 bg-[var(--admin-bg-surface-variant)] hover:bg-[var(--admin-border-subtle)] border border-[var(--admin-border-subtle)] rounded-2xl transition-all text-[var(--admin-text-primary)]"
                   >
                     <Search size={20} />
                   </button>
@@ -723,23 +723,23 @@ export default function AdminSecurityPage() {
               </div>
 
               {foundUser && (
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-white/5 rounded-3xl border border-white/10 space-y-4">
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-[var(--admin-bg-card)] rounded-3xl border border-[var(--admin-border-subtle)] space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-black">{foundUser.name || "User"}</p>
-                      <p className="text-[10px] text-slate-400">{foundUser.email}</p>
+                      <p className="text-xs font-black text-[var(--admin-text-primary)]">{foundUser.name || "User"}</p>
+                      <p className="text-[10px] text-[var(--admin-text-muted)]">{foundUser.email}</p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase text-slate-400">2FA:</span>
+                        <span className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">2FA:</span>
                         {foundUser.twoFactorEnabled ? (
                           <span className="px-2 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase rounded">Active</span>
                         ) : (
-                          <span className="px-2 py-0.5 bg-slate-700 text-slate-400 text-[9px] font-black uppercase rounded">Disabled</span>
+                          <span className="px-2 py-0.5 bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-muted)] border border-[var(--admin-border-subtle)] text-[9px] font-black uppercase rounded">Disabled</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase text-slate-400">Status:</span>
+                        <span className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Status:</span>
                         {foundUser.isLocked ? (
                           <span className="px-2 py-0.5 bg-rose-500 text-white text-[9px] font-black uppercase rounded">Locked</span>
                         ) : (
@@ -755,23 +755,23 @@ export default function AdminSecurityPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Admin Password</label>
+                  <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Admin Password</label>
                   <input 
                     type="password" 
                     placeholder="Password..."
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
-                    className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500"
+                    className="w-full p-4 bg-[var(--admin-bg-card)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 text-[var(--admin-text-primary)]"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Reason</label>
+                  <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Reason</label>
                   <input 
                     type="text" 
                     placeholder="Reason..."
                     value={overrideReason}
                     onChange={(e) => setOverrideReason(e.target.value)}
-                    className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500"
+                    className="w-full p-4 bg-[var(--admin-bg-card)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 text-[var(--admin-text-primary)]"
                   />
                 </div>
               </div>
@@ -809,26 +809,26 @@ export default function AdminSecurityPage() {
 
       <AnimatePresence>
         {selectedAuditLog && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-[#161B27] w-full max-w-xl rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+              className="bg-[var(--admin-bg-card)] w-full max-w-xl rounded-[2.5rem] shadow-2xl border border-[var(--admin-border)] overflow-hidden"
             >
-              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="p-8 border-b border-[var(--admin-border-subtle)] flex justify-between items-center bg-[var(--admin-bg-surface-variant)]">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getActionBadgeColor(selectedAuditLog.actionType)}`}>
                     <ShieldAlert size={20} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Audit Detail</h3>
-                    <p className="text-xs font-black text-slate-900 dark:text-white">{selectedAuditLog.actionType.replace('_', ' ')}</p>
+                    <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest">Audit Detail</h3>
+                    <p className="text-xs font-black text-[var(--admin-text-primary)]">{selectedAuditLog.actionType.replace('_', ' ')}</p>
                   </div>
                 </div>
                 <button 
                   onClick={() => setSelectedAuditLog(null)}
-                  className="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 transition-colors"
+                  className="w-10 h-10 rounded-xl hover:bg-[var(--admin-bg-surface-variant)] flex items-center justify-center text-[var(--admin-text-muted)] transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -837,39 +837,39 @@ export default function AdminSecurityPage() {
               <div className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400">Timestamp</label>
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Timestamp</label>
                     <p className="text-sm font-bold">{new Date(selectedAuditLog.createdAt).toLocaleString()}</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400">IP Address</label>
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">IP Address</label>
                     <p className="text-sm font-mono font-bold text-teal-500">{selectedAuditLog.ip}</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400">Administrator</label>
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Administrator</label>
                     <p className="text-sm font-bold">{selectedAuditLog.adminName}</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400">Target Resource</label>
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Target Resource</label>
                     <p className="text-sm font-bold text-rose-500">{selectedAuditLog.target}</p>
                   </div>
                 </div>
 
-                <div className="h-px bg-slate-100 dark:bg-slate-800" />
+                <div className="h-px bg-[var(--admin-border-subtle)]" />
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Detailed Action Logs</label>
-                  <div className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-800">
-                    <p className="text-sm leading-relaxed font-medium text-slate-600 dark:text-slate-400 italic">
+                  <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Detailed Action Logs</label>
+                  <div className="p-6 bg-[var(--admin-bg-surface-variant)] rounded-3xl border border-[var(--admin-border-subtle)]">
+                    <p className="text-sm leading-relaxed font-medium text-[var(--admin-text-secondary)] italic">
                       "{selectedAuditLog.details}"
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+              <div className="p-6 bg-[var(--admin-bg-surface-variant)] border-t border-[var(--admin-border-subtle)] flex justify-end">
                 <button 
                   onClick={() => setSelectedAuditLog(null)}
-                  className="px-8 py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold text-xs hover:opacity-90 transition-opacity"
+                  className="px-8 py-3 bg-teal-500 text-white rounded-xl font-bold text-xs hover:opacity-90 transition-opacity"
                 >
                   Close Detail
                 </button>

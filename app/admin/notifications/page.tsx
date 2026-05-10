@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send,
@@ -28,6 +29,7 @@ import {
   ChevronLeft,
   X,
   Smartphone,
+  Bell,
 } from "lucide-react";
 import { useModal } from "@/components/providers/ModalProvider";
 
@@ -58,9 +60,28 @@ interface Unsubscribe {
   user: { name: string | null };
 }
 
+interface AdminAlert {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  timestamp: string;
+  read: boolean;
+  model: string;
+}
+
 export default function AdminNotificationsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AdminNotificationsPageContent />
+    </Suspense>
+  );
+}
+
+function AdminNotificationsPageContent() {
   const { alert, confirm } = useModal();
-  const [activeTab, setActiveTab] = useState("send");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "send");
   const [loading, setLoading] = useState(false);
 
   // Send Announcement State
@@ -105,9 +126,38 @@ export default function AdminNotificationsPage() {
   // Unsubscribes State
   const [unsubscribes, setUnsubscribes] = useState<Unsubscribe[]>([]);
 
+  // System Alerts State
+  const [alerts, setAlerts] = useState<AdminAlert[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(false);
+
   // Settings State
   const [threshold, setThreshold] = useState(80);
   const [isAlertEnabled, setIsAlertEnabled] = useState(true);
+
+  const fetchAlerts = useCallback(async () => {
+    setAlertsLoading(true);
+    try {
+      const res = await fetch("/api/admin/notifications/admin-alerts");
+      if (res.ok) setAlerts(await res.json());
+    } catch (error) {
+      console.error("Alerts fetch failed");
+    } finally {
+      setAlertsLoading(false);
+    }
+  }, []);
+
+  const dismissAlert = async (id?: string, all = false) => {
+    try {
+      const res = await fetch("/api/admin/notifications/admin-alerts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, readAll: all }),
+      });
+      if (res.ok) fetchAlerts();
+    } catch (error) {
+      console.error("Failed to dismiss alert");
+    }
+  };
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -183,6 +233,7 @@ export default function AdminNotificationsPage() {
 
   useEffect(() => {
     if (activeTab === "history") fetchHistory();
+    if (activeTab === "alerts") fetchAlerts();
     if (activeTab === "templates") {
       fetchTemplates();
       setIsNewTemplateMode(false);
@@ -483,18 +534,19 @@ export default function AdminNotificationsPage() {
     <div className="space-y-8 pb-20">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+        <h1 className="text-3xl font-bold text-[var(--admin-text-primary)] tracking-tight">
           Notifications
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 font-medium">
+        <p className="text-[var(--admin-text-secondary)] font-medium">
           Send announcements, manage email templates
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800">
+      <div className="flex border-b border-[var(--admin-border)] overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
         {[
           { id: "send", label: "Send announcement", icon: Send },
+          { id: "alerts", label: "System alerts", icon: Bell },
           { id: "history", label: "History", icon: History },
           { id: "templates", label: "Email templates", icon: FileCode },
           { id: "unsubscribe", label: "Unsubscribe log", icon: UserX },
@@ -502,9 +554,9 @@ export default function AdminNotificationsPage() {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-bold transition-all relative ${activeTab === t.id ? "text-teal-500" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+            className={`flex items-center gap-2 px-4 md:px-6 py-4 text-xs md:text-sm font-bold transition-all relative shrink-0 ${activeTab === t.id ? "text-teal-500" : "text-[var(--admin-text-secondary)] hover:text-[var(--admin-text-primary)]"}`}
           >
-            <t.icon size={18} />
+            <t.icon size={16} className="md:w-[18px] md:h-[18px]" />
             {t.label}
             {activeTab === t.id && (
               <motion.div
@@ -522,14 +574,14 @@ export default function AdminNotificationsPage() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+            className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8"
           >
             {/* Compose Area */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+              <div className="bg-[var(--admin-bg-card)] rounded-3xl md:rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-[var(--admin-border-subtle)] bg-[var(--admin-bg-surface-variant)] flex justify-between items-center">
                   <div className="flex items-center gap-4">
-                    <span className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                    <span className="text-xs font-black uppercase text-[var(--admin-text-muted)] tracking-widest">
                       New Announcement
                     </span>
                     <select 
@@ -537,7 +589,7 @@ export default function AdminNotificationsPage() {
                         const t = templates.find(temp => temp.id === e.target.value);
                         if (t) loadTemplateIntoComposer(t);
                       }}
-                      className="bg-transparent border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1 text-[10px] font-bold text-slate-500 outline-none focus:ring-1 focus:ring-teal-500"
+                      className="bg-transparent border border-[var(--admin-border-subtle)] rounded-lg px-3 py-1 text-[10px] font-bold text-[var(--admin-text-secondary)] outline-none focus:ring-1 focus:ring-teal-500"
                     >
                       <option value="">Load Template...</option>
                       {templates.map(t => (
@@ -548,13 +600,13 @@ export default function AdminNotificationsPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setIsPreviewMode(false)}
-                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${!isPreviewMode ? "bg-teal-500 text-white" : "text-slate-400 hover:text-slate-600"}`}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${!isPreviewMode ? "bg-teal-500 text-white" : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]"}`}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => setIsPreviewMode(true)}
-                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${isPreviewMode ? "bg-teal-500 text-white" : "text-slate-400 hover:text-slate-600"}`}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${isPreviewMode ? "bg-teal-500 text-white" : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]"}`}
                     >
                       Preview
                     </button>
@@ -567,16 +619,16 @@ export default function AdminNotificationsPage() {
                     placeholder="Subject line..."
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    className="w-full text-xl font-bold bg-transparent border-none outline-none placeholder:text-slate-300"
+                    className="w-full text-xl font-bold bg-transparent border-none outline-none placeholder:text-[var(--admin-text-muted)] text-[var(--admin-text-primary)]"
                   />
-                  <div className="h-px bg-slate-100 dark:bg-slate-800" />
+                  <div className="h-px bg-[var(--admin-border-subtle)]" />
 
                   {isPreviewMode ? (
-                    <div className="prose prose-slate dark:prose-invert max-w-none min-h-[300px] p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
-                      <h2 className="text-xl font-bold mb-4">
+                    <div className="prose prose-slate dark:prose-invert max-w-none min-h-[300px] p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl">
+                      <h2 className="text-xl font-bold mb-4 text-[var(--admin-text-primary)]">
                         {subject || "No subject"}
                       </h2>
-                      <div className="whitespace-pre-wrap">
+                      <div className="whitespace-pre-wrap text-[var(--admin-text-secondary)]">
                         {body || "No content..."}
                       </div>
                     </div>
@@ -585,16 +637,16 @@ export default function AdminNotificationsPage() {
                       placeholder="Write your announcement here... Use {userName} for personalization."
                       value={body}
                       onChange={(e) => setBody(e.target.value)}
-                      className="w-full min-h-[300px] bg-transparent border-none outline-none resize-none placeholder:text-slate-300 font-medium leading-relaxed"
+                      className="w-full min-h-[300px] bg-transparent border-none outline-none resize-none placeholder:text-[var(--admin-text-muted)] text-[var(--admin-text-secondary)] font-medium leading-relaxed"
                     />
                   )}
                 </div>
 
-                <div className="p-6 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <div className="p-6 bg-[var(--admin-bg-surface-variant)] border-t border-[var(--admin-border-subtle)] flex justify-between items-center">
                   <button
                     onClick={() => sendTestEmail()}
                     disabled={loading}
-                    className="text-xs font-black uppercase text-slate-400 hover:text-teal-500 transition-colors flex items-center gap-2"
+                    className="text-xs font-black uppercase text-[var(--admin-text-muted)] hover:text-teal-500 transition-colors flex items-center gap-2"
                   >
                     <Mail size={14} /> Send test to me
                   </button>
@@ -616,8 +668,8 @@ export default function AdminNotificationsPage() {
 
             {/* Recipients Sidebar */}
             <div className="space-y-6">
-              <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-6">
-                <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">
+              <div className="bg-[var(--admin-bg-card)] rounded-3xl md:rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-5 md:p-8 space-y-6">
+                <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest">
                   Recipients
                 </h3>
 
@@ -630,7 +682,7 @@ export default function AdminNotificationsPage() {
                     <button
                       key={r.id}
                       onClick={() => setRecipientType(r.id)}
-                      className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${recipientType === r.id ? "bg-teal-500/10 border-teal-500/20 text-teal-600" : "bg-slate-50 dark:bg-slate-800/50 border-transparent text-slate-500 hover:bg-slate-100"}`}
+                      className={`w-full p-4 rounded-2xl flex items-center gap-3 transition-all ${recipientType === r.id ? "bg-teal-500/10 border-teal-500/20 text-teal-600" : "bg-[var(--admin-bg-surface-variant)] border-transparent text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-surface-variant)]"}`}
                     >
                       <r.icon size={18} />
                       <span className="text-sm font-bold">{r.label}</span>
@@ -642,7 +694,7 @@ export default function AdminNotificationsPage() {
                 </div>
 
                 {recipientType === "filtered" && (
-                  <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                   <div className="space-y-3 pt-4 border-t border-[var(--admin-border-subtle)]">
                     {[
                       { id: "twoFactorEnabled", label: "2FA Enabled" },
                       { id: "limitMode", label: "Limit Mode Only" },
@@ -664,9 +716,9 @@ export default function AdminNotificationsPage() {
                           onChange={(e) =>
                             setFilters({ ...filters, [f.id]: e.target.checked })
                           }
-                          className="w-5 h-5 rounded-lg border-2 border-slate-200 dark:border-slate-700 checked:bg-teal-500 transition-all cursor-pointer"
+                          className="w-5 h-5 rounded-lg border-2 border-[var(--admin-border-subtle)] checked:bg-teal-500 transition-all cursor-pointer"
                         />
-                        <span className="text-xs font-bold text-slate-500 group-hover:text-slate-700">
+                        <span className="text-xs font-bold text-[var(--admin-text-secondary)] group-hover:text-[var(--admin-text-primary)]">
                           {f.label}
                         </span>
                       </label>
@@ -678,9 +730,9 @@ export default function AdminNotificationsPage() {
                         onChange={(e) =>
                           setFilters({ ...filters, onboarded: e.target.checked ? false : null })
                         }
-                        className="w-5 h-5 rounded-lg border-2 border-slate-200 dark:border-slate-700 checked:bg-teal-500 transition-all cursor-pointer"
+                        className="w-5 h-5 rounded-lg border-2 border-[var(--admin-border-subtle)] checked:bg-teal-500 transition-all cursor-pointer"
                       />
-                      <span className="text-xs font-bold text-slate-500 group-hover:text-slate-700">
+                      <span className="text-xs font-bold text-[var(--admin-text-secondary)] group-hover:text-[var(--admin-text-primary)]">
                         Not Onboarded Only
                       </span>
                     </label>
@@ -688,22 +740,22 @@ export default function AdminNotificationsPage() {
                 )}
 
                 {recipientType === "specific" && (
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="pt-4 border-t border-[var(--admin-border-subtle)]">
                     <input
                       type="email"
                       placeholder="User email address..."
                       value={specificEmail}
                       onChange={(e) => setSpecificEmail(e.target.value)}
-                      className="w-full p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-teal-500"
+                      className="w-full p-3 bg-[var(--admin-bg-surface-variant)] rounded-xl text-xs font-bold outline-none border border-[var(--admin-border-subtle)] text-[var(--admin-text-primary)] focus:ring-2 focus:ring-teal-500"
                     />
                   </div>
                 )}
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
-                  <p className="text-[10px] font-black uppercase text-slate-400 mb-1">
+                <div className="p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-dashed border-[var(--admin-border-subtle)] text-center">
+                  <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-1">
                     Impact Preview
                   </p>
-                  <p className="text-xl font-black text-slate-900 dark:text-white">
+                  <p className="text-xl font-black text-[var(--admin-text-primary)]">
                     ~847 users
                   </p>
                 </div>
@@ -712,15 +764,94 @@ export default function AdminNotificationsPage() {
           </motion.div>
         )}
 
+        {activeTab === "alerts" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest flex items-center gap-2">
+                <Bell size={16} /> Active System Alerts
+              </h3>
+              <button 
+                onClick={() => dismissAlert(undefined, true)}
+                className="text-xs font-bold text-[var(--admin-text-muted)] hover:text-red-500 transition-colors"
+              >
+                Clear all alerts
+              </button>
+            </div>
+
+            {alertsLoading ? (
+              <div className="py-20 flex flex-col items-center justify-center gap-4 bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm">
+                <RefreshCw size={32} className="animate-spin text-teal-500" />
+                <p className="text-xs font-bold text-[var(--admin-text-muted)] uppercase tracking-widest">Fetching alerts...</p>
+              </div>
+            ) : alerts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {alerts.map((alert) => (
+                  <motion.div
+                    layout
+                    key={alert.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-6 bg-[var(--admin-bg-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm group hover:border-teal-500/30 transition-all flex gap-4"
+                  >
+                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                      alert.type === 'error' ? 'bg-red-500/10 text-red-500' : 
+                      alert.type === 'warning' ? 'bg-amber-500/10 text-amber-500' : 
+                      'bg-teal-500/10 text-teal-500'
+                    }`}>
+                      {alert.type === 'error' ? <XCircle size={24} /> : <AlertTriangle size={24} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <h4 className="text-sm font-bold text-[var(--admin-text-primary)] truncate">
+                          {alert.title}
+                        </h4>
+                        <span className="text-[10px] font-medium text-[var(--admin-text-muted)] whitespace-nowrap">
+                          {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[var(--admin-text-secondary)] leading-relaxed mb-3 line-clamp-2">
+                        {alert.description}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-[var(--admin-text-muted)] bg-[var(--admin-bg-surface-variant)] px-2 py-0.5 rounded">
+                          {alert.model}
+                        </span>
+                        <button 
+                          onClick={() => dismissAlert(alert.id)}
+                          className="text-[10px] font-bold text-teal-600 hover:text-teal-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-20 text-center bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm">
+                <div className="h-16 w-16 bg-[var(--admin-bg-surface-variant)] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 size={32} className="text-emerald-500" />
+                </div>
+                <h4 className="text-lg font-bold text-[var(--admin-text-primary)] mb-1">System Healthy</h4>
+                <p className="text-sm text-[var(--admin-text-secondary)]">No active alerts at this time.</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {activeTab === "history" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
+            className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden"
           >
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-800">
+                <tr className="bg-[var(--admin-bg-surface-variant)] text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest border-b border-[var(--admin-border-subtle)]">
                   <th className="py-5 px-8">Subject</th>
                   <th className="py-5 px-8">Recipients</th>
                   <th className="py-5 px-8">Sent At</th>
@@ -729,26 +860,26 @@ export default function AdminNotificationsPage() {
                   <th className="py-5 px-8 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+              <tbody className="divide-y divide-[var(--admin-border-subtle)]">
                 {history.map((log) => (
                   <tr
                     key={log.id}
-                    className="group hover:bg-slate-50/50 transition-colors"
+                    className="group hover:bg-[var(--admin-bg-surface-variant)] transition-colors"
                   >
                     <td className="py-4 px-8">
-                      <span className="text-sm font-bold text-slate-900 dark:text-slate-200 truncate max-w-[200px] block">
+                      <span className="text-sm font-bold text-[var(--admin-text-primary)] truncate max-w-[200px] block">
                         {log.subject}
                       </span>
                     </td>
-                    <td className="py-4 px-8 text-sm font-bold text-slate-500">
+                    <td className="py-4 px-8 text-sm font-bold text-[var(--admin-text-secondary)]">
                       {log.recipientCount} users
                     </td>
                     <td className="py-4 px-8">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <span className="text-xs font-bold text-[var(--admin-text-primary)]">
                           {new Date(log.createdAt).toLocaleDateString()}
                         </span>
-                        <span className="text-[10px] text-slate-500">
+                        <span className="text-[10px] text-[var(--admin-text-muted)]">
                           {new Date(log.createdAt).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -773,13 +904,13 @@ export default function AdminNotificationsPage() {
                             : "✗ Failed"}
                       </span>
                     </td>
-                    <td className="py-4 px-8 text-xs font-bold text-slate-500">
+                    <td className="py-4 px-8 text-xs font-bold text-[var(--admin-text-secondary)]">
                       {log.adminName}
                     </td>
                     <td className="py-4 px-8 text-right">
                       <button
                         onClick={() => viewNotification(log.id)}
-                        className="p-2 text-slate-400 hover:text-teal-500 transition-colors"
+                        className="p-2 text-[var(--admin-text-muted)] hover:text-teal-500 transition-colors"
                       >
                         <Eye size={16} />
                       </button>
@@ -799,9 +930,9 @@ export default function AdminNotificationsPage() {
           >
             {/* Template List */}
             <div className="lg:col-span-1 space-y-4">
-              <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
+              <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-6 space-y-4">
                 <div className="flex justify-between items-center px-2">
-                  <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  <h3 className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest">
                     Templates
                   </h3>
                   <button
@@ -819,7 +950,7 @@ export default function AdminNotificationsPage() {
                       setSubject("");
                       setBody("");
                     }}
-                    className="p-1 text-slate-400 hover:text-teal-500 transition-colors"
+                    className="p-1 text-[var(--admin-text-muted)] hover:text-teal-500 transition-colors"
                   >
                     <Plus size={16} />
                   </button>
@@ -828,7 +959,7 @@ export default function AdminNotificationsPage() {
                   {templates.map((t) => (
                     <div
                       key={t.id}
-                      className={`flex items-center group w-full text-left px-4 py-3 rounded-xl transition-all ${selectedTemplate?.id === t.id && !isNewTemplateMode ? "bg-teal-500 text-white shadow-lg shadow-teal-500/20" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50"}`}
+                      className={`flex items-center group w-full text-left px-4 py-3 rounded-xl transition-all ${selectedTemplate?.id === t.id && !isNewTemplateMode ? "bg-teal-500 text-white shadow-lg shadow-teal-500/20" : "text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-surface-variant)]"}`}
                     >
                       <button
                         onClick={() => {
@@ -843,7 +974,7 @@ export default function AdminNotificationsPage() {
                           {t.name}
                         </div>
                         <div
-                          className={`text-[9px] font-bold ${selectedTemplate?.id === t.id && !isNewTemplateMode ? "text-white/70" : "text-slate-400"}`}
+                          className={`text-[9px] font-bold ${selectedTemplate?.id === t.id && !isNewTemplateMode ? "text-white/70" : "text-[var(--admin-text-muted)]"}`}
                         >
                           {t.isSystem ? "System Template" : "Custom Template"}
                         </div>
@@ -868,8 +999,8 @@ export default function AdminNotificationsPage() {
             {/* Template Editor */}
             {selectedTemplate && (
               <div className="lg:col-span-3 space-y-6">
-                <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-[var(--admin-border-subtle)] flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
                         <FileCode size={20} />
@@ -881,14 +1012,14 @@ export default function AdminNotificationsPage() {
                             placeholder="Template Name..."
                             value={newTemplateName}
                             onChange={(e) => setNewTemplateName(e.target.value)}
-                            className="bg-transparent border-b border-slate-200 dark:border-slate-700 outline-none font-black text-slate-900 dark:text-white"
+                            className="bg-transparent border-b border-[var(--admin-border-subtle)] outline-none font-black text-[var(--admin-text-primary)]"
                           />
                         ) : (
                           <>
-                            <h3 className="font-black text-slate-900 dark:text-white">
+                            <h3 className="font-black text-[var(--admin-text-primary)]">
                               {selectedTemplate.name}
                             </h3>
-                            <p className="text-[10px] text-slate-500">
+                            <p className="text-[10px] text-[var(--admin-text-muted)]">
                               Edit content and variables
                             </p>
                           </>
@@ -901,14 +1032,14 @@ export default function AdminNotificationsPage() {
                           onClick={() =>
                             loadTemplateIntoComposer(selectedTemplate)
                           }
-                          className="px-4 py-2 text-[10px] font-black uppercase text-slate-400 hover:text-teal-500 transition-colors border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-2"
+                          className="px-4 py-2 text-[10px] font-black uppercase text-[var(--admin-text-muted)] hover:text-teal-500 transition-colors border border-[var(--admin-border-subtle)] rounded-lg flex items-center gap-2"
                         >
                           <Send size={14} /> Use Template
                         </button>
                       )}
                       <button
                         onClick={() => sendTestEmail(selectedTemplate)}
-                        className="px-4 py-2 text-[10px] font-black uppercase text-slate-400 hover:text-teal-500 transition-colors border border-slate-200 dark:border-slate-700 rounded-lg"
+                        className="px-4 py-2 text-[10px] font-black uppercase text-[var(--admin-text-muted)] hover:text-teal-500 transition-colors border border-[var(--admin-border-subtle)] rounded-lg"
                       >
                         Send Test
                       </button>
@@ -925,7 +1056,7 @@ export default function AdminNotificationsPage() {
                   <div className="p-8 space-y-8">
                     {/* Variables */}
                     <div className="space-y-3">
-                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest">
                         Available Variables
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -945,7 +1076,7 @@ export default function AdminNotificationsPage() {
                                 body: selectedTemplate.body + v,
                               })
                             }
-                            className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-black text-slate-500 hover:text-teal-500 transition-colors border border-slate-200 dark:border-slate-700"
+                            className="px-3 py-1 bg-[var(--admin-bg-surface-variant)] rounded-lg text-[10px] font-black text-[var(--admin-text-secondary)] hover:text-teal-500 transition-colors border border-[var(--admin-border-subtle)]"
                           >
                             {v}
                           </button>
@@ -955,7 +1086,7 @@ export default function AdminNotificationsPage() {
 
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400">
+                        <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">
                           Subject Line
                         </label>
                         <input
@@ -967,11 +1098,11 @@ export default function AdminNotificationsPage() {
                               subject: e.target.value,
                             })
                           }
-                          className="w-full p-4 bg-slate-50 dark:bg-[#1E2536] border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500"
+                          className="w-full p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-bold outline-none text-[var(--admin-text-primary)] focus:ring-2 focus:ring-teal-500"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400">
+                        <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">
                           Email Body
                         </label>
                         <textarea
@@ -982,7 +1113,7 @@ export default function AdminNotificationsPage() {
                               body: e.target.value,
                             })
                           }
-                          className="w-full min-h-[250px] p-4 bg-slate-50 dark:bg-[#1E2536] border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-teal-500 resize-none leading-relaxed"
+                          className="w-full min-h-[250px] p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-medium outline-none text-[var(--admin-text-secondary)] focus:ring-2 focus:ring-teal-500 resize-none leading-relaxed"
                         />
                       </div>
                     </div>
@@ -997,11 +1128,11 @@ export default function AdminNotificationsPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
+            className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden"
           >
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-slate-50/50 dark:bg-slate-800/30 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100 dark:border-slate-800">
+                <tr className="bg-[var(--admin-bg-surface-variant)] text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest border-b border-[var(--admin-border-subtle)]">
                   <th className="py-5 px-8">User Name</th>
                   <th className="py-5 px-8">Email</th>
                   <th className="py-5 px-8">Unsubscribed At</th>
@@ -1009,22 +1140,22 @@ export default function AdminNotificationsPage() {
                   <th className="py-5 px-8 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+              <tbody className="divide-y divide-[var(--admin-border-subtle)]">
                 {unsubscribes.map((u) => (
                   <tr
                     key={u.id}
-                    className="hover:bg-slate-50/50 transition-colors"
+                    className="hover:bg-[var(--admin-bg-surface-variant)] transition-colors"
                   >
-                    <td className="py-4 px-8 text-sm font-bold text-slate-900 dark:text-slate-200">
+                    <td className="py-4 px-8 text-sm font-bold text-[var(--admin-text-primary)]">
                       {u.user?.name || "Anonymous"}
                     </td>
-                    <td className="py-4 px-8 text-sm font-medium text-slate-500">
+                    <td className="py-4 px-8 text-sm font-medium text-[var(--admin-text-secondary)]">
                       {u.email}
                     </td>
-                    <td className="py-4 px-8 text-xs font-bold text-slate-500">
+                    <td className="py-4 px-8 text-xs font-bold text-[var(--admin-text-muted)]">
                       {new Date(u.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="py-4 px-8 text-xs italic text-slate-400">
+                    <td className="py-4 px-8 text-xs italic text-[var(--admin-text-muted)]">
                       {u.reason || "Not specified"}
                     </td>
                     <td className="py-4 px-8 text-right">
@@ -1044,24 +1175,24 @@ export default function AdminNotificationsPage() {
       </div>
 
       {/* Budget Alert Config Footer */}
-      <div className="bg-slate-900 dark:bg-slate-800/50 rounded-[2rem] p-8 flex flex-wrap items-center justify-between gap-8 text-white shadow-2xl">
+      <div className="bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-[2rem] p-8 flex flex-wrap items-center justify-between gap-8 text-[var(--admin-text-primary)] shadow-2xl">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-teal-500 flex items-center justify-center shadow-lg shadow-teal-500/20">
+          <div className="w-14 h-14 rounded-2xl bg-teal-500 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
             <AlertTriangle size={28} />
           </div>
           <div>
             <h3 className="text-lg font-black tracking-tight">
               Budget Threshold Alerts
             </h3>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-[var(--admin-text-muted)]">
               Automated emails when users hit spend milestones
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-8">
-          <div className="flex items-center gap-4 bg-white/5 p-2 rounded-2xl border border-white/10">
-            <span className="text-xs font-black uppercase text-slate-400 pl-4">
+          <div className="flex items-center gap-4 bg-[var(--admin-bg-surface-variant)] p-2 rounded-2xl border border-[var(--admin-border-subtle)]">
+            <span className="text-xs font-black uppercase text-[var(--admin-text-muted)] pl-4">
               Trigger at
             </span>
             <input
@@ -1070,17 +1201,17 @@ export default function AdminNotificationsPage() {
               onChange={(e) => updateSettings(parseInt(e.target.value))}
               min="50"
               max="100"
-              className="w-16 p-2 bg-white/10 rounded-xl text-center font-black outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-16 p-2 bg-[var(--admin-bg-card)] text-[var(--admin-text-primary)] border border-[var(--admin-border)] rounded-xl text-center font-black outline-none focus:ring-2 focus:ring-teal-500"
             />
             <span className="text-lg font-black pr-4">%</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs font-black uppercase text-slate-400">
+            <span className="text-xs font-black uppercase text-[var(--admin-text-muted)]">
               Status:
             </span>
             <button
               onClick={() => setIsAlertEnabled(!isAlertEnabled)}
-              className={`w-14 h-8 rounded-full transition-all relative ${isAlertEnabled ? "bg-teal-500" : "bg-slate-700"}`}
+              className={`w-14 h-8 rounded-full transition-all relative ${isAlertEnabled ? "bg-teal-500" : "bg-[var(--admin-border)]"}`}
             >
               <motion.div
                 animate={{ x: isAlertEnabled ? 28 : 4 }}
@@ -1098,14 +1229,14 @@ export default function AdminNotificationsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white dark:bg-[#161B27] rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden"
+              className="bg-[var(--admin-bg-card)] rounded-3xl w-full max-w-2xl shadow-2xl border border-[var(--admin-border)] flex flex-col max-h-[90vh] overflow-hidden"
             >
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="p-6 border-b border-[var(--admin-border-subtle)] flex justify-between items-center bg-[var(--admin-bg-surface-variant)]">
                 <div>
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                  <h3 className="text-xl font-black text-[var(--admin-text-primary)]">
                     Announcement Details
                   </h3>
-                  <p className="text-sm font-medium text-slate-500">
+                  <p className="text-sm font-medium text-[var(--admin-text-secondary)]">
                     Sent by {viewingNotification.adminName} on{" "}
                     {new Date(
                       viewingNotification.createdAt,
@@ -1114,45 +1245,45 @@ export default function AdminNotificationsPage() {
                 </div>
                 <button
                   onClick={() => setViewingNotification(null)}
-                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  className="p-2 text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
               <div className="p-8 overflow-y-auto space-y-6">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2 block">
+                  <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-2 block">
                     Subject
                   </label>
-                  <div className="text-lg font-bold text-slate-900 dark:text-white">
+                  <div className="text-lg font-bold text-[var(--admin-text-primary)]">
                     {viewingNotification.subject}
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2 block">
+                  <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-2 block">
                     Message Body
                   </label>
-                  <div className="prose prose-slate dark:prose-invert max-w-none text-sm font-medium whitespace-pre-wrap p-4 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="prose prose-slate dark:prose-invert max-w-none text-sm font-medium whitespace-pre-wrap p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)] text-[var(--admin-text-secondary)]">
                     {viewingNotification.body}
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest">
                       Recipients ({viewingRecipients.length})
                     </label>
                   </div>
-                  <div className="max-h-40 overflow-y-auto border border-slate-100 dark:border-slate-800 rounded-xl divide-y divide-slate-100 dark:divide-slate-800">
+                  <div className="max-h-40 overflow-y-auto border border-[var(--admin-border-subtle)] rounded-xl divide-y divide-[var(--admin-border-subtle)]">
                     {viewingRecipients.map((r, i) => (
-                      <div key={i} className="p-3 text-sm flex justify-between">
-                        <span className="font-bold text-slate-700 dark:text-slate-300">
+                      <div key={i} className="p-3 text-sm flex justify-between bg-[var(--admin-bg-card)]">
+                        <span className="font-bold text-[var(--admin-text-primary)]">
                           {r.name || "Unknown"}
                         </span>
-                        <span className="text-slate-500">{r.email}</span>
+                        <span className="text-[var(--admin-text-secondary)]">{r.email}</span>
                       </div>
                     ))}
                     {viewingRecipients.length === 0 && (
-                      <div className="p-4 text-sm text-center text-slate-500 italic">
+                      <div className="p-4 text-sm text-center text-[var(--admin-text-muted)] italic">
                         No specific recipients found for this filter.
                       </div>
                     )}

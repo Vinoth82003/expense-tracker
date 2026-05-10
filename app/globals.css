@@ -65,6 +65,15 @@
 
   --border-color: #e2e8f0;
   --border-hover: #cbd5e1;
+  --admin-bg-primary: #f8fafc;
+  --admin-bg-sidebar: #ffffff;
+  --admin-bg-card: #ffffff;
+  --admin-bg-surface-variant: #f1f5f9;
+  --admin-border: #e2e8f0;
+  --admin-border-subtle: #f1f5f9;
+  --admin-text-primary: #0f172a;
+  --admin-text-secondary: #475569;
+  --admin-text-muted: #94a3b8;
 }
 
 .dark {
@@ -81,6 +90,17 @@
 
   --border-color: #334155;
   --border-hover: #475569;
+
+  /* Admin Dark Specifics - Premium Deep Palette */
+  --admin-bg-primary: #06080c;
+  --admin-bg-sidebar: #0b0e14;
+  --admin-bg-card: #11141d;
+  --admin-bg-surface-variant: #1a1f2e;
+  --admin-border: #1e293b;
+  --admin-border-subtle: #141b26;
+  --admin-text-primary: #f8fafc;
+  --admin-text-secondary: #94a3b8;
+  --admin-text-muted: #4b5563;
 }
 
 /* Custom prose color overrides */

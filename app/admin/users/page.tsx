@@ -241,40 +241,40 @@ export default function AdminUsersPage() {
     <div className="space-y-8 pb-20">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">User management</h1>
-        <p className="text-slate-500 dark:text-slate-400 font-medium">All registered accounts</p>
+        <h1 className="text-3xl font-bold text-[var(--admin-text-primary)] tracking-tight">User management</h1>
+        <p className="text-[var(--admin-text-secondary)] font-medium">All registered accounts</p>
       </div>
 
       {/* Stats Strip */}
       <div className="flex flex-wrap gap-4">
         <StatChip label={`${stats.totalUsers.toLocaleString()} total users`} />
-        <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-800 self-center" />
+        <div className="w-[1px] h-6 bg-[var(--admin-border)] self-center" />
         <StatChip label={`${stats.activeToday.toLocaleString()} active today`} />
-        <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-800 self-center" />
+        <div className="w-[1px] h-6 bg-[var(--admin-border)] self-center" />
         <StatChip label={`${stats.twoFAEnabled.toLocaleString()} with 2FA enabled`} />
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white dark:bg-[#161B27] p-4 rounded-[1.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row gap-4 items-center">
+      <div className="bg-[var(--admin-bg-card)] p-4 rounded-[1.5rem] border border-[var(--admin-border)] shadow-sm flex flex-col lg:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]" size={18} />
           <input 
             type="text"
             placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm font-medium"
+            className="w-full pl-11 pr-4 py-3 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border)] rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm font-medium text-[var(--admin-text-primary)]"
           />
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* 2FA Segmented Control */}
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+          <div className="flex bg-[var(--admin-bg-surface-variant)] p-1 rounded-xl">
             {["All", "Enabled", "Disabled"].map(opt => (
               <button
                 key={opt}
                 onClick={() => setTwoFA(opt)}
-                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${twoFA === opt ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${twoFA === opt ? 'bg-[var(--admin-bg-card)] text-teal-600 dark:text-teal-400 shadow-sm' : 'text-[var(--admin-text-secondary)] hover:text-[var(--admin-text-primary)]'}`}
               >
                 {opt === "All" ? "All 2FA" : opt}
               </button>
@@ -284,7 +284,7 @@ export default function AdminUsersPage() {
           <select 
             value={mode}
             onChange={(e) => setMode(e.target.value)}
-            className="bg-slate-100 dark:bg-slate-800 border-none rounded-xl px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none cursor-pointer"
+            className="bg-[var(--admin-bg-surface-variant)] border-none rounded-xl px-4 py-2.5 text-xs font-bold text-[var(--admin-text-secondary)] outline-none cursor-pointer"
           >
             <option value="All">All Modes</option>
             <option value="Limit">Limit</option>
@@ -294,7 +294,7 @@ export default function AdminUsersPage() {
           <select 
             value={joined}
             onChange={(e) => setJoined(e.target.value)}
-            className="bg-slate-100 dark:bg-slate-800 border-none rounded-xl px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-400 outline-none cursor-pointer"
+            className="bg-[var(--admin-bg-surface-variant)] border-none rounded-xl px-4 py-2.5 text-xs font-bold text-[var(--admin-text-secondary)] outline-none cursor-pointer"
           >
             <option value="All time">All time</option>
             <option value="Last 7d">Last 7d</option>
@@ -312,11 +312,11 @@ export default function AdminUsersPage() {
       </div>
 
       {/* User Table */}
-      <div className="bg-white dark:bg-[#161B27] rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50/50 dark:bg-[#1E2536]/30 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+            <tr className="bg-[var(--admin-bg-surface-variant)] text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest border-b border-[var(--admin-border-subtle)]">
                 <th className="py-5 px-6 cursor-pointer hover:text-teal-500 transition-colors" onClick={() => handleSort('name')}>
                   <div className="flex items-center gap-2">Avatar+Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}</div>
                 </th>
@@ -332,30 +332,30 @@ export default function AdminUsersPage() {
                 <th className="py-5 px-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+            <tbody className="divide-y divide-[var(--admin-border-subtle)]">
               {users.map((user) => (
                 <tr 
                   key={user.id} 
-                  className="group hover:bg-teal-50/30 dark:hover:bg-teal-500/5 transition-colors cursor-pointer"
+                  className="group hover:bg-[var(--admin-bg-surface-variant)] transition-colors cursor-pointer"
                   onClick={() => fetchUserDetail(user.id)}
                 >
                   <td className="py-5 px-6">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-500 overflow-hidden ring-2 ring-transparent group-hover:ring-teal-500/20 transition-all">
+                      <div className="w-10 h-10 rounded-full bg-[var(--admin-bg-surface-variant)] flex items-center justify-center text-sm font-bold text-[var(--admin-text-secondary)] overflow-hidden ring-2 ring-transparent group-hover:ring-teal-500/20 transition-all">
                         {user.avatar ? <img src={user.avatar} alt={user.name || ""} className="w-full h-full object-cover" /> : (user.name?.charAt(0) || user.email.charAt(0).toUpperCase())}
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <div className="text-sm font-bold text-[var(--admin-text-primary)] flex items-center gap-2">
                           {user.name || "Anonymous"}
                           {user.isSuspended && <Ban size={12} className="text-red-500" />}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="py-5 px-6 text-sm font-medium text-slate-500 dark:text-slate-400">{user.email}</td>
-                  <td className="py-5 px-6 text-xs font-bold text-slate-400">{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td className="py-5 px-6 text-sm font-medium text-[var(--admin-text-secondary)]">{user.email}</td>
+                  <td className="py-5 px-6 text-xs font-bold text-[var(--admin-text-muted)]">{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td className="py-5 px-6">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${user.expenseMode === 'limit' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${user.expenseMode === 'limit' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-secondary)]'}`}>
                       {user.expenseMode === 'limit' ? 'Limit' : 'No limit'}
                     </span>
                   </td>
@@ -364,20 +364,20 @@ export default function AdminUsersPage() {
                       {user.twoFactorEnabled ? 'On' : 'Off'}
                     </span>
                   </td>
-                  <td className="py-5 px-6 text-xs font-bold text-slate-400">{user.lastActive ? formatRelativeTime(user.lastActive) : "Never"}</td>
+                  <td className="py-5 px-6 text-xs font-bold text-[var(--admin-text-muted)]">{user.lastActive ? formatRelativeTime(user.lastActive) : "Never"}</td>
                   <td className="py-5 px-6 text-right">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                      <button className="p-2 text-slate-400 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-500/10 rounded-lg transition-all" title="View Detail" onClick={() => fetchUserDetail(user.id)}>
+                      <button className="p-2 text-[var(--admin-text-muted)] hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-500/10 rounded-lg transition-all" title="View Detail" onClick={() => fetchUserDetail(user.id)}>
                         <Eye size={16} />
                       </button>
                       <button 
-                        className={`p-2 transition-all rounded-lg ${user.isSuspended ? 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10' : 'text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10'}`} 
+                        className={`p-2 transition-all rounded-lg ${user.isSuspended ? 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10' : 'text-[var(--admin-text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10'}`} 
                         title={user.isSuspended ? "Activate" : "Suspend"} 
                         onClick={() => { setSelectedUser(user as any); setIsSuspendModalOpen(true); }}
                       >
                         <Ban size={16} />
                       </button>
-                      <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all" title="Delete" onClick={() => { setSelectedUser(user as any); setIsDeleteModalOpen(true); }}>
+                      <button className="p-2 text-[var(--admin-text-muted)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all" title="Delete" onClick={() => { setSelectedUser(user as any); setIsDeleteModalOpen(true); }}>
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -389,21 +389,21 @@ export default function AdminUsersPage() {
         </div>
         
         {/* Pagination */}
-        <div className="px-6 py-4 bg-slate-50/50 dark:bg-[#1E2536]/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Showing {users.length} of {total} users</p>
+        <div className="px-6 py-4 bg-[var(--admin-bg-surface-variant)] border-t border-[var(--admin-border-subtle)] flex items-center justify-between">
+          <p className="text-xs font-bold text-[var(--admin-text-muted)] uppercase tracking-widest">Showing {users.length} of {total} users</p>
           <div className="flex items-center gap-2">
             <button 
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
-              className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 disabled:opacity-50 transition-all"
+              className="p-2 bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-lg text-[var(--admin-text-secondary)] disabled:opacity-50 transition-all"
             >
               <ChevronLeft size={18} />
             </button>
-            <span className="px-4 text-xs font-bold text-slate-600 dark:text-slate-300">Page {page} of {Math.ceil(total / 25) || 1}</span>
+            <span className="px-4 text-xs font-bold text-[var(--admin-text-secondary)]">Page {page} of {Math.ceil(total / 25) || 1}</span>
             <button 
               disabled={page >= Math.ceil(total / 25)}
               onClick={() => setPage(page + 1)}
-              className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 disabled:opacity-50 transition-all"
+              className="p-2 bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-lg text-[var(--admin-text-secondary)] disabled:opacity-50 transition-all"
             >
               <ChevronRight size={18} />
             </button>
@@ -420,31 +420,31 @@ export default function AdminUsersPage() {
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
               onClick={() => setIsDrawerOpen(false)}
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90]" 
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]" 
             />
             <motion.div 
               initial={{ x: "100%" }} 
               animate={{ x: 0 }} 
               exit={{ x: "100%" }} 
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-[420px] bg-white dark:bg-[#161B27] z-[100] shadow-2xl border-l border-slate-200 dark:border-slate-800 overflow-y-auto"
+              className="fixed right-0 top-0 bottom-0 w-[420px] bg-[var(--admin-bg-card)] z-[100] shadow-2xl border-l border-[var(--admin-border)] overflow-y-auto"
             >
               <div className="p-8 space-y-10">
                 {/* Drawer Header */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl font-bold text-slate-500 overflow-hidden">
+                    <div className="w-16 h-16 rounded-3xl bg-[var(--admin-bg-surface-variant)] flex items-center justify-center text-2xl font-bold text-[var(--admin-text-secondary)] overflow-hidden">
                       {selectedUser.avatar ? <img src={selectedUser.avatar} alt={selectedUser.name || ""} className="w-full h-full object-cover" /> : (selectedUser.name?.charAt(0) || selectedUser.email.charAt(0).toUpperCase())}
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <h2 className="text-xl font-bold text-[var(--admin-text-primary)] flex items-center gap-2">
                         {selectedUser.name || "Anonymous"}
                         {selectedUser.isSuspended && <Ban size={16} className="text-red-500" />}
                       </h2>
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{selectedUser.email}</p>
+                      <p className="text-sm font-medium text-[var(--admin-text-secondary)]">{selectedUser.email}</p>
                     </div>
                   </div>
-                  <button onClick={() => setIsDrawerOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-colors">
+                  <button onClick={() => setIsDrawerOpen(false)} className="p-2 hover:bg-[var(--admin-bg-surface-variant)] rounded-xl text-[var(--admin-text-muted)] transition-colors">
                     <X size={20} />
                   </button>
                 </div>
@@ -466,12 +466,12 @@ export default function AdminUsersPage() {
                     <StatBox label="Total Expenses" count={selectedUser._count.expenses} total={`₹${selectedUser.stats.expenseTotal.toLocaleString()}`} color="text-red-500" />
                     <StatBox label="Total Income" count={selectedUser._count.incomes} total={`+₹${selectedUser.stats.incomeTotal.toLocaleString()}`} color="text-emerald-500" />
                   </div>
-                  <div className="mt-4 p-4 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div className="mt-4 p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)] flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <FileText size={18} className="text-purple-500" />
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">AI Reports Generated</span>
+                      <span className="text-sm font-bold text-[var(--admin-text-secondary)]">AI Reports Generated</span>
                     </div>
-                    <span className="text-lg font-bold text-slate-900 dark:text-white">{selectedUser._count.reports}</span>
+                    <span className="text-lg font-bold text-[var(--admin-text-primary)]">{selectedUser._count.reports}</span>
                   </div>
                 </DrawerSection>
 
@@ -483,14 +483,14 @@ export default function AdminUsersPage() {
                   )}
                   {selectedUser.stats.budgetHistory.length > 0 && (
                     <div className="mt-4 space-y-2">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">History (Last 6m)</p>
-                      <div className="bg-slate-50 dark:bg-[#1E2536] rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800">
+                      <p className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest">History (Last 6m)</p>
+                      <div className="bg-[var(--admin-bg-surface-variant)] rounded-xl overflow-hidden border border-[var(--admin-border-subtle)]">
                         <table className="w-full text-left">
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                          <tbody className="divide-y divide-[var(--admin-border-subtle)]">
                             {selectedUser.stats.budgetHistory.map(h => (
                               <tr key={h.month}>
-                                <td className="py-2 px-4 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">{h.month}</td>
-                                <td className="py-2 px-4 text-xs font-bold text-slate-900 dark:text-white text-right">₹{h.amount.toLocaleString()}</td>
+                                <td className="py-2 px-4 text-xs font-bold text-[var(--admin-text-secondary)] uppercase">{h.month}</td>
+                                <td className="py-2 px-4 text-xs font-bold text-[var(--admin-text-primary)] text-right">₹{h.amount.toLocaleString()}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -502,10 +502,10 @@ export default function AdminUsersPage() {
 
                 {/* Security Section */}
                 <DrawerSection title="Security" icon={Lock}>
-                  <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)]">
                     <div className="flex items-center gap-3">
-                      <ShieldCheck size={18} className={selectedUser.twoFactorEnabled ? "text-emerald-500" : "text-slate-400"} />
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Two-Factor Auth</span>
+                      <ShieldCheck size={18} className={selectedUser.twoFactorEnabled ? "text-emerald-500" : "text-[var(--admin-text-muted)]"} />
+                      <span className="text-sm font-bold text-[var(--admin-text-secondary)]">Two-Factor Auth</span>
                     </div>
                     <span className={`text-xs font-bold uppercase ${selectedUser.twoFactorEnabled ? "text-emerald-500" : "text-red-500"}`}>
                       {selectedUser.twoFactorEnabled ? "Enabled" : "Disabled"}
@@ -514,24 +514,24 @@ export default function AdminUsersPage() {
                 </DrawerSection>
 
                 {/* Actions Section */}
-                <div className="pt-6 space-y-4 border-t border-slate-100 dark:border-slate-800">
-                  <button className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-[#1E2536] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all group">
+                <div className="pt-6 space-y-4 border-t border-[var(--admin-border-subtle)]">
+                  <button className="w-full flex items-center justify-between p-4 bg-[var(--admin-bg-surface-variant)] hover:bg-[var(--admin-border-subtle)] rounded-2xl transition-all group">
                     <div className="flex items-center gap-3">
-                      <Eye size={18} className="text-slate-400 group-hover:text-teal-500" />
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">View as this user</span>
+                      <Eye size={18} className="text-[var(--admin-text-muted)] group-hover:text-teal-500" />
+                      <span className="text-sm font-bold text-[var(--admin-text-secondary)]">View as this user</span>
                     </div>
-                    <ChevronRight size={16} className="text-slate-300" />
+                    <ChevronRight size={16} className="text-[var(--admin-text-muted)]" />
                   </button>
                   <button 
                     onClick={handleReset2FA}
                     disabled={!selectedUser.twoFactorEnabled || actionLoading}
-                    className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-[#1E2536] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all group disabled:opacity-50"
+                    className="w-full flex items-center justify-between p-4 bg-[var(--admin-bg-surface-variant)] hover:bg-[var(--admin-border-subtle)] rounded-2xl transition-all group disabled:opacity-50"
                   >
                     <div className="flex items-center gap-3">
-                      <RefreshCcw size={18} className="text-slate-400 group-hover:text-teal-500" />
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Reset 2FA</span>
+                      <RefreshCcw size={18} className="text-[var(--admin-text-muted)] group-hover:text-teal-500" />
+                      <span className="text-sm font-bold text-[var(--admin-text-secondary)]">Reset 2FA</span>
                     </div>
-                    <ChevronRight size={16} className="text-slate-300" />
+                    <ChevronRight size={16} className="text-[var(--admin-text-muted)]" />
                   </button>
                   <button 
                     onClick={() => setIsSuspendModalOpen(true)}
@@ -563,17 +563,17 @@ export default function AdminUsersPage() {
       {/* Suspend Modal */}
       <AnimatePresence>
         {isSuspendModalOpen && selectedUser && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-md bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 shadow-2xl space-y-6">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-md bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-[2rem] p-8 shadow-2xl space-y-6">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center">
                   <AlertTriangle size={32} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-xl font-bold text-[var(--admin-text-primary)]">
                     {selectedUser.isSuspended ? 'Activate' : 'Suspend'} {selectedUser.name || "User"}?
                   </h3>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  <p className="text-sm font-medium text-[var(--admin-text-secondary)]">
                     {selectedUser.isSuspended ? "Allow this user to access their account again." : "The user will be immediately logged out and blocked from logging in."}
                   </p>
                 </div>
@@ -581,14 +581,14 @@ export default function AdminUsersPage() {
 
               {!selectedUser.isSuspended && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-2">Reason for suspension</label>
+                  <label className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest pl-2">Reason for suspension</label>
                   <textarea 
                     value={suspensionReason}
                     onChange={(e) => setSuspensionReason(e.target.value)}
                     required
                     rows={3}
                     placeholder="e.g., Policy violation, suspicious activity..."
-                    className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-medium text-slate-900 dark:text-white"
+                    className="w-full p-4 rounded-2xl bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-medium text-[var(--admin-text-primary)]"
                   />
                 </div>
               )}
@@ -601,9 +601,9 @@ export default function AdminUsersPage() {
                 >
                   {actionLoading ? "Processing..." : selectedUser.isSuspended ? "Activate Account" : "Suspend Account"}
                 </button>
-                <button 
+                 <button 
                   onClick={() => setIsSuspendModalOpen(false)}
-                  className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="w-full py-4 bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-secondary)] rounded-xl font-bold hover:bg-[var(--admin-border-subtle)] transition-colors"
                 >
                   Cancel
                 </button>
@@ -616,15 +616,15 @@ export default function AdminUsersPage() {
       {/* Delete Modal */}
       <AnimatePresence>
         {isDeleteModalOpen && selectedUser && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-md bg-white dark:bg-[#161B27] border border-red-500/30 dark:border-red-500/20 rounded-[2rem] p-8 shadow-2xl space-y-6">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-md bg-[var(--admin-bg-card)] border border-red-500/30 dark:border-red-500/20 rounded-[2rem] p-8 shadow-2xl space-y-6">
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className="w-16 h-16 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-2xl flex items-center justify-center">
                   <Trash2 size={32} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Permanently delete account?</h3>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  <h3 className="text-xl font-bold text-[var(--admin-text-primary)]">Permanently delete account?</h3>
+                  <p className="text-sm font-medium text-[var(--admin-text-secondary)]">
                     This will permanently delete all expenses, reports, and data for <strong>{selectedUser.name || "this user"}</strong>. This action cannot be undone.
                   </p>
                 </div>
@@ -638,7 +638,7 @@ export default function AdminUsersPage() {
                   value={deleteConfirmationEmail}
                   onChange={(e) => setDeleteConfirmationEmail(e.target.value)}
                   placeholder="Enter user email..."
-                  className="w-full p-4 rounded-xl bg-white dark:bg-[#1E2536] border border-red-200 dark:border-red-500/30 focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-bold text-slate-900 dark:text-white"
+                  className="w-full p-4 rounded-xl bg-[var(--admin-bg-card)] border border-red-200 dark:border-red-500/30 focus:ring-2 focus:ring-red-500 outline-none transition-all text-sm font-bold text-[var(--admin-text-primary)]"
                 />
               </div>
 
@@ -652,7 +652,7 @@ export default function AdminUsersPage() {
                 </button>
                 <button 
                   onClick={() => setIsDeleteModalOpen(false)}
-                  className="w-full py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="w-full py-4 bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-secondary)] rounded-xl font-bold hover:bg-[var(--admin-border-subtle)] transition-colors"
                 >
                   Cancel
                 </button>
@@ -665,9 +665,9 @@ export default function AdminUsersPage() {
   );
 }
 
-function StatChip({ label }: { label: string }) {
+ function StatChip({ label }: { label: string }) {
   return (
-    <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+    <div className="px-4 py-2 bg-[var(--admin-bg-surface-variant)] rounded-xl text-xs font-bold text-[var(--admin-text-muted)] uppercase tracking-widest">
       {label}
     </div>
   );
@@ -676,7 +676,7 @@ function StatChip({ label }: { label: string }) {
 function DrawerSection({ title, icon: Icon, children }: any) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 uppercase tracking-widest text-[10px] font-black">
+      <div className="flex items-center gap-2 text-[var(--admin-text-muted)] uppercase tracking-widest text-[10px] font-black">
         <Icon size={14} />
         {title}
       </div>
@@ -690,18 +690,18 @@ function DrawerSection({ title, icon: Icon, children }: any) {
 function DetailItem({ label, value, valueColor }: { label: string, value: string, valueColor?: string }) {
   return (
     <div className="flex justify-between items-start gap-4">
-      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</span>
-      <span className={`text-sm font-bold text-right ${valueColor || 'text-slate-900 dark:text-white'}`}>{value}</span>
+      <span className="text-xs font-medium text-[var(--admin-text-secondary)]">{label}</span>
+      <span className={`text-sm font-bold text-right ${valueColor || 'text-[var(--admin-text-primary)]'}`}>{value}</span>
     </div>
   );
 }
 
 function StatBox({ label, count, total, color }: { label: string, count: number, total: string, color: string }) {
   return (
-    <div className="p-4 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+    <div className="p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)] space-y-1">
+      <p className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest">{label}</p>
       <div className="flex items-baseline gap-2">
-        <span className="text-lg font-bold text-slate-900 dark:text-white">{count}</span>
+        <span className="text-lg font-bold text-[var(--admin-text-primary)]">{count}</span>
         <span className={`text-xs font-bold ${color}`}>{total}</span>
       </div>
     </div>

@@ -114,8 +114,8 @@ export default function AdminFAQ() {
     <div className="space-y-10 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Manage FAQ</h1>
-          <p className="text-slate-600 dark:text-slate-400 font-medium">Add, edit, or remove frequently asked questions dynamically.</p>
+          <h1 className="text-4xl font-bold text-[var(--admin-text-primary)] tracking-tight">Manage FAQ</h1>
+          <p className="text-[var(--admin-text-secondary)] font-medium">Add, edit, or remove frequently asked questions dynamically.</p>
         </div>
         <button 
           onClick={() => { setIsAdding(true); setEditingId(null); setFormData({ question: "", answer: "", category: "General", order: 0 }); }}
@@ -135,10 +135,10 @@ export default function AdminFAQ() {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="p-8 sm:p-10 rounded-[3rem] bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-800 shadow-sm mb-10 space-y-8 relative">
+            <div className="p-8 sm:p-10 rounded-[3rem] bg-[var(--admin-bg-card)] border border-[var(--admin-border)] shadow-sm mb-10 space-y-8 relative">
               <button 
                 onClick={() => { setIsAdding(false); setEditingId(null); }}
-                className="absolute top-8 right-8 p-2 rounded-full bg-slate-50 dark:bg-[#1E2536] text-slate-500 dark:text-slate-400 hover:text-red-500 transition-colors"
+                className="absolute top-8 right-8 p-2 rounded-full bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-muted)] hover:text-red-500 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -147,25 +147,25 @@ export default function AdminFAQ() {
                 <div className="p-3 bg-teal-500 rounded-xl text-white">
                   {editingId ? <Edit2 size={24} /> : <Plus size={24} />}
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-wider">{editingId ? 'Edit Question' : 'New Question'}</h3>
+                <h3 className="text-2xl font-bold text-[var(--admin-text-primary)] uppercase tracking-wider">{editingId ? 'Edit Question' : 'New Question'}</h3>
               </div>
 
               <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2 space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-2">Question</label>
+                  <label className="text-[11px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest pl-2">Question</label>
                   <input 
                     required
                     value={formData.question}
                     onChange={(e) => setFormData({...formData, question: e.target.value})}
-                    className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none font-medium text-slate-900 dark:text-white text-sm transition-all"
+                    className="w-full p-4 rounded-2xl bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none font-medium text-[var(--admin-text-primary)] text-sm transition-all"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-2">Category</label>
+                  <label className="text-[11px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest pl-2">Category</label>
                   <select 
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none font-medium text-slate-900 dark:text-white text-sm transition-all appearance-none"
+                    className="w-full p-4 rounded-2xl bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none font-medium text-[var(--admin-text-primary)] text-sm transition-all appearance-none"
                   >
                     <option>General</option>
                     <option>Security & Privacy</option>
@@ -173,29 +173,29 @@ export default function AdminFAQ() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-2">Display Order</label>
+                  <label className="text-[11px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest pl-2">Display Order</label>
                   <input 
                     type="number"
                     value={formData.order}
                     onChange={(e) => setFormData({...formData, order: parseInt(e.target.value)})}
-                    className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none font-medium text-slate-900 dark:text-white text-sm transition-all"
+                    className="w-full p-4 rounded-2xl bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none font-medium text-[var(--admin-text-primary)] text-sm transition-all"
                   />
                 </div>
                 <div className="md:col-span-2 space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-2">Answer</label>
+                  <label className="text-[11px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest pl-2">Answer</label>
                   <textarea 
                     required
                     rows={4}
                     value={formData.answer}
                     onChange={(e) => setFormData({...formData, answer: e.target.value})}
-                    className="w-full p-6 rounded-[2rem] bg-slate-50 dark:bg-[#1E2536] border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none font-medium text-slate-900 dark:text-white text-sm leading-relaxed transition-all"
+                    className="w-full p-6 rounded-[2rem] bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none font-medium text-[var(--admin-text-primary)] text-sm leading-relaxed transition-all"
                   />
                 </div>
                 <div className="md:col-span-2 flex justify-end gap-3 pt-4">
                   <button 
                     type="button"
                     onClick={() => { setIsAdding(false); setEditingId(null); }}
-                    className="px-8 py-4 rounded-2xl font-bold text-sm text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                    className="px-8 py-4 rounded-2xl font-bold text-sm text-[var(--admin-text-secondary)] border border-[var(--admin-border)] hover:bg-[var(--admin-bg-surface-variant)] transition-all"
                   >
                     Cancel
                   </button>
@@ -216,51 +216,51 @@ export default function AdminFAQ() {
       {/* FAQ List */}
       <div className="space-y-6">
         <div className="relative mb-8">
-          <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+          <Search size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]" />
           <input 
             type="text" 
             placeholder="Search questions or categories..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-14 pr-6 py-5 rounded-[2rem] bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-800 shadow-sm font-medium text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+            className="w-full pl-14 pr-6 py-5 rounded-[2rem] bg-[var(--admin-bg-card)] border border-[var(--admin-border)] shadow-sm font-medium text-sm text-[var(--admin-text-primary)] outline-none focus:ring-2 focus:ring-teal-500 transition-all"
           />
         </div>
 
         <div className="grid grid-cols-1 gap-4">
            {loading ? (
-             <div className="p-20 text-center animate-pulse text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">LOADING DATABASE...</div>
+             <div className="p-20 text-center animate-pulse text-[var(--admin-text-muted)] font-bold uppercase tracking-widest">LOADING DATABASE...</div>
            ) : filteredFaqs.length === 0 ? (
-             <div className="p-20 text-center bg-white dark:bg-[#161B27] border border-dashed border-slate-200 dark:border-slate-800 rounded-[3rem]">
-                <HelpCircle size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-                <p className="text-slate-500 font-medium">No results found matching your search.</p>
+             <div className="p-20 text-center bg-[var(--admin-bg-card)] border border-dashed border-[var(--admin-border)] rounded-[3rem]">
+                <HelpCircle size={48} className="mx-auto text-[var(--admin-text-muted)] opacity-30 mb-4" />
+                <p className="text-[var(--admin-text-secondary)] font-medium">No results found matching your search.</p>
              </div>
            ) : (
              filteredFaqs.map((faq) => (
                <motion.div
                  key={faq.id}
                  layout
-                 className="p-8 rounded-[2.5rem] bg-white dark:bg-[#161B27] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-8 group"
+                 className="p-8 rounded-[2.5rem] bg-[var(--admin-bg-card)] border border-[var(--admin-border)] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-8 group"
                >
                  <div className="space-y-3">
                    <div className="flex items-center gap-3">
-                     <span className="px-3 py-1 bg-slate-50 dark:bg-[#1E2536] text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest rounded-full">
+                     <span className="px-3 py-1 bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-muted)] text-[10px] font-bold uppercase tracking-widest rounded-full">
                        {faq.category}
                      </span>
-                     <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Order: {faq.order}</span>
+                     <span className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase">Order: {faq.order}</span>
                    </div>
-                   <h4 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-teal-500 transition-colors">{faq.question}</h4>
-                   <p className="text-sm text-slate-600 dark:text-slate-400 font-medium line-clamp-1">{faq.answer}</p>
+                   <h4 className="text-xl font-bold text-[var(--admin-text-primary)] group-hover:text-teal-500 transition-colors">{faq.question}</h4>
+                   <p className="text-sm text-[var(--admin-text-secondary)] font-medium line-clamp-1">{faq.answer}</p>
                  </div>
                  <div className="flex items-center gap-3 shrink-0">
                     <button 
                       onClick={() => startEdit(faq)}
-                      className="w-12 h-12 rounded-xl bg-slate-50 dark:bg-[#1E2536] text-slate-600 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-teal-500/10 hover:text-teal-600 dark:hover:text-teal-400 transition-all flex items-center justify-center"
+                      className="w-12 h-12 rounded-xl bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-muted)] hover:bg-teal-500/10 hover:text-teal-500 transition-all flex items-center justify-center"
                     >
                       <Edit2 size={18} />
                     </button>
                     <button 
                       onClick={() => handleDelete(faq.id)}
-                      className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 transition-all flex items-center justify-center"
+                      className="w-12 h-12 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all flex items-center justify-center"
                     >
                       <Trash2 size={18} />
                     </button>

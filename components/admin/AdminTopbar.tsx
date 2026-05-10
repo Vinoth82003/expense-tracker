@@ -1,10 +1,12 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { Search, Bell, Sun, Moon } from "lucide-react";
+import { Search, Bell, Sun, Moon, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AdminNotificationDropdown } from "./AdminNotificationDropdown";
+import { AdminSearchPalette } from "./AdminSearchPalette";
 
-export function AdminTopbar() {
+export function AdminTopbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -14,42 +16,40 @@ export function AdminTopbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex h-[60px] items-center justify-between border-b border-slate-200 bg-white/80 px-4 backdrop-blur-md dark:border-slate-800 dark:bg-[#0F1117]/80">
-      <div className="flex items-center gap-4 flex-1">
-        <h1 className="text-xl font-semibold text-slate-900 dark:text-white hidden sm:block">
+    <header className="sticky top-0 z-[40] flex h-[60px] items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-bg-sidebar)]/80 px-4 backdrop-blur-md">
+      <div className="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+        <button 
+          onClick={onMenuClick}
+          className="p-2 text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-surface-variant)] rounded-lg md:hidden shrink-0"
+          title="Open menu"
+        >
+          <Menu size={20} />
+        </button>
+
+        <h1 className="text-lg md:text-xl font-bold text-[var(--admin-text-primary)] hidden lg:block shrink-0">
           Admin Panel
         </h1>
         
-        <div className="relative max-w-md w-full sm:ml-4">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <Search className="h-4 w-4 text-slate-400" />
-          </div>
-          <input
-            type="text"
-            className="block w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-10 pr-3 text-sm placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-teal-500 transition-colors"
-            placeholder="Search admin..."
-          />
+        <div className="flex-1 max-w-md ml-0 md:ml-4">
+          <AdminSearchPalette />
         </div>
       </div>
 
-      <div className="flex items-center gap-3 ml-4">
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors">
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-2 top-2 flex h-2 w-2 rounded-full bg-teal-500"></span>
-        </button>
+      <div className="flex items-center gap-1.5 md:gap-3 ml-4 shrink-0">
+        <AdminNotificationDropdown />
 
         {mounted && (
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-surface-variant)] transition-colors"
             title="Toggle theme"
           >
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
         )}
 
-        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700 border border-slate-200 dark:border-slate-700 ml-2">
-          <div className="flex h-full w-full items-center justify-center bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300 font-bold text-sm">
+        <div className="h-8 w-8 md:h-9 md:w-9 shrink-0 overflow-hidden rounded-full bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] ml-1 md:ml-2">
+            <div className="flex h-full w-full items-center justify-center bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300 font-bold text-xs md:text-sm">
             A
           </div>
         </div>
