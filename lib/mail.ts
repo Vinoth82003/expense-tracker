@@ -178,6 +178,22 @@ export const sendFeedbackRequestEmail = async (email: string, name: string) => {
   return sendEmail(email, subject, wrapLayout(content, email));
 };
 
+export const sendGroupInvitationEmail = async (email: string, inviterName: string, groupName: string, inviteLink: string) => {
+  const subject = `You're invited to join ${groupName} on SpendWise!`;
+  const content = `
+    <h2>Hi there!</h2>
+    <p><strong>${inviterName}</strong> has invited you to join the group <strong>"${groupName}"</strong> on SpendWise.</p>
+    <p>By joining this group, you can easily split expenses, track who owes what, and manage shared finances with ${inviterName} and others.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${inviteLink}" class="button">Join Group</a>
+    </div>
+    <p>If you don't have a SpendWise account yet, you'll be able to create one after clicking the link above.</p>
+    <p style="margin-top: 30px;">Best,<br/> <strong>The SpendWise Team</strong></p>
+  `;
+
+  return sendEmail(email, subject, wrapLayout(content, email));
+};
+
 /**
  * Sends an automated system email based on a configured template key
  */

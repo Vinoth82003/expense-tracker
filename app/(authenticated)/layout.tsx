@@ -26,7 +26,8 @@ import {
   ShieldCheck,
   HelpCircle,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Users
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
@@ -54,6 +55,12 @@ const navGroups = [
       { name: "Expenses", href: "/expenses", icon: ReceiptIndianRupee },
       { name: "Income", href: "/income", icon: Banknote },
       { name: "Category Map", href: "/settings/categories", icon: LayoutGrid },
+    ]
+  },
+  {
+    title: "Community",
+    items: [
+      { name: "Expense Groups", href: "/groups", icon: Users },
     ]
   },
   {

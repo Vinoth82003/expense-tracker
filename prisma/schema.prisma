@@ -56,6 +56,12 @@ model User {
   lastBudgetAlertMonth String?  // "YYYY-MM" format
 
   reviews          Review[]
+  
+  createdGroups     Group[]        @relation("GroupCreator")
+  groupMemberships  GroupMember[]
+  paidGroupExpenses GroupExpense[] @relation("ExpensePayer")
+  expenseSplits     ExpenseSplit[]
+
   createdAt        DateTime?   @default(now())
   updatedAt        DateTime    @updatedAt
 }
@@ -286,4 +292,78 @@ model SystemLog {
 
   @@index([level, createdAt])
   @@index([service, createdAt])
+}
+
+model Group {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  createdBy   String         @db.ObjectId
+  creator     User           @relation("GroupCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  
+  members     GroupMember[]
+  expenses    GroupExpense[]
+  invitations Invitation[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model GroupMember {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId   String   @db.ObjectId
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  role      String   @default("MEMBER") // "ADMIN", "MEMBER"
+  status    String   @default("PENDING") // "PENDING", "ACCEPTED"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, groupId])
+}
+
+model GroupExpense {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  groupId     String         @db.ObjectId
+  group       Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  description String
+  amount      Float
+  date        DateTime
+  paidById    String         @db.ObjectId
+  paidBy      User           @relation("ExpensePayer", fields: [paidById], references: [id], onDelete: Cascade)
+  status      String         @default("PENDING") // "PENDING", "PARTIAL", "PAID"
+  
+  splits      ExpenseSplit[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model ExpenseSplit {
+  id             String       @id @default(auto()) @map("_id") @db.ObjectId
+  groupExpenseId String       @db.ObjectId
+  groupExpense   GroupExpense @relation(fields: [groupExpenseId], references: [id], onDelete: Cascade)
+  userId         String       @db.ObjectId
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount         Float
+  splitType      String       // "equal", "count", "custom"
+  count          Int?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Invitation {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  groupId   String   @db.ObjectId
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  email     String
+  token     String   @unique
+  status    String   @default("PENDING") // "PENDING", "ACCEPTED", "DECLINED"
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

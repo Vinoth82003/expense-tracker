@@ -19,6 +19,7 @@ import {
   Triangle
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
+import ActiveGroupBalances from "@/components/groups/ActiveGroupBalances";
 import Link from "next/link";
 import { useDashboard } from "@/context/DashboardContext";
 import { 
@@ -311,14 +312,15 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
+      {/* Main Analysis Grid */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
         {/* Recent Activity */}
-        <div className="bg-surface rounded-[2.5rem] border border-border-subtle overflow-hidden flex flex-col shadow-sm">
+        <div className="lg:col-span-1 bg-surface rounded-[2.5rem] border border-border-subtle overflow-hidden flex flex-col shadow-sm">
           <div className="p-8 flex items-center justify-between border-b border-border-subtle">
             <h3 className="text-2xl font-black">Recent Activity</h3>
             <Link href="/expenses" className="text-sm font-black text-primary-500 hover:text-primary-600 flex items-center gap-1.5 px-4 py-2 bg-primary-500/5 rounded-full transition-colors">
@@ -422,6 +424,11 @@ export default function DashboardPage() {
               </>
             )}
           </div>
+        </div>
+
+        {/* Shared Balances Integration */}
+        <div className="lg:col-span-1">
+          <ActiveGroupBalances />
         </div>
       </motion.div>
 
