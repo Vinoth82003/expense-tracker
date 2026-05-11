@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, IndianRupee, FileText, Calendar, Loader2, Plus, ChevronDown, CheckCircle2, PieChart } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { X, IndianRupee, FileText, Calendar, Loader2, Plus, ChevronDown, CheckCircle2, PieChart, User } from "lucide-react";
 import toast from "react-hot-toast";
 import SplitCalculator from "./SplitCalculator";
 import { SplitResult, SplitType } from "@/lib/split-logic";
@@ -25,6 +26,7 @@ export default function GroupExpenseModal({
   onSuccess,
   editExpense 
 }: GroupExpenseModalProps) {
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [description, setDescription] = useState("");
@@ -32,6 +34,7 @@ export default function GroupExpenseModal({
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [splits, setSplits] = useState<SplitResult[]>([]);
   const [splitType, setSplitType] = useState<SplitType>("equal");
+  const [paidById, setPaidById] = useState<string>("");
 
   useEffect(() => {
     if (isOpen) {
@@ -41,21 +44,31 @@ export default function GroupExpenseModal({
         setDate(new Date(editExpense.date).toISOString().split("T")[0]);
         setSplits(editExpense.splits.map(s => ({ userId: s.userId, amount: s.amount })));
         setSplitType(editExpense.splits[0]?.splitType as SplitType || "equal");
+        setPaidById(editExpense.paidById);
       } else {
         setDescription("");
         setAmount("");
         setDate(new Date().toISOString().split("T")[0]);
         setSplits([]);
         setSplitType("equal");
+        
+        // Default to current user if found in members
+        if (session?.user?.email) {
+          const currentMember = members.find(m => m.user.email === session.user?.email);
+          if (currentMember) {
+            setPaidById(currentMember.userId);
+          }
+        }
       }
     }
-  }, [isOpen, editExpense]);
+  }, [isOpen, editExpense, members, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!description.trim()) return toast.error("Please enter a description");
     if (!amount || parseFloat(amount) <= 0) return toast.error("Please enter a valid amount");
+    if (!paidById) return toast.error("Please select who paid");
     if (splits.length === 0) return toast.error("Please select at least one member to split with");
 
     const totalSplit = splits.reduce((sum, s) => sum + s.amount, 0);
@@ -78,6 +91,7 @@ export default function GroupExpenseModal({
           description,
           amount: parseFloat(amount),
           date: new Date(date).toISOString(),
+          paidById,
           splits: splits.map(s => ({
             userId: s.userId,
             amount: s.amount,
@@ -184,6 +198,37 @@ export default function GroupExpenseModal({
                         onChange={(e) => setDate(e.target.value)}
                         className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-primary-500 outline-none transition-all font-bold"
                       />
+                    </div>
+                  </div>
+
+                  {/* Paid By */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-black uppercase tracking-widest text-secondary flex items-center gap-2">
+                      <User size={16} />
+                      Paid By
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {members.map((member) => (
+                        <button
+                          key={member.userId}
+                          type="button"
+                          onClick={() => setPaidById(member.userId)}
+                          className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${
+                            paidById === member.userId
+                              ? "bg-primary-500/10 border-primary-500/50 text-primary-500"
+                              : "bg-white/5 border-white/10 text-secondary hover:border-white/20"
+                          }`}
+                        >
+                          <div className="w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {member.user.avatar ? (
+                              <img src={member.user.avatar} alt={member.user.name || ""} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[10px] font-black">{(member.user.name || "U").charAt(0)}</span>
+                            )}
+                          </div>
+                          <span className="text-xs font-bold truncate">{member.user.name?.split(" ")[0] || "User"}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 

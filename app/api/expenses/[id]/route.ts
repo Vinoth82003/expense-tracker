@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// GET - Fetch a single personal expense by ID
 export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
@@ -24,26 +25,16 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const expense = await (prisma as any).groupExpense.findUnique({
+    const expense = await prisma.expense.findUnique({
       where: { id },
-      include: {
-        paidBy: { select: { id: true, name: true, email: true, avatar: true } },
-        splits: {
-          include: {
-            user: { select: { id: true, name: true, email: true, avatar: true } },
-          },
-        },
-        group: { select: { members: true } },
-      },
     });
 
     if (!expense) {
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
-    // Verify group membership
-    const isMember = expense.group.members.some((m: any) => m.userId === user.id);
-    if (!isMember) {
+    // Ensure the expense belongs to the user
+    if (expense.userId !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -54,7 +45,8 @@ export async function GET(
   }
 }
 
-export async function PUT(
+// PATCH - Update a personal expense
+export async function PATCH(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
@@ -67,7 +59,7 @@ export async function PUT(
     const params = await context.params;
     const { id } = params;
     const body = await req.json();
-    const { description, amount, date, splits } = body;
+    const { amount, category, subcategory, note, date } = body;
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -77,7 +69,7 @@ export async function PUT(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const expense = await (prisma as any).groupExpense.findUnique({
+    const expense = await prisma.expense.findUnique({
       where: { id },
     });
 
@@ -85,67 +77,30 @@ export async function PUT(
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
-    // Only creator (payer) can edit
-    if (expense.paidById !== user.id) {
-      return NextResponse.json({ error: "Forbidden. Only the payer can edit this expense." }, { status: 403 });
+    // Only the owner can edit
+    if (expense.userId !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (splits) {
-      const totalSplitAmount = splits.reduce((sum: number, split: any) => sum + split.amount, 0);
-      if (Math.abs(totalSplitAmount - (amount || expense.amount)) > 0.01) {
-        return NextResponse.json({ error: "Split amounts must equal the total expense amount" }, { status: 400 });
-      }
-    }
-
-    // Use a transaction if splits are being updated to delete old and create new
-    const updateData: any = {
-      description,
-      amount,
-      ...(date && { date: new Date(date) }),
-    };
-
-    if (splits) {
-      await (prisma as any).$transaction([
-        (prisma as any).expenseSplit.deleteMany({ where: { groupExpenseId: id } }),
-        (prisma as any).groupExpense.update({
-          where: { id },
-          data: {
-            ...updateData,
-            splits: {
-              create: splits.map((split: any) => ({
-                userId: split.userId,
-                amount: split.amount,
-                splitType: split.splitType,
-                count: split.count,
-              })),
-            },
-          },
-        }),
-      ]);
-    } else {
-      await (prisma as any).groupExpense.update({
-        where: { id },
-        data: updateData,
-      });
-    }
-
-    const updatedExpense = await (prisma as any).groupExpense.findUnique({
+    const updated = await prisma.expense.update({
       where: { id },
-      include: {
-        paidBy: { select: { id: true, name: true, email: true, avatar: true } },
-        splits: {
-          include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
-        },
+      data: {
+        ...(amount !== undefined && { amount: Number(amount) }),
+        ...(category !== undefined && { category }),
+        ...(subcategory !== undefined && { subcategory }),
+        ...(note !== undefined && { note: note || null }),
+        ...(date !== undefined && { date: new Date(date) }),
       },
     });
 
-    return NextResponse.json(updatedExpense);
+    return NextResponse.json({ expense: updated });
   } catch (error) {
     console.error("Error updating expense:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
+// DELETE - Delete a personal expense
 export async function DELETE(
   req: Request,
   context: { params: Promise<{ id: string }> }
@@ -167,7 +122,7 @@ export async function DELETE(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const expense = await (prisma as any).groupExpense.findUnique({
+    const expense = await prisma.expense.findUnique({
       where: { id },
     });
 
@@ -175,12 +130,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
-    // Only creator (payer) can delete
-    if (expense.paidById !== user.id) {
-      return NextResponse.json({ error: "Forbidden. Only the payer can delete this expense." }, { status: 403 });
+    // Only the owner can delete
+    if (expense.userId !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await (prisma as any).groupExpense.delete({
+    await prisma.expense.delete({
       where: { id },
     });
 

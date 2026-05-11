@@ -27,6 +27,7 @@ export default function SplitCalculator({
   );
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [results, setResults] = useState<SplitResult[]>(initialSplits || []);
+  const [lockedMemberIds, setLockedMemberIds] = useState<string[]>([]);
 
   // Initialize counts
   useEffect(() => {
@@ -60,6 +61,7 @@ export default function SplitCalculator({
     if (selectedMemberIds.includes(userId)) {
       if (selectedMemberIds.length > 1) {
         setSelectedMemberIds(selectedMemberIds.filter(id => id !== userId));
+        setLockedMemberIds(lockedMemberIds.filter(id => id !== userId));
       }
     } else {
       setSelectedMemberIds([...selectedMemberIds, userId]);
@@ -71,11 +73,19 @@ export default function SplitCalculator({
   };
 
   const handleCustomAmountChange = (userId: string, value: number) => {
+    // When manually changing, lock this member so they aren't auto-adjusted later
+    const newLocked = lockedMemberIds.includes(userId) 
+      ? lockedMemberIds 
+      : [...lockedMemberIds, userId];
+    
+    setLockedMemberIds(newLocked);
+
     const newResults = redistributeCustomSplit(
       totalAmount,
       results.map(r => ({ userId: r.userId, amount: r.amount })),
       userId,
-      value
+      value,
+      lockedMemberIds // Pass currently locked (excluding the one being changed)
     );
     setResults(newResults);
     onSplitChange(newResults, splitType);
@@ -83,7 +93,8 @@ export default function SplitCalculator({
 
   const handleTypeChange = (newType: SplitType) => {
     setSplitType(newType);
-    if (newType === "custom" && results.length === 0) {
+    setLockedMemberIds([]); // Reset locks when changing type
+    if (newType === "custom" && (results.length === 0 || splitType !== "custom")) {
       const initial = calculateEqualSplit(totalAmount, selectedMemberIds);
       setResults(initial);
       onSplitChange(initial, "custom");
@@ -127,6 +138,7 @@ export default function SplitCalculator({
         <div className="space-y-2">
           {members.map((member) => {
             const isSelected = selectedMemberIds.includes(member.userId);
+            const isLocked = lockedMemberIds.includes(member.userId);
             const result = results.find(r => r.userId === member.userId);
             
             return (
@@ -135,7 +147,7 @@ export default function SplitCalculator({
                 layout
                 className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${
                   isSelected ? "bg-white/5 border-primary-500/30" : "bg-transparent border-white/5 opacity-60"
-                }`}
+                } ${isLocked && splitType === "custom" ? "ring-1 ring-primary-500/20" : ""}`}
               >
                 <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => toggleMember(member.userId)}>
                    <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-white/10">
@@ -146,7 +158,12 @@ export default function SplitCalculator({
                      )}
                    </div>
                    <div>
-                     <p className="text-sm font-bold">{member.user.name || "Unknown User"}</p>
+                     <p className="text-sm font-bold flex items-center gap-2">
+                        {member.user.name || "Unknown User"}
+                        {isLocked && splitType === "custom" && (
+                          <span className="text-[8px] px-1.5 py-0.5 bg-primary-500/10 text-primary-500 rounded-full uppercase font-black">Locked</span>
+                        )}
+                     </p>
                      {isSelected && result && (
                        <p className="text-xs text-primary-500 font-black">₹{result.amount.toFixed(2)}</p>
                      )}
@@ -180,7 +197,7 @@ export default function SplitCalculator({
                           type="number"
                           value={result?.amount || 0}
                           onChange={(e) => handleCustomAmountChange(member.userId, parseFloat(e.target.value) || 0)}
-                          className="w-full pl-7 pr-3 py-2 bg-surface-variant border border-white/10 rounded-xl text-xs font-black focus:outline-none focus:border-primary-500"
+                          className={`w-full pl-7 pr-3 py-2 bg-surface-variant border border-white/10 rounded-xl text-xs font-black focus:outline-none focus:border-primary-500 ${isLocked ? "text-primary-500" : ""}`}
                         />
                       </div>
                     )}

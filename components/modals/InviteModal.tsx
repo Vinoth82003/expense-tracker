@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Mail, Plus, Trash2, Send, CheckCircle2, UserPlus } from "lucide-react";
-import toast from "react-hot-toast";
+import { useUI } from "@/context/UIContext";
 
 interface InviteModalProps {
   isOpen: boolean;
@@ -16,6 +16,7 @@ export default function InviteModal({ isOpen, onClose, groupId, groupName }: Inv
   const [emails, setEmails] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const { toast } = useUI();
 
   const handleAddEmail = () => {
     setEmails([...emails, ""]);

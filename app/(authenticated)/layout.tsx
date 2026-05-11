@@ -31,8 +31,8 @@ import {
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
-import { UIProvider } from "@/context/UIContext";
 import { DashboardProvider } from "@/context/DashboardContext";
+
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { ActivityTracker } from "@/components/activity/ActivityTracker";
 import { SystemStatusChecker } from "@/components/layout/SystemStatusChecker";
@@ -408,7 +408,6 @@ export default function DashboardLayout({
   );
 
   return (
-    <UIProvider>
       <DashboardProvider>
         <SystemStatusChecker />
         <ActivityTracker />
@@ -418,6 +417,6 @@ export default function DashboardLayout({
           content
         )}
       </DashboardProvider>
-    </UIProvider>
+
   );
 }

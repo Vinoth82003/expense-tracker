@@ -66,12 +66,14 @@ export function calculateCountSplit(totalAmount: number, members: { userId: stri
 
 /**
  * Redistributes the remaining amount when one member's custom amount is changed.
+ * Members in lockedUserIds will not have their amounts changed.
  */
 export function redistributeCustomSplit(
   totalAmount: number, 
   members: { userId: string; amount: number }[], 
   changedUserId: string, 
-  newAmount: number
+  newAmount: number,
+  lockedUserIds: string[] = []
 ): SplitResult[] {
   const results = [...members];
   const changedIdx = results.findIndex(m => m.userId === changedUserId);
@@ -79,23 +81,31 @@ export function redistributeCustomSplit(
 
   results[changedIdx].amount = newAmount;
 
-  const otherMembers = results.filter((_, idx) => idx !== changedIdx);
-  if (otherMembers.length === 0) return results;
+  // Members who can be adjusted: not the one who just changed, and not locked
+  const adjustableMembers = results.filter((m) => 
+    m.userId !== changedUserId && !lockedUserIds.includes(m.userId)
+  );
 
-  const remainingToDistribute = totalAmount - newAmount;
-  
-  // If remaining is negative, it's invalid but we handle it by setting others to 0 and adjusting the current?
-  // Usually the UI prevents this, but let's be safe.
-  if (remainingToDistribute < 0) {
-    otherMembers.forEach(m => m.amount = 0);
+  if (adjustableMembers.length === 0) {
+    // If no one else can be adjusted, we might have a discrepancy
+    // But we'll let the rounding logic or validation handle it
     return results;
   }
 
-  const distributed = calculateEqualSplit(remainingToDistribute, otherMembers.map(m => m.userId));
+  // Calculate what's already spoken for (changed user + locked users)
+  const spokenForAmount = results
+    .filter(m => m.userId === changedUserId || lockedUserIds.includes(m.userId))
+    .reduce((sum, m) => sum + m.amount, 0);
+
+  const remainingToDistribute = Math.max(0, totalAmount - spokenForAmount);
+  
+  const distributed = calculateEqualSplit(remainingToDistribute, adjustableMembers.map(m => m.userId));
   
   distributed.forEach(d => {
     const idx = results.findIndex(r => r.userId === d.userId);
-    results[idx].amount = d.amount;
+    if (idx !== -1) {
+      results[idx].amount = d.amount;
+    }
   });
 
   return results;

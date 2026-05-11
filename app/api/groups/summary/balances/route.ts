@@ -27,18 +27,20 @@ export async function GET() {
       const groupId = membership.groupId;
       
       const [totalOwed, totalPaid] = await Promise.all([
+        // Total amount this user owes in splits (for unpaid/partial expenses)
         (prisma as any).expenseSplit.aggregate({
           where: {
             userId: user.id,
-            expense: { groupId, isPaid: false }
+            groupExpense: { groupId, status: { not: "PAID" } }
           },
           _sum: { amount: true }
         }),
+        // Total amount this user has paid for (for unpaid/partial expenses)
         (prisma as any).groupExpense.aggregate({
           where: {
             groupId,
             paidById: user.id,
-            isPaid: false
+            status: { not: "PAID" }
           },
           _sum: { amount: true }
         })

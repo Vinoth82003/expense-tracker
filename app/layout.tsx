@@ -23,6 +23,8 @@ import PWAInstallBanner from "@/components/layout/PWAInstallBanner";
 import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { PublicMaintenanceBanner } from "@/components/layout/PublicMaintenanceBanner";
 import { ModalProvider } from "@/components/providers/ModalProvider";
+import { UIProvider } from "@/context/UIContext";
+
 
 export const viewport = {
   width: "device-width",
@@ -148,7 +150,9 @@ export default function RootLayout({
         <Toaster position="top-center" reverseOrder={false} />
         <AuthProvider>
           <ThemeProvider>
-            <ModalProvider>{children}</ModalProvider>
+            <UIProvider>
+              <ModalProvider>{children}</ModalProvider>
+            </UIProvider>
           </ThemeProvider>
         </AuthProvider>
         <PWAInstallBanner />
