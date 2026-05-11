@@ -270,14 +270,18 @@ model FAQ {
 }
 
 model Doc {
-  id       String @id @default(auto()) @map("_id") @db.ObjectId
-  title    String
-  content  String // Markdown content
-  category String
-  slug     String @unique
-  order    Int    @default(0)
-
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  content     String   // Markdown or HTML content
+  contentType String   @default("MARKDOWN") // "MARKDOWN" or "HTML"
+  status      String   @default("DRAFT") // "DRAFT" or "PUBLISHED"
+  category    String
+  slug        String   @unique
+  order       Int      @default(0)
+  helpfulCount    Int      @default(0)
+  notHelpfulCount Int      @default(0)
+  updatedAt   DateTime? @updatedAt
+  createdAt   DateTime? @default(now())
 }
 
 model SystemLog {

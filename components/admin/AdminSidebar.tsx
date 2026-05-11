@@ -19,7 +19,8 @@ import {
   ChevronRight,
   Wallet,
   Terminal,
-  MessageSquare
+  MessageSquare,
+  BookOpen
 } from "lucide-react";
 import { X } from "lucide-react";
 import { useModal } from "@/components/providers/ModalProvider";
@@ -51,6 +52,7 @@ const MENU_ITEMS = [
     section: "System",
     items: [
       { name: "App analytics", href: "/admin/analytics", icon: BarChart2 },
+      { name: "Documentation", href: "/admin/docs", icon: BookOpen },
       { name: "Notifications", href: "/admin/notifications", icon: Bell },
       { name: "Security & 2FA", href: "/admin/security", icon: Lock },
       { name: "System logs", href: "/admin/logs", icon: Terminal },

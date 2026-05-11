@@ -57,12 +57,12 @@ const navGroups = [
       { name: "Category Map", href: "/settings/categories", icon: LayoutGrid },
     ]
   },
-  {
-    title: "Community",
-    items: [
-      { name: "Expense Groups", href: "/groups", icon: Users },
-    ]
-  },
+  // {
+  //   title: "Community",
+  //   items: [
+  //     { name: "Expense Groups", href: "/groups", icon: Users },
+  //   ]
+  // },
   {
     title: "Preferences",
     items: [
