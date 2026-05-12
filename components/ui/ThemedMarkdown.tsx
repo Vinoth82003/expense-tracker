@@ -30,7 +30,7 @@ export function ThemedMarkdown({ content, className }: Props) {
         components={{
           h1: ({ children }) => {
             const id = children?.toString().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-            return <h1 id={id} className="text-4xl md:text-5xl mb-8 leading-[1.1]">{children}</h1>;
+            return <h1 id={id} className="text-3xl sm:text-4xl md:text-5xl mb-8 leading-[1.1]">{children}</h1>;
           },
           h2: ({ children }) => {
             const id = children?.toString().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");

@@ -84,7 +84,7 @@ export default function DocsPage() {
       />
 
       <main className="min-h-screen pt-24 pb-20 transition-all flex justify-center">
-        <div className="w-full max-w-[1440px] flex">
+        <div className="w-full max-w-[1440px] flex flex-col lg:flex-row">
           {/* Spacer for fixed sidebar on desktop */}
           <div className="hidden lg:block w-80 shrink-0" />
         {/* Mobile Header Toggle */}
@@ -132,7 +132,7 @@ export default function DocsPage() {
 
               {/* Page Header */}
               <header className="space-y-6">
-                 <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tightest leading-[0.95]">
+                 <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground tracking-tightest leading-[0.95]">
                    {selectedDoc.title}
                  </h1>
                  <div className="flex flex-wrap items-center gap-6 pt-2">
