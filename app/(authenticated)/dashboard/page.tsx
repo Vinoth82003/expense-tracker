@@ -1,10 +1,9 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   Sparkles, 
-  ArrowUpRight, 
   Wallet, 
   ShoppingCart, 
   Activity,
@@ -19,7 +18,6 @@ import {
   Triangle
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import ActiveGroupBalances from "@/components/groups/ActiveGroupBalances";
 import Link from "next/link";
 import { useDashboard } from "@/context/DashboardContext";
 import { 
@@ -34,21 +32,6 @@ import {
   PolarAngleAxis, 
   PolarRadiusAxis
 } from "recharts";
-
-interface Expense {
-  id: string;
-  amount: number;
-  category: string;
-  subcategory: string;
-  date: string;
-}
-
-interface Income {
-  id: string;
-  amount: number;
-  source: string;
-  date: string;
-}
 
 const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#06b6d4", "#f59e0b", "#10b981"];
 
@@ -68,6 +51,7 @@ export default function DashboardPage() {
   const firstName = session?.user?.name?.split(" ")[0] || "there";
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
   const stats = useMemo(() => {
@@ -282,7 +266,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-col items-center md:items-end gap-1 relative z-10">
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted">Today's Spend</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-muted">Today&apos;s Spend</div>
             <div className={`text-3xl font-black ${
               stats.todayUsagePercent <= 25 ? "text-success" :
               stats.todayUsagePercent <= 50 ? "text-warning" :
@@ -317,7 +301,7 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
       >
         {/* Recent Activity */}
         <div className="lg:col-span-1 bg-surface rounded-[2.5rem] border border-border-subtle overflow-hidden flex flex-col shadow-sm">
@@ -424,11 +408,6 @@ export default function DashboardPage() {
               </>
             )}
           </div>
-        </div>
-
-        {/* Shared Balances Integration */}
-        <div className="lg:col-span-1">
-          <ActiveGroupBalances />
         </div>
       </motion.div>
 
