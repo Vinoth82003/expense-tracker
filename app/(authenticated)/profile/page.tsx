@@ -26,6 +26,7 @@ import { useModal } from "@/components/providers/ModalProvider";
 import { OTPActionModal } from "@/components/modals/OTPActionModal";
 import FeedbackModal from "@/components/modals/FeedbackModal";
 import { toast } from "react-hot-toast";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const { data: session, update: updateSession } = useSession();
@@ -96,7 +97,7 @@ export default function ProfilePage() {
     const nextState = !twoFAEnabled;
     const isConfirmed = await confirm({
       title: nextState ? "Enable 2FA?" : "Disable 2FA?",
-      message: nextState 
+      message: nextState
         ? "Future logins will require a 6-digit email code. A confirmation email will be sent to you."
         : "This will remove the extra layer of protection from your account. A confirmation email will be sent to you.",
       danger: !nextState
@@ -396,21 +397,26 @@ export default function ProfilePage() {
             <h3 className="text-xl font-black mb-6">Resources</h3>
             <div className="space-y-2">
               {[
-                { label: "Terms of Service", icon: ShieldCheck },
-                { label: "Privacy Policy", icon: Shield },
-                { label: "Help Center", icon: ExternalLink },
+                { label: "Terms of Service", icon: ShieldCheck, href: "/terms" },
+                { label: "Privacy Policy", icon: Shield, href: "/privacy" },
+                { label: "Help Center", icon: ExternalLink, href: "/contact" },
               ].map((link) => (
-                <button
+                <Link
                   key={link.label}
+                  href={link.href}
                   className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-surface-variant/50 transition-colors group"
                 >
                   <div className="flex items-center gap-3">
                     <link.icon size={18} className="text-secondary" />
                     <span className="font-bold">{link.label}</span>
                   </div>
-                  <ChevronRight size={16} className="text-muted group-hover:translate-x-1 transition-transform" />
-                </button>
+                  <ChevronRight
+                    size={16}
+                    className="text-muted group-hover:translate-x-1 transition-transform"
+                  />
+                </Link>
               ))}
+
               <button
                 onClick={() => setIsFeedbackModalOpen(true)}
                 className="w-full flex items-center justify-between p-4 rounded-2xl bg-primary-500/5 hover:bg-primary-500/10 border border-primary-500/20 transition-colors group"
@@ -419,7 +425,10 @@ export default function ProfilePage() {
                   <Star size={18} className="text-primary-500 fill-primary-500" />
                   <span className="font-bold text-primary-500">Share Feedback</span>
                 </div>
-                <ChevronRight size={16} className="text-primary-500 group-hover:translate-x-1 transition-transform" />
+                <ChevronRight
+                  size={16}
+                  className="text-primary-500 group-hover:translate-x-1 transition-transform"
+                />
               </button>
             </div>
           </motion.div>
@@ -460,7 +469,7 @@ export default function ProfilePage() {
         description="This action is PERMANENT and cannot be undone. All your data will be erased forever. Please verify your identity to proceed."
         actionButtonText="Delete My Account Permanently"
       />
-      <FeedbackModal 
+      <FeedbackModal
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
       />
