@@ -3,13 +3,14 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronRight, X, Menu, BookOpen, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 import { Doc } from "@/types/docs";
 
 interface DocsSidebarProps {
   docs: Doc[];
   selectedDocId: string | null;
-  onSelect: (doc: Doc) => void;
+  onSelect?: (doc: Doc) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   isOpen: boolean;
@@ -63,10 +64,11 @@ export function DocsSidebar({
                 {categoryDocs.map((doc) => {
                   const isActive = selectedDocId === doc.id;
                   return (
-                    <button
+                    <Link
                       key={doc.id}
+                      href={`/docs/${doc.slug}`}
                       onClick={() => {
-                        onSelect(doc);
+                        if (onSelect) onSelect(doc);
                         onClose();
                       }}
                       className={cn(
@@ -84,7 +86,7 @@ export function DocsSidebar({
                           isActive ? "translate-x-0 opacity-100" : "-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100"
                         )} 
                       />
-                    </button>
+                    </Link>
                   );
                 })}
               </div>
@@ -103,7 +105,7 @@ export function DocsSidebar({
       </nav>
 
       {/* Footer hint */}
-      <div className="p-6 border-t border-border-subtle bg-surface-variant/30">
+      {/* <div className="p-6 border-t border-border-subtle bg-surface-variant/30">
         <div className="flex items-center gap-3 p-4 rounded-2xl bg-surface border border-border-subtle shadow-sm">
            <div className="w-8 h-8 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-600">
              <BookOpen size={16} />
@@ -113,7 +115,7 @@ export function DocsSidebar({
              <span className="text-[9px] font-bold text-muted uppercase tracking-tighter">v2.4.0 Stable</span>
            </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 
