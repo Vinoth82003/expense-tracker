@@ -113,6 +113,8 @@ export default function RootLayout({
         {/* DNS prefetch for external resources */}
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
         <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+        <link rel="dns-prefetch" href="//www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="//www.google-analytics.com" />
 
         {/* Preconnect to Google Fonts */}
         <link
@@ -143,6 +145,29 @@ export default function RootLayout({
             `,
           }}
         />
+
+        {/* Google Analytics 4 — must be in <head> for earliest possible load */}
+        {process.env.NODE_ENV === "production" && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}', {
+                    page_path: window.location.pathname,
+                    send_page_view: true
+                  });
+                `,
+              }}
+            />
+          </>
+        )}
       </head>
       <body
         className="min-h-full flex flex-col antialiased"
