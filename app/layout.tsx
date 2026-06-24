@@ -95,6 +95,9 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
     >
       <head>
+        {/* LLM / AI Agent Discovery File */}
+        <link rel="llms-txt" type="text/plain" href="/llms.txt" title="SpendWise LLM Context" />
+
         {/* DNS prefetch for external resources */}
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
         <link rel="dns-prefetch" href="//fonts.gstatic.com" />
