@@ -19,6 +19,20 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// ------------------------------------------------------------
+// Fallback FAQ data used when the API fails or returns no records
+// ------------------------------------------------------------
+const FALLBACK_FAQS: FAQItem[] = [
+  { id: "1", question: "How do I create an account?", answer: "Click 'Sign Up' on the homepage and use Google Auth to create your account instantly.", category: "General", order: 1 },
+  { id: "2", question: "Is my financial data secure?", answer: "All data is encrypted at rest and in transit using industry‑standard TLS.", category: "Security & Privacy", order: 2 },
+  { id: "3", question: "Can I export my expense data?", answer: "Yes, go to Settings → Export and download a CSV of your records.", category: "Features & Support", order: 3 },
+  { id: "4", question: "How does the AI analysis work?", answer: "Our AI scans your spending patterns and suggests optimizations without storing any personal data.", category: "Features & Support", order: 4 },
+  { id: "5", question: "What if I forget my password?", answer: "We use Google OAuth, so you never set a password for SpendWise.", category: "General", order: 5 },
+  { id: "6", question: "Do you share my data with third parties?", answer: "No. Your data never leaves your account unless you explicitly export it.", category: "Security & Privacy", order: 6 },
+  { id: "7", question: "How can I contact support?", answer: "Use the 'Message Support' button at the bottom of the FAQ page or email support@spendwise.in.", category: "General", order: 7 },
+  { id: "8", question: "Is there a free tier?", answer: "Yes, SpendWise offers a free plan with core features; premium features are available in paid plans.", category: "Features & Support", order: 8 },
+];
+
 interface FAQItem {
   id: string;
   question: string;
@@ -86,8 +100,14 @@ export default function FAQPage() {
         const res = await fetch("/api/faq");
         const data = await res.json();
         setFaqs(data);
+        // If API returned an empty array, fall back to static FAQs
+        if (Array.isArray(data) && data.length === 0) {
+          setFaqs(FALLBACK_FAQS);
+        }
       } catch (error) {
         console.error("Failed to fetch FAQs", error);
+        // Use fallback FAQs so the page never stays empty
+        setFaqs(FALLBACK_FAQS);
       } finally {
         setLoading(false);
       }
@@ -197,7 +217,7 @@ export default function FAQPage() {
                  <div className="w-16 h-16 bg-surface rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg border border-border-subtle">
                     <Loader2 className="animate-spin text-primary-500" size={32} />
                  </div>
-                 <p className="font-black text-[11px] text-muted uppercase tracking-[0.2em]">Synchronizing Records...</p>
+                 <p className="font-black text-[11px] text-muted uppercase tracking-[0.2em]">Loading FAQs...</p>
               </motion.div>
             ) : filteredFaqs.length === 0 ? (
               <motion.div 

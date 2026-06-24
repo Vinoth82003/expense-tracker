@@ -28,6 +28,11 @@ const steps = [
     icon: MousePointerClick,
     color: "from-blue-500 to-indigo-600",
     mockup: "auth",
+    bullets: [
+      "Secure Google OAuth login",
+      "Zero password management",
+      "Instant account creation"
+    ]
   },
   {
     number: "02",
@@ -36,6 +41,11 @@ const steps = [
     icon: Plus,
     color: "from-emerald-500 to-teal-600",
     mockup: "log",
+    bullets: [
+      "Quick expense entry",
+      "Real-time categorization",
+      "₹ currency support"
+    ]
   },
   {
     number: "03",
@@ -44,6 +54,11 @@ const steps = [
     icon: Brain,
     color: "from-violet-500 to-purple-600",
     mockup: "ai",
+    bullets: [
+      "Pattern detection",
+      "Spending optimization",
+      "Personalized recommendations"
+    ]
   },
   {
     number: "04",
@@ -52,6 +67,11 @@ const steps = [
     icon: PieChart,
     color: "from-amber-500 to-orange-600",
     mockup: "stats",
+    bullets: [
+      "Comprehensive analytics",
+      "Exportable reports",
+      "Goal tracking"
+    ]
   },
 ];
 
@@ -171,8 +191,19 @@ function AIMockup() {
           </div>
         </div>
         <div className="flex justify-between items-center pt-4 border-t border-border-subtle">
-          <span className="text-[10px] font-black text-muted uppercase tracking-widest">AI Confidence</span>
-          <span className="text-sm font-black text-indigo-600">98.4%</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black text-muted uppercase tracking-widest">
+              Pattern Accuracy
+            </span>
+            <motion.span
+              className="text-sm font-black text-indigo-600"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 2, ease: "easeOut" }}
+            >
+              98.4%
+            </motion.span>
+          </div>
         </div>
       </div>
     </div>
@@ -287,10 +318,10 @@ export default function HowItWorks() {
                 </div>
 
                 <ul className="space-y-4">
-                  {['Enterprise-grade security', 'Instant synchronization', 'Data-driven insights'].map((item, idx) => (
+                  {step.bullets.map((bullet, idx) => (
                     <li key={idx} className="flex items-center gap-3 text-sm font-bold text-secondary">
                       <CheckCircle2 size={18} className="text-success" />
-                      {item}
+                      {bullet}
                     </li>
                   ))}
                 </ul>

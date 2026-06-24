@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { Shield, Lock, Eye, FileText, ChevronRight } from "lucide-react";
+import { Shield, Lock, Eye, FileText, ChevronRight, Server, RefreshCw, Mail } from "lucide-react";
 
 const sections = [
   {
@@ -20,6 +20,21 @@ const sections = [
     icon: Lock,
     title: "Data Sharing",
     content: "SpendWise does not sell, trade, or otherwise transfer your personal information to outside parties. Your data is your private property and is used solely for the purpose of providing you with financial insights."
+  },
+  {
+    icon: Server,
+    title: "Secure Storage",
+    content: "All data is hosted on secure, compliant cloud infrastructure with automated backups. We employ rigorous access controls to ensure your information remains accessible only to you."
+  },
+  {
+    icon: RefreshCw,
+    title: "Policy Updates",
+    content: "As we evolve our services, we may update this policy. We will notify you of any significant changes via email or an in-app announcement to ensure you remain fully informed."
+  },
+  {
+    icon: Mail,
+    title: "Contact Us",
+    content: "If you have any questions or concerns regarding your privacy or how we handle your data, our dedicated support team is always ready to assist you via our official contact channels."
   },
   {
     icon: FileText,
