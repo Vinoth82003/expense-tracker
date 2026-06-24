@@ -20,7 +20,8 @@ import {
   Settings,
   Bell,
   Lock,
-  Compass
+  Compass,
+  Download
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -56,6 +57,7 @@ export default async function SitemapPage() {
     { label: "Features", href: "/features", desc: "Deep dive into budget limits, categories, and tracking.", icon: Compass },
     { label: "How It Works", href: "/how-it-works", desc: "Tutorial on onboarding, PWA setup, and syncing.", icon: Info },
     { label: "FAQs", href: "/faq", desc: "Answers to pricing, security, data export, and PWA questions.", icon: HelpCircle },
+    { label: "Download App", href: "/download", desc: "Install the SpendWise PWA on your Android, iOS, or desktop device.", icon: Download },
     { label: "Contact Us", href: "/contact", desc: "Get in touch with support or submit user feedback.", icon: Mail },
     { label: "System Status", href: "/status", desc: "Real-time health indicator of database, API, and app servers.", icon: Activity },
   ];

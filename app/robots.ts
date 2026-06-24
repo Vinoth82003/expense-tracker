@@ -18,6 +18,8 @@ export default function robots(): MetadataRoute.Robots {
           "/privacy",
           "/terms",
           "/status",
+          "/download",
+          "/sitemap",
           "/llms.txt"
         ],
         disallow: [
@@ -60,6 +62,8 @@ export default function robots(): MetadataRoute.Robots {
           "/privacy",
           "/terms",
           "/status",
+          "/download",
+          "/sitemap",
           "/llms.txt"
         ],
         disallow: [
