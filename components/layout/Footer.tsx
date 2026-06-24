@@ -40,6 +40,7 @@ const footerLinks: Record<string, FooterLink[]> = {
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms of Service", href: "/terms" },
     { label: "Contact Us", href: "/contact" },
+    { label: "Sitemap", href: "/sitemap" },
   ],
 };
 
