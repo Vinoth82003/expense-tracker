@@ -27,7 +27,7 @@ const footerLinks: Record<string, FooterLink[]> = {
     { label: "Home", href: "/" },
     { label: "Features", href: "/features" },
     { label: "How It Works", href: "/how-it-works" },
-    { label: "Download App", href: "#", isAction: true },
+    { label: "Download App", href: "/download" },
     { label: "AI Analysis", href: "/login" },
   ],
   Resources: [

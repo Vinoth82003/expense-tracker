@@ -362,14 +362,14 @@ export default function HowItWorks() {
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button
-                  onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base transition-all hover:-translate-y-1 active:scale-95 shadow-xl text-white"
+                <Link
+                  href="/download"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base transition-all hover:-translate-y-1 active:scale-95 shadow-xl text-white flex-shrink-0"
                   style={{ background: "#6366f1" }}
                 >
                   <Download size={18} />
                   Download App
-                </button>
+                </Link>
                 <Link
                   href="/contact"
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-primary-500/40 transition-all"

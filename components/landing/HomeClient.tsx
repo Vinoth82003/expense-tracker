@@ -603,14 +603,14 @@ export function HomeClient() {
                   Start Free Today
                   <ArrowRight size={18} />
                 </Link>
-                <button
-                  onClick={() => window.dispatchEvent(new Event("showPwaInstall"))}
+                <Link
+                  href="/download"
                   id="cta-install-app"
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-primary-500/40 transition-all"
                 >
                   <Download size={18} />
                   Install App
-                </button>
+                </Link>
               </div>
 
               <div className="mt-8 flex items-center justify-center gap-2 text-muted text-[11px] font-black uppercase tracking-widest">

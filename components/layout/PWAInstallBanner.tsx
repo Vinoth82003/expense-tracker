@@ -47,13 +47,16 @@ const PWAInstallBanner = () => {
       }
     };
 
-    // 4. Listen for beforeinstallprompt
+    // 4. Listen for beforeinstallprompt or retrieve from global window
+    if ((window as any).deferredPrompt) {
+      setDeferredPrompt((window as any).deferredPrompt);
+      triggerAutoShow();
+    }
+
     const handler = (e: any) => {
-      // Prevent the browser's automatic prompt
       e.preventDefault();
-      // Stash the event so it can be triggered later
       setDeferredPrompt(e);
-      // Only show automatically if on home page and not shown this session
+      (window as any).deferredPrompt = e;
       triggerAutoShow();
     };
 

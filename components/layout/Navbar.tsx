@@ -125,15 +125,18 @@ export function Navbar() {
         {/* Desktop Right Side */}
         <div className="hidden md:flex items-center gap-4">
           <ThemeToggle />
-          <motion.button
+          <motion.div
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-surface-variant border border-border-subtle text-foreground font-bold text-sm hover:bg-border-subtle transition-all"
           >
-            <Download size={16} />
-            Download App
-          </motion.button>
+            <Link
+              href="/download"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-surface-variant border border-border-subtle text-foreground font-bold text-sm hover:bg-border-subtle transition-all"
+            >
+              <Download size={16} />
+              Download App
+            </Link>
+          </motion.div>
           <motion.div
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -199,16 +202,14 @@ export function Navbar() {
                 transition={{ delay: 0.3 }}
                 className="mt-4 pt-4 border-t border-border-subtle flex flex-col gap-3"
               >
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    window.dispatchEvent(new Event('showPwaInstall'));
-                  }}
+                <Link
+                  href="/download"
+                  onClick={() => setIsMenuOpen(false)}
                   className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-surface-variant border border-border-subtle text-foreground font-bold text-lg"
                 >
                   <Download size={20} />
                   Download App
-                </button>
+                </Link>
                 <Link
                   href="/login"
                   onClick={() => setIsMenuOpen(false)}

@@ -98,6 +98,18 @@ export default function RootLayout({
         {/* LLM / AI Agent Discovery File */}
         <link rel="llms-txt" type="text/plain" href="/llms.txt" title="SpendWise LLM Context" />
 
+        {/* Capture PWA installation prompt globally */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                window.deferredPrompt = e;
+              });
+            `,
+          }}
+        />
+
         {/* DNS prefetch for external resources */}
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
         <link rel="dns-prefetch" href="//fonts.gstatic.com" />

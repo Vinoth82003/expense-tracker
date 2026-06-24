@@ -295,13 +295,13 @@ export default function FAQPage() {
                 Join thousands of users who are already mastering their finances with SpendWise.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button
-                  onClick={() => window.dispatchEvent(new Event('showPwaInstall'))}
+                <Link
+                  href="/download"
                   className="w-full sm:w-auto px-10 py-4 rounded-xl bg-white text-primary-600 font-black text-base shadow-xl hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-2"
                 >
                   <Download size={20} />
                   Download App
-                </button>
+                </Link>
                 <Link
                   href="/onboarding"
                   className="w-full sm:w-auto px-10 py-4 rounded-xl bg-primary-700/30 text-white border border-white/20 font-black text-base hover:bg-white/10 transition-all flex items-center justify-center gap-2"
