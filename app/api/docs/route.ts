@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
+import { verifyAdminSession } from "@/lib/admin-auth";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const isAdmin = cookieStore.get("admin_session")?.value;
+    const isAdmin = await verifyAdminSession();
 
     let whereClause: any = {};
-    if (isAdmin !== "true") { // Explicitly check if it's not "true"
+    if (!isAdmin) {
       whereClause.status = "PUBLISHED";
     }
 
@@ -24,8 +23,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const isAdmin = cookieStore.get("admin_session")?.value;
+    const isAdmin = await verifyAdminSession();
 
     if (!isAdmin) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

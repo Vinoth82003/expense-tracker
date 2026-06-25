@@ -1,10 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
 import { DocsLayoutClient } from "@/app/docs/DocsLayoutClient";
+import { verifyAdminSession } from "@/lib/admin-auth";
 
 export default async function DocsLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies();
-  const isAdmin = cookieStore.get("admin_session")?.value === "true";
+  const isAdmin = await verifyAdminSession();
 
   let whereClause: any = {};
   if (!isAdmin) {

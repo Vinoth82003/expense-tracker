@@ -1,16 +1,15 @@
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DocsPageClient } from "@/app/docs/[[...slug]]/DocsPageClient";
 import { Metadata } from "next";
+import { verifyAdminSession } from "@/lib/admin-auth";
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
 }
 
 async function getDocData(slugParam?: string[]) {
-  const cookieStore = await cookies();
-  const isAdmin = cookieStore.get("admin_session")?.value === "true";
+  const isAdmin = await verifyAdminSession();
 
   let whereClause: any = {};
   if (!isAdmin) {

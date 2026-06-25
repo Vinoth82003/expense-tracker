@@ -71,6 +71,14 @@ export async function middleware(request: NextRequest) {
     "/api/expenses",
     "/api/income",
     "/api/analyze",
+    "/api/budget",
+    "/api/categories",
+    "/api/groups",
+    "/api/invitations",
+    "/api/onboarding",
+    "/api/profile",
+    "/api/reviews",
+    "/api/user",
   ];
   if (protectedApiPaths.some((p) => pathname.startsWith(p))) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
@@ -123,5 +131,13 @@ export const config = {
     "/api/expenses/:path*",
     "/api/income/:path*",
     "/api/admin/:path*",
+    "/api/budget/:path*",
+    "/api/categories/:path*",
+    "/api/groups/:path*",
+    "/api/invitations/:path*",
+    "/api/onboarding/:path*",
+    "/api/profile/:path*",
+    "/api/reviews/:path*",
+    "/api/user/:path*",
   ],
 };

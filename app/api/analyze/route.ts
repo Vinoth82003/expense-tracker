@@ -323,8 +323,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const isDev = process.env.NODE_ENV === "development";
     return NextResponse.json(
-      { error: error.message || "Something went wrong during financial analysis" },
+      { error: isDev ? (error.message || "Something went wrong during financial analysis") : "Something went wrong during financial analysis" },
       { status: 500 }
     );
   }
