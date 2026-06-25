@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import { rateLimiter } from "@/lib/rateLimit";
+
+const limiter = rateLimiter(5, 15 * 60 * 1000);
 
 export async function POST(req: Request) {
   try {
+    const limitResponse = limiter(req);
+    if (limitResponse) return limitResponse;
+
     const { name, email, subject, message } = await req.json();
 
     if (!name || !email || !message) {

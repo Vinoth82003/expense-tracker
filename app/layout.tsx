@@ -75,9 +75,7 @@ export const metadata: Metadata = {
   icons: {
     apple: "/web-app-manifest-192x192.png",
   },
-  other: {
-    "google-site-verification": "your-verification-code", // Add if you have Google Search Console
-  },
+
 };
 
 import { Toaster } from "react-hot-toast";

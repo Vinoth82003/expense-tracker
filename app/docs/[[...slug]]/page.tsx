@@ -38,6 +38,23 @@ async function getDocData(slugParam?: string[]) {
   };
 }
 
+function stripMarkdown(md: string): string {
+  if (!md) return "";
+  let text = md;
+  text = text.replace(/```[\s\S]*?```/g, "");
+  text = text.replace(/`([^`]+)`/g, "$1");
+  text = text.replace(/!\[([^\]]*)\]\([^)]+\)/g, "");
+  text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+  text = text.replace(/<[^>]*>/g, "");
+  text = text.replace(/^\s*#+\s+/gm, "");
+  text = text.replace(/^\s*[-*+]\s+/gm, "");
+  text = text.replace(/^\s*\d+\.\s+/gm, "");
+  text = text.replace(/^\s*>\s+/gm, "");
+  text = text.replace(/[*_~]+/g, "");
+  text = text.replace(/\s+/g, " ");
+  return text.trim();
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const { selectedDoc } = await getDocData(slug);
@@ -49,11 +66,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const plainText = selectedDoc.content
-    .substring(0, 160)
-    .replace(/[#*`_\-]/g, "")
-    .replace(/<[^>]*>/g, "")
-    .trim();
+  const cleanDescription = stripMarkdown(selectedDoc.content);
+  const plainText = cleanDescription.length > 160 
+    ? cleanDescription.substring(0, 157) + "..."
+    : cleanDescription;
 
   return {
     title: `${selectedDoc.title} | SpendWise Docs`,

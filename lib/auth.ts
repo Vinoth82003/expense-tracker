@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendWelcomeEmail } from "@/lib/mail";
 
+const failedLogins = new Map<string, { count: number; first: number }>();
+
 export const authOptions: AuthOptions = {
   providers: [
     GoogleProvider({
@@ -20,6 +22,21 @@ export const authOptions: AuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Missing email or password");
+        }
+
+        const email = credentials.email.toLowerCase();
+        const now = Date.now();
+        const windowMs = 15 * 60 * 1000;
+        const maxFailures = 10;
+
+        const record = failedLogins.get(email) ?? { count: 0, first: now };
+        if (now - record.first > windowMs) {
+          record.count = 0;
+          record.first = now;
+        }
+
+        if (record.count >= maxFailures) {
+          throw new Error("Too many failed login attempts. Please try again in 15 minutes.");
         }
 
         const user = await prisma.user.findUnique({
@@ -44,20 +61,26 @@ export const authOptions: AuthOptions = {
             console.error("Welcome email failed:", e);
           }
 
+          failedLogins.delete(email);
           return newUser;
         }
 
         // If user exists but was Google-only, we might want to block this or link it
         // For now, let's check if they have a password
         if (!(user as any).password) {
+          record.count++;
+          failedLogins.set(email, record);
           throw new Error("This account uses Google sign-in. Please use Google to continue.");
         }
 
         const isValid = await bcrypt.compare(credentials.password, (user as any).password);
         if (!isValid) {
+          record.count++;
+          failedLogins.set(email, record);
           throw new Error("Invalid password");
         }
 
+        failedLogins.delete(email);
         return user;
       }
     }),

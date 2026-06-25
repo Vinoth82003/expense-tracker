@@ -34,7 +34,7 @@ const footerLinks: Record<string, FooterLink[]> = {
     { label: "Documentation", href: "/docs" },
     { label: "FAQ", href: "/faq" },
     { label: "Share Feedback", href: "/feedback" },
-    { label: "Open Source", href: "https://github.com/Vinoth82003" },
+
   ],
   Legal: [
     { label: "Privacy Policy", href: "/privacy" },
