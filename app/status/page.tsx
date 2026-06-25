@@ -32,21 +32,23 @@ async function checkDatabase(): Promise<ServiceCheck> {
   const start = Date.now();
   try {
     const { prisma } = await import("@/lib/prisma");
-    await (prisma as any).$queryRaw`SELECT 1`;
+    // Use findFirst instead of $queryRaw — compatible with MongoDB and SQL
+    await prisma.user.findFirst({ select: { id: true }, take: 1 });
     return {
       name: "Database",
-      description: "PostgreSQL via Prisma ORM",
+      description: "MongoDB via Prisma ORM",
       status: "operational",
       latencyMs: Date.now() - start,
     };
   } catch {
     return {
       name: "Database",
-      description: "PostgreSQL via Prisma ORM",
+      description: "MongoDB via Prisma ORM",
       status: "down",
     };
   }
 }
+
 
 async function checkApi(): Promise<ServiceCheck> {
   return {

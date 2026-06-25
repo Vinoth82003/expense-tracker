@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
+import { verifyAdminSession } from "@/lib/admin-auth";
 import { subDays } from "date-fns";
 import { logger } from "@/lib/logger";
 import { sendFeedbackRequestEmail } from "@/lib/mail";
 
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("admin_session");
-  return session?.value === "true";
-}
 
 export async function POST(req: NextRequest) {
   try {
-    if (!(await isAdmin())) {
+    if (!(await verifyAdminSession())) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

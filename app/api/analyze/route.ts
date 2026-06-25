@@ -113,11 +113,19 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Prepare data (Sanitized - NO CONFIDENTIAL DATA LIKE NAMES/EMAILS)
+    const sanitizeNote = (note: string) => {
+      if (!note) return "";
+      return note
+        .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[EMAIL]")
+        .replace(/\b\d{10,14}\b/g, "[PHONE]")
+        .replace(/\b(?:\d[ -]*?){13,16}\b/g, "[CARD]");
+    };
+
     const sanitizedIncomes = incomes.map(inc => ({
       amount: inc.amount,
       source: inc.source,
       date: inc.date.toISOString().split("T")[0],
-      note: inc.note || "" // Notes are allowed
+      note: sanitizeNote(inc.note || "")
     }));
 
     const sanitizedExpenses = expenses.map(exp => ({
@@ -125,7 +133,7 @@ export async function POST(req: NextRequest) {
       category: exp.category,
       subcategory: exp.subcategory,
       date: exp.date.toISOString().split("T")[0],
-      note: exp.note || "" // Notes are allowed
+      note: sanitizeNote(exp.note || "")
     }));
 
     // 3. Initialize Gemini SDK

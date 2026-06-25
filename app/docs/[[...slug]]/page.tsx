@@ -46,7 +46,8 @@ function stripMarkdown(md: string): string {
   text = text.replace(/!\[([^\]]*)\]\([^)]+\)/g, "");
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
   text = text.replace(/<[^>]*>/g, "");
-  text = text.replace(/^\s*#+\s+/gm, "");
+  // Remove entire heading lines (not just the # prefix) to prevent heading text in meta descriptions
+  text = text.replace(/^\s*#+.*$/gm, "");
   text = text.replace(/^\s*[-*+]\s+/gm, "");
   text = text.replace(/^\s*\d+\.\s+/gm, "");
   text = text.replace(/^\s*>\s+/gm, "");
@@ -54,6 +55,7 @@ function stripMarkdown(md: string): string {
   text = text.replace(/\s+/g, " ");
   return text.trim();
 }
+
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;

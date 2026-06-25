@@ -1,17 +1,11 @@
+import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
 import { sendAutomatedEmail } from "@/lib/mail";
 import { logger } from "@/lib/logger";
 
-async function isAdmin() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("admin_session");
-  return session?.value === "true";
-}
-
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) {
+  if (!(await verifyAdminSession())) {
     logger.warn("Unauthorized attempt to access lockout API", { ip: req.headers.get("x-forwarded-for") });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

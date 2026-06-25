@@ -15,15 +15,21 @@ export const metadata: Metadata = {
 async function getFAQs(): Promise<FAQItem[]> {
   try {
     const { prisma } = await import("@/lib/prisma");
-    const rows = await (prisma as any).fAQ?.findMany({
-      orderBy: { order: "asc" },
-    });
+
+    // Race the DB query against a 3-second timeout to prevent page hanging
+    const timeout = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 3000)
+    );
+    const dbQuery = (prisma as any).fAQ?.findMany({ orderBy: { order: "asc" } });
+
+    const rows = await Promise.race([dbQuery, timeout]);
     if (Array.isArray(rows) && rows.length > 0) return rows as FAQItem[];
   } catch {
     // Prisma model may not exist in all environments — fall through
   }
   return FALLBACK_FAQS;
 }
+
 
 export default async function FAQPage() {
   const faqs = await getFAQs();

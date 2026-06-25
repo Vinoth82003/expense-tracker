@@ -100,14 +100,14 @@ export const authOptions: AuthOptions = {
       }
 
       try {
-        console.log(`Authenticating user: ${user.email}`);
+        // Auth event logged without PII for security compliance
         
         const existingUser = await prisma.user.findUnique({
           where: { email: user.email },
         });
 
         if (!existingUser) {
-          console.log(`New user detected. Creating account for: ${user.email}`);
+        console.log(`[Auth] New user account creation initiated.`);
           
           // Create user and seed default categories
           const newUser = await prisma.user.create({

@@ -1,12 +1,9 @@
+import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("admin_session");
-
-  if (!session || session.value !== "true") {
+  if (!(await verifyAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -75,10 +72,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("admin_session");
-
-  if (!session || session.value !== "true") {
+  if (!(await verifyAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -114,10 +108,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("admin_session");
-
-  if (!session || session.value !== "true") {
+  if (!(await verifyAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,19 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { WifiOff, RefreshCw } from "lucide-react";
+import { WifiOff, RefreshCw, X } from "lucide-react";
 
 export function OfflineIndicator() {
   const [isOffline, setIsOffline] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Check initial state
     if (typeof navigator !== "undefined") {
       setIsOffline(!navigator.onLine);
     }
 
-    const handleOffline = () => setIsOffline(true);
-    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => {
+      setIsOffline(true);
+      setDismissed(false); // Re-show banner when going offline again
+    };
+    const handleOnline = () => {
+      setIsOffline(false);
+      setDismissed(false);
+    };
 
     window.addEventListener("offline", handleOffline);
     window.addEventListener("online", handleOnline);
@@ -24,26 +30,36 @@ export function OfflineIndicator() {
     };
   }, []);
 
-  if (!isOffline) return null;
+  if (!isOffline || dismissed) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-4">
-      <div className="bg-surface border border-border-subtle rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl flex flex-col items-center">
-        <div className="w-20 h-20 bg-error/10 text-error rounded-full flex items-center justify-center mb-6">
-          <WifiOff size={40} strokeWidth={2} />
-        </div>
-        <h2 className="text-2xl font-black mb-2 tracking-tight">You are offline</h2>
-        <p className="text-secondary mb-8 leading-relaxed">
-          It looks like you've lost your internet connection. Please check your network and try again.
-        </p>
+    <div
+      role="alert"
+      aria-live="polite"
+      className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-between gap-3 px-4 py-3 bg-amber-500 text-white shadow-lg"
+    >
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <WifiOff size={16} />
+        <span>You&apos;re offline — some features may be limited. Cached data is available.</span>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
         <button
           onClick={() => window.location.reload()}
-          className="w-full py-4 rounded-xl bg-primary-600 text-white font-bold shadow-lg shadow-primary-600/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+          className="flex items-center gap-1.5 text-xs font-bold bg-white/20 hover:bg-white/30 rounded-lg px-3 py-1.5 transition-colors"
+          aria-label="Retry connection"
         >
-          <RefreshCw size={20} />
-          Reload Page
+          <RefreshCw size={13} />
+          Retry
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          className="p-1 rounded-lg hover:bg-white/20 transition-colors"
+          aria-label="Dismiss offline notice"
+        >
+          <X size={16} />
         </button>
       </div>
     </div>
   );
 }
+

@@ -1,16 +1,13 @@
+import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
+  if (!(await verifyAdminSession())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const cookieStore = await cookies();
-    const adminSession = cookieStore.get("admin_session");
-
-    if (!adminSession || adminSession.value !== "true") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const reviews = await prisma.review.findMany({
       include: {
         user: {
@@ -30,4 +27,3 @@ export async function GET() {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
-

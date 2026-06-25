@@ -1,17 +1,12 @@
+import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies, headers } from "next/headers";
 import { sendEmail } from "@/lib/mail";
 import { logger } from "@/lib/logger";
 
-async function isAdmin() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("admin_session");
-  return session?.value === "true";
-}
-
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) {
+  if (!(await verifyAdminSession())) {
     logger.warn("Unauthorized 2FA override attempt", { ip: req.headers.get("x-forwarded-for") });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

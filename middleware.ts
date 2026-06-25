@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { verifyAdminToken } from "@/lib/admin-auth";
 
 // Simple in‑memory rate limiter – suitable for low‑traffic endpoints.
 const rateLimits = new Map<string, { count: number; first: number }>();
@@ -34,6 +35,15 @@ export async function middleware(request: NextRequest) {
       return new NextResponse("Too many login attempts – please try again later.", { status: 429 });
     }
   }
+  // Rate‑limit the paid AI endpoint to prevent billing abuse
+  if (pathname.startsWith("/api/analyze")) {
+    if (!checkRateLimit(ip, "analyze", 5, 60 * 60 * 1000)) {
+      return new NextResponse(
+        JSON.stringify({ error: "Too many AI analysis requests. Please wait before trying again." }),
+        { status: 429, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
 
   // ---- Protected routes (server‑side) ----
   const protectedPaths = [
@@ -56,12 +66,36 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ---- Admin guard (existing) ----
+  // ---- Protect authenticated API routes ----
+  const protectedApiPaths = [
+    "/api/expenses",
+    "/api/income",
+    "/api/analyze",
+  ];
+  if (protectedApiPaths.some((p) => pathname.startsWith(p))) {
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
+  // ---- Admin guard — signed HMAC token verification ----
   if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
-    const adminSession = request.cookies.get("admin_session");
-    if (!adminSession?.value) {
+    const adminCookie = request.cookies.get("admin_session");
+    const isValidAdmin = adminCookie?.value ? await verifyAdminToken(adminCookie.value) : false;
+    if (!isValidAdmin) {
       console.warn(`[SECURITY] Unauthorized admin access attempt to ${pathname} from IP: ${ip}`);
       return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+  }
+
+  // ---- Admin API guard — signed HMAC token verification ----
+  if (pathname.startsWith("/api/admin") && !pathname.startsWith("/api/admin/login")) {
+    const adminCookie = request.cookies.get("admin_session");
+    const isValidAdmin = adminCookie?.value ? await verifyAdminToken(adminCookie.value) : false;
+    if (!isValidAdmin) {
+      console.warn(`[SECURITY] Unauthorized admin API access attempt to ${pathname} from IP: ${ip}`);
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
 
@@ -85,5 +119,9 @@ export const config = {
     "/api/contact",
     "/api/auth/:path*",
     "/api/login",
+    "/api/analyze",
+    "/api/expenses/:path*",
+    "/api/income/:path*",
+    "/api/admin/:path*",
   ],
 };
