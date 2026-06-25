@@ -45,6 +45,9 @@ export async function middleware(request: NextRequest) {
     "/notifications",
     "/settings",
     "/onboarding",
+    "/analyze",
+    "/feedback",
+    "/profile",
   ];
   if (protectedPaths.some((p) => pathname.startsWith(p))) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
@@ -75,6 +78,9 @@ export const config = {
     "/notifications/:path*",
     "/settings/:path*",
     "/onboarding/:path*",
+    "/analyze/:path*",
+    "/feedback/:path*",
+    "/profile/:path*",
     "/admin/:path*",
     "/api/contact",
     "/api/auth/:path*",

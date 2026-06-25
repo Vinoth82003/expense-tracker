@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -20,33 +20,47 @@ import {
 
 const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@spendwise.app";
 
-const contactChannels = [
-  {
-    icon: Mail,
-    label: "Email Support",
-    value: supportEmail,
-    href: `mailto:${supportEmail}`,
-    note: "Response within 24 hours",
-  },
-  {
-    icon: Phone,
-    label: "Indian Helpline",
-    value: "+91 93844 60843",
-    href: "tel:+919384460843",
-    note: "Available 10 AM – 6 PM IST",
-  },
-  {
-    icon: Clock,
-    label: "Response Time",
-    value: "< 24 Hours",
-    href: null,
-    note: "On all business days",
-  },
-];
+// Phone parts are joined on the client to prevent static scraping.
+// Parts: country code, first half, second half
+const PHONE_PARTS = ["+91", " 93844", " 60843"];
+
+function buildContactChannels(phone: string) {
+  return [
+    {
+      icon: Mail,
+      label: "Email Support",
+      value: supportEmail,
+      href: `mailto:${supportEmail}`,
+      note: "Response within 24 hours",
+    },
+    {
+      icon: Phone,
+      label: "Indian Helpline",
+      value: phone || "Loading...",
+      href: phone ? `tel:${phone.replace(/\s/g, "")}` : null,
+      note: "Available 10 AM – 6 PM IST",
+    },
+    {
+      icon: Clock,
+      label: "Response Time",
+      value: "< 24 Hours",
+      href: null,
+      note: "On all business days",
+    },
+  ];
+}
 
 export default function ContactPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [phone, setPhone] = useState("");
+
+  // Assemble phone number on the client to avoid static scraping
+  useEffect(() => {
+    setPhone(PHONE_PARTS.join(""));
+  }, []);
+
+  const contactChannels = buildContactChannels(phone);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

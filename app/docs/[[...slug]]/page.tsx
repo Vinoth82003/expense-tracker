@@ -67,9 +67,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const cleanDescription = stripMarkdown(selectedDoc.content);
-  const plainText = cleanDescription.length > 160 
-    ? cleanDescription.substring(0, 157) + "..."
-    : cleanDescription;
+  // Remove leading generic headings like "Overview"
+  const descriptionWithoutHeading = cleanDescription.replace(/^\s*Overview\s*/i, '').trim();
+  const plainText = truncateDescription(descriptionWithoutHeading, 160);
+
+  function truncateDescription(text: string, maxLength: number): string {
+    if (text.length <= maxLength) return text;
+    const truncated = text.slice(0, maxLength);
+    // Trim to last space to avoid cutting words
+    const lastSpace = truncated.lastIndexOf(' ');
+    return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
+  }
 
   return {
     title: `${selectedDoc.title} | SpendWise Docs`,

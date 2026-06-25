@@ -71,6 +71,17 @@ export default function TermsPage() {
             </motion.div>
           ))}
         </section>
+
+        {/* Legal compliance footer */}
+        <div className="max-w-3xl mx-auto px-5 md:px-10 pb-16 text-center">
+          <p className="text-xs text-muted font-semibold uppercase tracking-widest border-t border-border-subtle pt-8">
+            Last Updated: April 2026
+          </p>
+          <p className="text-xs text-muted font-medium mt-2">
+            By using SpendWise you acknowledge that you have read, understood,
+            and agree to be bound by these Terms of Service.
+          </p>
+        </div>
       </main>
       <Footer />
     </>
