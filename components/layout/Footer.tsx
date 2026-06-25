@@ -33,8 +33,8 @@ const footerLinks: Record<string, FooterLink[]> = {
   Resources: [
     { label: "Documentation", href: "/docs" },
     { label: "FAQ", href: "/faq" },
-    { label: "Share Feedback", href: "/feedback" },
-
+    { label: "Share Feedback", href: "/contact" },
+    { label: "System Status", href: "/status" },
   ],
   Legal: [
     { label: "Privacy Policy", href: "/privacy" },

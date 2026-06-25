@@ -75,6 +75,10 @@ export const metadata: Metadata = {
   icons: {
     apple: "/web-app-manifest-192x192.png",
   },
+  // Confirms ownership via the HTML file already in /public
+  verification: {
+    google: "f1afae934a46160c",
+  },
 
 };
 
