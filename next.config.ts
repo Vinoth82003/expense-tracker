@@ -46,20 +46,31 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              "script-src 'self' https://accounts.google.com https://www.googletagmanager.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://lh3.googleusercontent.com https://res.cloudinary.com https://www.googletagmanager.com https://www.google-analytics.com",
-              "connect-src 'self' https://generativelanguage.googleapis.com https://api.openai.com https://www.google-analytics.com https://www.googletagmanager.com",
-              "frame-src https://accounts.google.com",
-              "frame-ancestors 'self'",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "upgrade-insecure-requests",
-            ].join("; "),
+            value: (() => {
+              const isDev = process.env.NODE_ENV === "development";
+              const scriptSrc = isDev
+                ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.googletagmanager.com"
+                : "script-src 'self' https://accounts.google.com https://www.googletagmanager.com";
+              
+              const connectSrc = isDev
+                ? "connect-src 'self' ws: wss: https://generativelanguage.googleapis.com https://api.openai.com https://www.google-analytics.com https://www.googletagmanager.com"
+                : "connect-src 'self' https://generativelanguage.googleapis.com https://api.openai.com https://www.google-analytics.com https://www.googletagmanager.com";
+
+              return [
+                "default-src 'self'",
+                scriptSrc,
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+                "font-src 'self' https://fonts.gstatic.com",
+                "img-src 'self' data: blob: https://lh3.googleusercontent.com https://res.cloudinary.com https://www.googletagmanager.com https://www.google-analytics.com",
+                connectSrc,
+                "frame-src https://accounts.google.com",
+                "frame-ancestors 'self'",
+                "object-src 'none'",
+                "base-uri 'self'",
+                "form-action 'self'",
+                "upgrade-insecure-requests",
+              ].join("; ");
+            })(),
           },
           {
             key: "Cross-Origin-Resource-Policy",
