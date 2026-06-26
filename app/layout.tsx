@@ -24,6 +24,7 @@ import { OfflineIndicator } from "@/components/ui/OfflineIndicator";
 import { PublicMaintenanceBanner } from "@/components/layout/PublicMaintenanceBanner";
 import { ModalProvider } from "@/components/providers/ModalProvider";
 import { UIProvider } from "@/context/UIContext";
+import { CookieConsent } from "@/components/layout/CookieConsent";
 
 
 export const viewport = {
@@ -42,7 +43,8 @@ export const viewport = {
 export const metadata: Metadata = {
   title: "SpendWise — Smart Expense Tracker for India",
   description:
-    "Track your daily expenses, set monthly budgets, and get clear financial insights. SpendWise is the mobile-first, Rupee-native expense manager designed to help Indians save smarter.",
+    "Master your personal finance with SpendWise, the smart AI-powered expense tracker and budget manager built for India. Track daily spending, set monthly budgets, and gain deep financial insights.",
+  applicationName: "SpendWise",
   keywords: [
     "expense tracker",
     "expense manager",
@@ -51,6 +53,9 @@ export const metadata: Metadata = {
     "personal finance",
     "money tracker India",
     "SaaS budget app",
+    "AI financial assistant",
+    "wealth tracker",
+    "budgeting app",
   ],
   authors: [{ name: "SpendWise" }],
   robots: "index, follow",
@@ -117,27 +122,15 @@ export default function RootLayout({
         {/* Capture PWA installation prompt globally */}
         <script src="/js/pwa-prompt.js" defer />
 
-        {/* DNS prefetch for external resources */}
+        {/* DNS prefetch & preconnect for external resources */}
         <link rel="dns-prefetch" href="//www.googletagmanager.com" />
         <link rel="dns-prefetch" href="//www.google-analytics.com" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://accounts.google.com" />
 
         {/* Prevent FOUC - inject theme before hydration */}
         <script src="/js/theme-init.js" />
-
-        {/* Google Analytics 4 — must be in <head> for earliest possible load */}
-        {process.env.NODE_ENV === "production" && (
-          <>
-            <script
-              async
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
-            />
-            <script
-              src="/js/ga-init.js"
-              data-ga-id={process.env.NEXT_PUBLIC_GA_ID}
-              defer
-            />
-          </>
-        )}
       </head>
       <body
         className="min-h-full flex flex-col antialiased"
@@ -166,6 +159,7 @@ export default function RootLayout({
           </ThemeProvider>
         </AuthProvider>
         <PWAInstallBanner />
+        <CookieConsent />
       </body>
     </html>
   );

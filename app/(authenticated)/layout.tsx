@@ -166,7 +166,7 @@ export default function DashboardLayout({
             <div className="h-8 w-40 lg:w-48 bg-surface-variant rounded-lg"></div>
             <div className="flex items-center gap-4">
               <div className="hidden sm:block h-10 w-32 bg-surface-variant rounded-xl"></div>
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-surface-variant"></div>
+              <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-surface-variant"></div>
             </div>
           </header>
           
@@ -202,7 +202,7 @@ export default function DashboardLayout({
           {navGroups.map((group) => (
             <div key={group.title} className="space-y-3">
               <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">{group.title}</h3>
-              <nav className="space-y-1">
+              <nav className="space-y-1" aria-label={`${group.title} Navigation`}>
                 {group.items.map((item) => {
                   const isActive = pathname === item.href;
                   return (
@@ -236,7 +236,7 @@ export default function DashboardLayout({
           }`}>
             <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-500/10 border border-primary-500/20 flex items-center justify-center">
               {session.user?.image ? (
-                <img src={session.user.image} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={session.user.image} alt={`${session.user.name || 'User'}'s avatar`} width={32} height={32} className="w-full h-full object-cover" />
               ) : (
                 <User size={16} className="text-primary-600" />
               )}
@@ -267,7 +267,8 @@ export default function DashboardLayout({
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-xl bg-surface border border-border-subtle text-secondary"
+              aria-label="Open mobile navigation menu"
+              className="lg:hidden p-2 rounded-xl bg-surface border border-border-subtle text-secondary focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
             >
               <Menu size={24} />
             </button>
@@ -300,7 +301,7 @@ export default function DashboardLayout({
             >
               <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full overflow-hidden border-2 border-background shadow-md flex items-center justify-center transition-all group-hover:ring-2 group-hover:ring-primary-500/50">
                 {session.user?.image ? (
-                  <img src={session.user.image} alt="Avatar" className="w-full h-full object-cover" />
+                  <img src={session.user.image} alt={`${session.user.name || 'User'}'s profile picture`} width={44} height={44} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-lime-500 to-green-600 flex items-center justify-center text-white font-black text-lg">
                     {session.user?.name?.charAt(0) || "U"}
@@ -350,7 +351,7 @@ export default function DashboardLayout({
                 {navGroups.map((group) => (
                   <div key={group.title} className="space-y-3">
                     <h3 className="px-4 text-[10px] font-black uppercase tracking-widest text-muted">{group.title}</h3>
-                    <nav className="space-y-1">
+                    <nav className="space-y-1" aria-label={`${group.title} Mobile Navigation`}>
                       {group.items.map((item) => {
                         const isActive = pathname === item.href;
                         return (

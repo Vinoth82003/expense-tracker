@@ -57,7 +57,7 @@ export function DashboardMockup({
     { name: "Utilities", value: "₹5,000", percent: 40, color: COLORS[3] }
   ];
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 rounded-[2.5rem] bg-background border border-border-subtle shadow-2xl relative overflow-hidden backdrop-blur-sm">
+    <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 rounded-[2.5rem] bg-background border border-border-subtle shadow-2xl relative overflow-hidden backdrop-blur-sm min-h-[640px] md:min-h-[520px] lg:min-h-[490px]">
       {/* Abstract Background Accents */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 blur-[80px] -mr-32 -mt-32 rounded-full" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-500/5 blur-[80px] -ml-32 -mb-32 rounded-full" />

@@ -24,7 +24,9 @@ import {
   User as UserIcon
 } from "lucide-react";
 import { DashboardMockup } from "./DashboardMockup";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
+
+const TestimonialsSection = lazy(() => import("./TestimonialsSection"));
 
 /* ──────────────────────────────────────────────
    DATA
@@ -53,7 +55,7 @@ const features = [
     icon: ShieldCheck,
     title: "Bank-Grade Security",
     description:
-      "Google OAuth 2.0 authentication, end-to-end encryption, and zero password storage. Your data stays yours.",
+      "Google OAuth 2.0 authentication, encryption in transit and at rest, and zero password storage. Your data stays yours.",
   },
   {
     icon: FileText,
@@ -108,90 +110,7 @@ const fadeUp: Variants = {
   visible: { y: 0, opacity: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
 };
 
-function TestimonialsSection() {
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const res = await fetch("/api/reviews");
-        if (res.ok) {
-          const data = await res.json();
-          setReviews(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch reviews", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchReviews();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-10">
-        <div className="w-8 h-8 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (reviews.length === 0) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-secondary font-medium italic">"Exceptional tool for forensic financial tracking. Highly recommended!"</p>
-        <p className="text-xs font-black uppercase tracking-widest mt-2 text-muted">— Early Adopter</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {reviews.slice(0, 6).map((review, i) => (
-        <motion.div
-          key={review.id}
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          transition={{ delay: i * 0.1 }}
-          className="p-8 bg-surface border border-border-subtle rounded-[2rem] shadow-sm relative group hover:border-primary-500/30 transition-all"
-        >
-          <Quote className="absolute top-6 right-8 text-primary-500/10 group-hover:text-primary-500/20 transition-colors" size={48} />
-          
-          <div className="flex items-center gap-1 mb-4">
-            {[...Array(5)].map((_, starI) => (
-              <Star 
-                key={starI} 
-                size={14} 
-                className={starI < review.rating ? "fill-warning text-warning" : "text-border-subtle"} 
-              />
-            ))}
-          </div>
-
-          <p className="text-secondary font-medium leading-relaxed mb-6 italic relative z-10">
-            "{review.comment}"
-          </p>
-
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center shrink-0 border border-border-subtle">
-              {review.user?.avatar ? (
-                <img src={review.user.avatar} alt={review.user.name} className="w-full h-full object-cover" />
-              ) : (
-                <UserIcon size={18} className="text-muted" />
-              )}
-            </div>
-            <div>
-              <p className="font-bold text-sm text-foreground">{review.user?.name || "Anonymous User"}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted">SpendWise User</p>
-            </div>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  );
-}
+// TestimonialsSection is now lazy-loaded from its own file
 
 /* ──────────────────────────────────────────────
    COMPONENT
@@ -252,8 +171,7 @@ export function HomeClient() {
                 Your Money,{" "}
                 <br />
                 <span
-                  className="italic"
-                  style={{ color: "#6366f1" }}
+                  className="italic text-indigo-600 dark:text-indigo-400"
                 >
                   Forensically
                 </span>
@@ -279,8 +197,8 @@ export function HomeClient() {
                 <Link
                   href="/login"
                   id="hero-get-started"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-black text-base text-white shadow-xl transition-all hover:-translate-y-1 active:scale-95"
-                  style={{ background: "#6366f1" }}
+                  aria-label="Get started free with SpendWise"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-black text-base text-white shadow-xl transition-all hover:-translate-y-1 active:scale-95 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
                 >
                   Get Started Free
                   <ArrowRight size={18} />
@@ -288,7 +206,8 @@ export function HomeClient() {
                 <Link
                   href="/how-it-works"
                   id="hero-see-how"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-[#6366f1]/40 transition-all"
+                  aria-label="See how SpendWise works"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-indigo-600/40 dark:hover:border-indigo-400/40 transition-all"
                 >
                   See how it works →
                 </Link>
@@ -405,8 +324,8 @@ export function HomeClient() {
             <div className="mt-12 text-center">
               <Link
                 href="/features"
-                className="inline-flex items-center gap-2 text-base font-black hover:gap-4 transition-all"
-                style={{ color: "#6366f1" }}
+                aria-label="Explore all capabilities of SpendWise"
+                className="inline-flex items-center gap-2 text-base font-black hover:gap-4 transition-all text-indigo-600 dark:text-indigo-400"
               >
                 Explore all capabilities <ArrowRight size={18} />
               </Link>
@@ -547,7 +466,13 @@ export function HomeClient() {
               </h2>
             </motion.div>
 
-            <TestimonialsSection />
+            <Suspense fallback={
+              <div className="flex justify-center py-10">
+                <div className="w-8 h-8 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+              </div>
+            }>
+              <TestimonialsSection />
+            </Suspense>
           </div>
         </section>
 
@@ -583,7 +508,7 @@ export function HomeClient() {
 
               <h2 className="text-4xl md:text-6xl font-black tracking-tight text-foreground mb-6 leading-[0.95]">
                 Your Wallet,{" "}
-                <span className="italic" style={{ color: "#6366f1" }}>
+                <span className="italic text-indigo-600 dark:text-indigo-400">
                   Redefined.
                 </span>
               </h2>
@@ -597,8 +522,8 @@ export function HomeClient() {
                 <Link
                   href="/login"
                   id="cta-start-free"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base transition-all hover:-translate-y-1 active:scale-95 shadow-xl text-white"
-                  style={{ background: "#6366f1" }}
+                  aria-label="Start free today with SpendWise"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base transition-all hover:-translate-y-1 active:scale-95 shadow-xl text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
                 >
                   Start Free Today
                   <ArrowRight size={18} />
@@ -606,7 +531,8 @@ export function HomeClient() {
                 <Link
                   href="/download"
                   id="cta-install-app"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-primary-500/40 transition-all"
+                  aria-label="Install SpendWise progressive web app"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-indigo-600/40 dark:hover:border-indigo-400/40 transition-all"
                 >
                   <Download size={18} />
                   Install App
