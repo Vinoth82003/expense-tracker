@@ -112,10 +112,42 @@ export default async function Page({ params }: PageProps) {
     updatedAt: d.updatedAt?.toISOString() || null,
   }));
 
+  const baseUrl = process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
+  const articleStructuredData = selectedDoc ? {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": selectedDoc.title,
+    "description": selectedDoc.content ? stripMarkdown(selectedDoc.content).slice(0, 150) : `SpendWise documentation page for ${selectedDoc.title}.`,
+    "inLanguage": "en",
+    "mainEntityOfPage": `${baseUrl}/docs/${selectedDoc.slug}`,
+    "datePublished": selectedDoc.createdAt?.toISOString() || new Date("2024-05-01").toISOString(),
+    "dateModified": selectedDoc.updatedAt?.toISOString() || new Date().toISOString(),
+    "publisher": {
+      "@type": "Organization",
+      "name": "SpendWise",
+      "logo": {
+        "@type": "ImageObject",
+        "url": `${baseUrl}/web-app-manifest-192x192.png`
+      }
+    },
+    "author": {
+      "@type": "Person",
+      "name": "Vinoth S"
+    }
+  } : null;
+
   return (
-    <DocsPageClient 
-      selectedDoc={serializedSelectedDoc as any} 
-      allDocs={serializedAllDocs as any} 
-    />
+    <>
+      {articleStructuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleStructuredData) }}
+        />
+      )}
+      <DocsPageClient 
+        selectedDoc={serializedSelectedDoc as any} 
+        allDocs={serializedAllDocs as any} 
+      />
+    </>
   );
 }

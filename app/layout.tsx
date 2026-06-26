@@ -115,52 +115,14 @@ export default function RootLayout({
         <link rel="llms-txt" type="text/plain" href="/llms.txt" title="SpendWise LLM Context" />
 
         {/* Capture PWA installation prompt globally */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                window.deferredPrompt = e;
-              });
-            `,
-          }}
-        />
+        <script src="/js/pwa-prompt.js" defer />
 
         {/* DNS prefetch for external resources */}
-        <link rel="dns-prefetch" href="//fonts.googleapis.com" />
-        <link rel="dns-prefetch" href="//fonts.gstatic.com" />
         <link rel="dns-prefetch" href="//www.googletagmanager.com" />
         <link rel="dns-prefetch" href="//www.google-analytics.com" />
 
-        {/* Preconnect to Google Fonts */}
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-          crossOrigin=""
-        />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-
         {/* Prevent FOUC - inject theme before hydration */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                var t = localStorage.getItem('theme');
-                if (t) {
-                  if (t === 'dark') {
-                    document.documentElement.classList.add('dark');
-                  }
-                } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                  document.documentElement.classList.add('dark');
-                }
-              } catch(e) {}
-            `,
-          }}
-        />
+        <script src="/js/theme-init.js" />
 
         {/* Google Analytics 4 — must be in <head> for earliest possible load */}
         {process.env.NODE_ENV === "production" && (
@@ -170,17 +132,9 @@ export default function RootLayout({
               src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
             />
             <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}', {
-                    page_path: window.location.pathname,
-                    send_page_view: true
-                  });
-                `,
-              }}
+              src="/js/ga-init.js"
+              data-ga-id={process.env.NEXT_PUBLIC_GA_ID}
+              defer
             />
           </>
         )}
