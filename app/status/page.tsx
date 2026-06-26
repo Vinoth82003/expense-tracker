@@ -4,12 +4,32 @@ import { Footer } from "@/components/layout/Footer";
 import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "System Status – SpendWise",
+  title: "System Status — SpendWise",
   description:
     "Real-time status of SpendWise services including API, database, authentication, and AI features.",
+  alternates: {
+    canonical: "/status",
+  },
   openGraph: {
-    title: "System Status – SpendWise",
-    description: "Real-time status of SpendWise services.",
+    title: "System Status — SpendWise",
+    description:
+      "Real-time status of SpendWise services including API, database, authentication, and AI features.",
+    url: "https://money-spend-tracker.vercel.app/status",
+    images: [
+      {
+        url: "/og-images/og-sitemap-dark.png",
+        width: 1200,
+        height: 630,
+        alt: "SpendWise System Status",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "System Status — SpendWise",
+    description:
+      "Real-time status of SpendWise services including API, database, authentication, and AI features.",
+    images: ["/og-images/og-sitemap-dark.png"],
   },
 };
 

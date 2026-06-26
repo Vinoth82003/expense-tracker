@@ -54,17 +54,31 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "SpendWise" }],
   robots: "index, follow",
+  metadataBase: new URL("https://money-spend-tracker.vercel.app"),
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "SpendWise — Smart Expense Tracker for India",
     description:
       "Track, categorize, and visualize your expenses. Built for India, powered by simplicity.",
     type: "website",
     siteName: "SpendWise",
+    url: "https://money-spend-tracker.vercel.app",
+    images: [
+      {
+        url: "/og-images/og-home-dark.png",
+        width: 1200,
+        height: 630,
+        alt: "SpendWise — Smart Expense Tracker",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "SpendWise — Expense Tracker",
     description: "Smart rupee-first expense tracking for every Indian.",
+    images: ["/og-images/og-home-dark.png"],
   },
   manifest: "/manifest.json",
   appleWebApp: {
