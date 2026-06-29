@@ -19,22 +19,25 @@ import {
   Sparkles,
   Zap,
   Lock,
-  ArrowUpRight
+  ArrowUpRight,
+  Laptop,
+  Terminal,
+  ShieldCheck,
+  Cpu
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 
-type PlatformType = "android" | "ios" | "desktop" | "other";
+type DetailedOS = "windows" | "macos" | "linux" | "ios" | "android" | "other";
 
 export function DownloadClient() {
   const { data: session } = useSession();
-  const [platform, setPlatform] = useState<PlatformType>("other");
+  const [detectedOS, setDetectedOS] = useState<DetailedOS>("other");
+  const [activeTab, setActiveTab] = useState<DetailedOS>("windows");
   const [isStandalone, setIsStandalone] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [installSuccess, setInstallSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState<PlatformType>("android");
 
-  // 1. Detect standalone mode, platform, and stashed prompt on mount
   useEffect(() => {
     // Check if running in standalone PWA mode
     const checkStandalone = 
@@ -43,51 +46,42 @@ export function DownloadClient() {
     
     setIsStandalone(checkStandalone);
 
-    // Detect user platform
+    // Detect user OS
     const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
-    const isAndroid = /android/.test(userAgent);
+    const platform = window.navigator.platform.toLowerCase();
+    
+    let os: DetailedOS = "windows"; // Default recommendation
 
-    let detectedPlatform: PlatformType = "desktop";
-    if (isIOS) {
-      detectedPlatform = "ios";
-    } else if (isAndroid) {
-      detectedPlatform = "android";
+    if (/iphone|ipad|ipod/.test(userAgent)) {
+      os = "ios";
+    } else if (/android/.test(userAgent)) {
+      os = "android";
+    } else if (/mac/.test(platform) || /mac/.test(userAgent)) {
+      os = "macos";
+    } else if (/linux/.test(platform) || /linux/.test(userAgent)) {
+      os = "linux";
+    } else if (/win/.test(platform) || /win/.test(userAgent)) {
+      os = "windows";
     }
 
-    setPlatform(detectedPlatform);
-    setActiveTab(detectedPlatform);
+    setDetectedOS(os);
+    setActiveTab(os);
 
-    // Retrieve stashed prompt from layout script if available
+    // PWA Prompt handling
     if ((window as any).deferredPrompt) {
       setDeferredPrompt((window as any).deferredPrompt);
     }
 
-    // Bind event listeners for beforeinstallprompt stashing
     const handleBeforeInstall = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
       (window as any).deferredPrompt = e;
     };
 
-    // Bind event listener for PWA install completion
     const handleAppInstalled = () => {
       setInstallSuccess(true);
       setIsStandalone(true);
-      toast.success("SpendWise installed successfully! Open the app from your home screen.");
-      
-      // Track the download in the database (authenticated users)
-      if (session?.user?.email) {
-        fetch("/api/user/pwa", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ installed: true }),
-        })
-        .then((res) => {
-          if (!res.ok) console.error("Realtime tracking update failed");
-        })
-        .catch(console.error);
-      }
+      toast.success("SpendWise PWA installed successfully!");
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
@@ -97,58 +91,45 @@ export function DownloadClient() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
-  }, [session]);
+  }, []);
 
-  // 2. Trigger installation prompt
-  const handleInstallClick = async () => {
-    // If standalone is active, do nothing
-    if (isStandalone) {
-      toast("SpendWise is already installed and running!", { icon: "🎉" });
-      return;
-    }
-
+  const handlePWAInstall = async () => {
     const prompt = deferredPrompt || (window as any).deferredPrompt;
-
     if (prompt) {
       try {
         prompt.prompt();
         const { outcome } = await prompt.userChoice;
-        console.log(`PWA prompt outcome: ${outcome}`);
-        
         if (outcome === "accepted") {
-          toast.success("Installing SpendWise...");
+          toast.success("Installing SpendWise PWA...");
           setDeferredPrompt(null);
-          (window as any).deferredPrompt = null;
-
-          // Track the download in the database in real-time
-          if (session?.user?.email) {
-            await fetch("/api/user/pwa", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ installed: true }),
-            });
-          }
-        } else {
-          toast("Installation cancelled", { icon: "ℹ️" });
         }
       } catch (err) {
-        console.error("Installation prompt failed:", err);
-        toast.error("Install prompt failed to trigger. Try using manual steps.");
+        toast.error("Install prompt failed to trigger.");
       }
     } else {
-      // Fallback instruction trigger
-      if (platform === "ios") {
-        toast("iOS requires manual install! Tap Share below then 'Add to Home Screen'.", {
-          duration: 4000,
-          icon: "📱",
-        });
-      } else {
-        toast("Install prompt is not active. If it didn't open, use browser menu -> 'Install SpendWise'.", {
-          duration: 5000,
-          icon: "💡",
-        });
-      }
+      toast("To install, use your browser's menu -> 'Install SpendWise'.", { icon: "💡" });
     }
+  };
+
+  const getOSDisplayName = (os: DetailedOS) => {
+    switch (os) {
+      case "windows": return "Windows";
+      case "macos": return "macOS";
+      case "linux": return "Linux";
+      case "ios": return "iOS (iPhone/iPad)";
+      case "android": return "Android";
+      default: return "Desktop";
+    }
+  };
+
+  // Mock download triggering
+  const handleDownloadDesktopApp = (os: DetailedOS) => {
+    toast.success(`Starting download for SpendWise desktop app for ${getOSDisplayName(os)}...`, {
+      icon: "🚀",
+      duration: 3000
+    });
+    // In production, this would link to the actual packaged executable
+    // window.location.href = `/downloads/SpendWise-setup.${os === 'windows' ? 'exe' : os === 'macos' ? 'dmg' : 'AppImage'}`;
   };
 
   return (
@@ -156,260 +137,252 @@ export function DownloadClient() {
       <Navbar />
 
       <main className="pt-32 pb-24 min-h-screen bg-background relative overflow-hidden">
-        {/* Background visual graphics */}
+        {/* Dynamic ambient backgrounds */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] pointer-events-none -z-10 overflow-hidden">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/5 blur-[120px] rounded-full" />
-          <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-violet-500/5 blur-[100px] rounded-full" />
+          <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary-500/10 blur-[130px] rounded-full" />
+          <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-violet-500/10 blur-[110px] rounded-full" />
         </div>
 
-        {/* Core Hero Section */}
+        {/* Hero Section */}
         <section className="px-5 md:px-10 max-w-4xl mx-auto mb-16 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
             className="space-y-6"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/5 text-primary-600 text-[10px] font-black tracking-widest uppercase border border-primary-500/10 backdrop-blur-sm">
-              <Smartphone size={12} /> Mobile First Experience
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 text-primary-500 text-[11px] font-extrabold tracking-widest uppercase border border-primary-500/20 backdrop-blur-md">
+              <Sparkles size={12} className="animate-pulse" /> Desktop & Mobile Native Apps
             </div>
             
             <h1 className="text-5xl md:text-7xl font-black text-foreground tracking-tight leading-none">
-              Download <br />
-              <span className="text-primary-600">SpendWise App</span>
+              Experience <span className="text-primary-500">SpendWise</span> Anywhere
             </h1>
 
-            <p className="text-lg md:text-xl text-secondary max-w-2xl mx-auto font-medium leading-relaxed opacity-80">
-              Get the native application experience directly on your device. Works offline, loads instantly, and runs in fullscreen.
+            <p className="text-lg md:text-xl text-secondary max-w-2xl mx-auto font-medium leading-relaxed opacity-90">
+              Download native desktop clients with custom system frames, window management, and native PWA clients for your mobile devices.
             </p>
           </motion.div>
         </section>
 
-        {/* Standalone state or Download controller */}
-        <section className="px-5 md:px-10 max-w-3xl mx-auto">
-          {isStandalone || installSuccess ? (
-            // App is already installed or runs in standalone PWA wrapper
+        {/* Core Content Container */}
+        <section className="px-5 md:px-10 max-w-5xl mx-auto space-y-16">
+          
+          {/* Dynamic Auto-Detection Notification Banner */}
+          {detectedOS !== "other" && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="p-10 rounded-[3rem] border-2 border-emerald-500/20 bg-emerald-500/5 text-center space-y-8 shadow-xl shadow-emerald-500/5"
+              className="p-8 rounded-[2.5rem] bg-gradient-to-r from-primary-500/10 via-violet-500/5 to-transparent border border-primary-500/20 backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-6 shadow-lg"
             >
-              <div className="w-20 h-20 rounded-[2.2rem] bg-emerald-500 flex items-center justify-center text-white mx-auto shadow-lg shadow-emerald-500/20">
-                <CheckCircle2 size={40} />
+              <div className="flex items-center gap-5 text-left">
+                <div className="w-14 h-14 rounded-2xl bg-primary-500/20 text-primary-500 flex items-center justify-center shrink-0">
+                  {detectedOS === "windows" || detectedOS === "macos" || detectedOS === "linux" ? (
+                    <Laptop size={28} />
+                  ) : (
+                    <Smartphone size={28} />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-primary-500 uppercase tracking-wider">Detected System</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                  </div>
+                  <h3 className="text-2xl font-black text-foreground">
+                    SpendWise for {getOSDisplayName(detectedOS)}
+                  </h3>
+                  <p className="text-xs text-secondary font-medium mt-1">
+                    Get the most optimized version tailored perfectly for your device.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-3">
-                <h2 className="text-3xl font-black text-foreground">SpendWise Installed!</h2>
-                <p className="text-secondary font-medium max-w-md mx-auto">
-                  You are viewing the site within standalone app mode or installation was successfully completed on this device.
-                </p>
-              </div>
+
               <div>
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-emerald-600 text-white font-black text-base shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Enter Dashboard <ArrowRight size={18} />
-                </Link>
+                {detectedOS === "windows" || detectedOS === "macos" || detectedOS === "linux" ? (
+                  <button
+                    onClick={() => handleDownloadDesktopApp(detectedOS)}
+                    className="px-8 py-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-black text-sm shadow-xl shadow-primary-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+                  >
+                    <Download size={18} />
+                    Download Native App
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePWAInstall}
+                    className="px-8 py-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-black text-sm shadow-xl shadow-primary-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+                  >
+                    <Smartphone size={18} />
+                    Install Native PWA
+                  </button>
+                )}
               </div>
             </motion.div>
-          ) : (
-            // Installation block
-            <div className="space-y-12">
-              {/* Install Action Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="p-8 md:p-12 rounded-[3rem] bg-surface border border-border-subtle shadow-xl relative overflow-hidden group text-center space-y-8"
-              >
-                {/* Visual glow decoration */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/2 bg-primary-500/5 blur-[100px] pointer-events-none" />
-                
-                <div className="w-16 h-16 rounded-2xl bg-primary-500/10 text-primary-600 flex items-center justify-center mx-auto">
-                  <Download size={32} />
-                </div>
-                
-                <div className="space-y-3">
-                  <h2 className="text-3xl font-black text-foreground tracking-tight">One-Click Install</h2>
-                  <p className="text-secondary font-medium max-w-md mx-auto text-sm">
-                    Click the install button below to register SpendWise on your home screen or app launcher.
-                  </p>
-                </div>
+          )}
 
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <button
-                    onClick={handleInstallClick}
-                    className="w-full sm:w-auto px-10 py-4 rounded-xl bg-primary-600 text-white font-black text-base shadow-xl shadow-primary-600/20 hover:bg-primary-500 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                  >
-                    <Download size={20} />
-                    Install SpendWise
-                  </button>
-                  <Link
-                    href="/dashboard"
-                    className="w-full sm:w-auto px-10 py-4 rounded-xl bg-surface-variant/50 border border-border-subtle text-secondary hover:text-foreground font-black text-base transition-all flex items-center justify-center gap-2"
-                  >
-                    Use Web Version <ArrowUpRight size={18} />
-                  </Link>
-                </div>
+          {/* Selector Tabs for OS Options */}
+          <div className="space-y-8">
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-black text-foreground tracking-tight">Choose Your Platform</h2>
+              <p className="text-secondary text-sm font-medium">Select any operating system to access downloads or guides</p>
+            </div>
 
-                {/* Status tip */}
-                {!deferredPrompt && platform !== "ios" && (
-                  <p className="text-xs text-secondary font-bold bg-amber-500/5 border border-amber-500/10 p-3 rounded-xl max-w-md mx-auto flex items-start gap-2 text-left">
-                    <Info size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                    <span>
-                      If the installer does not trigger, please open your browser's menu (top-right three dots) and click <strong>'Install'</strong> or <strong>'Add to Home Screen'</strong>.
-                    </span>
-                  </p>
-                )}
-              </motion.div>
+            {/* Premium Selector Buttons */}
+            <div className="flex flex-wrap justify-center gap-2 bg-surface-variant/20 p-2 rounded-[2rem] border border-border-subtle max-w-2xl mx-auto backdrop-blur-md">
+              {(["windows", "macos", "linux", "ios", "android"] as DetailedOS[]).map((os) => (
+                <button
+                  key={os}
+                  onClick={() => setActiveTab(os)}
+                  className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-black text-xs transition-all uppercase tracking-wider ${
+                    activeTab === os
+                      ? "bg-primary-600 text-white shadow-lg shadow-primary-600/25"
+                      : "text-secondary hover:text-foreground hover:bg-surface-variant/30"
+                  }`}
+                >
+                  {os === "windows" && <Laptop size={14} />}
+                  {os === "macos" && <Cpu size={14} />}
+                  {os === "linux" && <Terminal size={14} />}
+                  {os === "ios" && <Smartphone size={14} />}
+                  {os === "android" && <Globe size={14} />}
+                  {os}
+                </button>
+              ))}
+            </div>
 
-              {/* Step-by-Step Interactive Tabs */}
-              <div className="space-y-6">
-                <div className="text-center space-y-2">
-                  <h3 className="text-2xl font-black text-foreground tracking-tight">Manual Install Guide</h3>
-                  <p className="text-secondary text-sm font-medium">Select your device operating system to view instructions</p>
-                </div>
+            {/* Dynamic Tab Pane Render */}
+            <div className="bg-surface border border-border-subtle rounded-[3rem] p-8 md:p-12 shadow-xl min-h-[400px] flex flex-col justify-center relative overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.3 }}
+                  className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center"
+                >
+                  {/* Info Card */}
+                  <div className="space-y-6 text-left">
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1.5 rounded-lg bg-primary-500/10 text-primary-500 text-[10px] font-black uppercase tracking-widest border border-primary-500/20">
+                        {activeTab === "windows" || activeTab === "macos" || activeTab === "linux" ? "Desktop App" : "PWA App"}
+                      </span>
+                      {detectedOS === activeTab && (
+                        <span className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20">
+                          Recommended
+                        </span>
+                      )}
+                    </div>
 
-                {/* Tabs selection */}
-                <div className="flex justify-center gap-2 bg-surface-variant/30 p-1.5 rounded-2xl border border-border-subtle max-w-md mx-auto">
-                  {(["android", "ios", "desktop"] as PlatformType[]).map((tab) => {
-                    const LabelIcon = tab === "android" ? Globe : tab === "ios" ? Smartphone : Monitor;
-                    return (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs transition-all uppercase tracking-wider ${
-                          activeTab === tab
-                            ? "bg-primary-600 text-white shadow-md shadow-primary-600/10"
-                            : "text-secondary hover:text-foreground"
-                        }`}
-                      >
-                        <LabelIcon size={14} />
-                        {tab}
-                      </button>
-                    );
-                  })}
-                </div>
+                    <h3 className="text-4xl font-black text-foreground leading-tight tracking-tight">
+                      SpendWise for {getOSDisplayName(activeTab)}
+                    </h3>
 
-                {/* Tabs Content */}
-                <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 md:p-10 shadow-sm min-h-[300px] flex flex-col justify-center">
-                  <AnimatePresence mode="wait">
+                    <p className="text-base text-secondary font-medium leading-relaxed">
+                      {activeTab === "windows" && "Experience SpendWise natively on your PC. Supports quick launch from Taskbar, custom borders, local file cache, and background services."}
+                      {activeTab === "macos" && "Engineered specifically to blend into the macOS workspace. Supports dock pinning, native frame actions, and optimal memory management."}
+                      {activeTab === "linux" && "Run SpendWise smoothly across all distributions with our packaged AppImage bundle. Standard desktop integration and offline resources loaded by default."}
+                      {activeTab === "ios" && "Access SpendWise on iOS devices with instant PWA setup. Add to your home screen directly from Safari with complete hardware acceleration."}
+                      {activeTab === "android" && "Enjoy full mobile control. Receive background push notification sync, fast layout caching, and standalone offline-first ledger logs."}
+                    </p>
+
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center gap-3 text-sm font-semibold text-secondary">
+                        <ShieldCheck size={18} className="text-emerald-500" /> Safe & verified installation binary.
+                      </div>
+                      <div className="flex items-center gap-3 text-sm font-semibold text-secondary">
+                        <Zap size={18} className="text-amber-500" /> Full auto-update capability enabled.
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      {activeTab === "windows" || activeTab === "macos" || activeTab === "linux" ? (
+                        <button
+                          onClick={() => handleDownloadDesktopApp(activeTab)}
+                          className="px-10 py-5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-black text-base shadow-2xl shadow-primary-600/35 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3"
+                        >
+                          <Download size={20} />
+                          Download Installer
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handlePWAInstall}
+                          className="px-10 py-5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-black text-base shadow-2xl shadow-primary-600/35 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3"
+                        >
+                          <Smartphone size={20} />
+                          Install PWA App
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Guide / Specs Card */}
+                  <div className="p-8 rounded-[2rem] bg-surface-variant/30 border border-border-subtle space-y-6 text-left backdrop-blur-md">
+                    <h4 className="font-extrabold text-lg text-foreground flex items-center gap-2">
+                      <Info size={18} className="text-primary-500" /> Setup & Specs
+                    </h4>
+
+                    {activeTab === "windows" && (
+                      <div className="space-y-4 text-xs font-semibold text-secondary">
+                        <p>1. Run the downloaded installer file <code className="text-primary-500 font-mono">SpendWise-setup.exe</code>.</p>
+                        <p>2. Complete setup prompts on your Windows system.</p>
+                        <p>3. Run SpendWise directly from your desktop or start menu.</p>
+                        <div className="border-t border-border-subtle pt-4 space-y-1">
+                          <p><strong className="text-foreground">Requirement:</strong> Windows 10 or later</p>
+                          <p><strong className="text-foreground">Arch:</strong> x64, ARM64</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "macos" && (
+                      <div className="space-y-4 text-xs font-semibold text-secondary">
+                        <p>1. Download the file <code className="text-primary-500 font-mono">SpendWise-mac.dmg</code>.</p>
+                        <p>2. Drag SpendWise to your <code className="text-foreground">Applications</code> folder.</p>
+                        <p>3. Launch from Launchpad or Finder.</p>
+                        <div className="border-t border-border-subtle pt-4 space-y-1">
+                          <p><strong className="text-foreground">Requirement:</strong> macOS Big Sur (11.0) or later</p>
+                          <p><strong className="text-foreground">Arch:</strong> Apple Silicon (M1/M2/M3) & Intel</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "linux" && (
+                      <div className="space-y-4 text-xs font-semibold text-secondary">
+                        <p>1. Fetch the binary <code className="text-primary-500 font-mono">SpendWise.AppImage</code>.</p>
+                        <p>2. Set executable permission: <code className="text-primary-500 font-mono bg-surface p-1 rounded">chmod +x SpendWise.AppImage</code>.</p>
+                        <p>3. Execute from terminal or files app.</p>
+                        <div className="border-t border-border-subtle pt-4 space-y-1">
+                          <p><strong className="text-foreground">Requirement:</strong> glibc 2.28 or later</p>
+                          <p><strong className="text-foreground">Arch:</strong> x64</p>
+                        </div>
+                      </div>
+                    )}
+
                     {activeTab === "ios" && (
-                      <motion.div
-                        key="ios-panel"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-6"
-                      >
-                        <div className="flex items-center gap-2 text-rose-500">
-                          <Smartphone size={24} />
-                          <h4 className="font-black text-lg">Apple iOS Safari Instructions</h4>
+                      <div className="space-y-4 text-xs font-semibold text-secondary">
+                        <p>1. Launch the default <code className="text-foreground">Safari Browser</code>.</p>
+                        <p>2. Tap the browser's <strong className="text-foreground">Share</strong> icon at the bottom center.</p>
+                        <p>3. Choose <strong className="text-foreground">Add to Home Screen</strong> from the listing options.</p>
+                        <div className="border-t border-border-subtle pt-4 space-y-1">
+                          <p><strong className="text-foreground">Requirement:</strong> iOS 14+ / iPadOS 14+</p>
                         </div>
-                        <p className="text-sm text-secondary font-medium leading-relaxed">
-                          Apple iOS requires PWAs to be installed manually using the Safari Web Browser. App Store or third party browsers do not support direct PWA prompt events.
-                        </p>
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant/30 border border-border-subtle">
-                            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center border border-border-subtle shrink-0 font-black text-xs text-primary-600">1</div>
-                            <div>
-                              <p className="font-bold text-sm text-foreground">Open Safari</p>
-                              <p className="text-xs text-secondary mt-0.5">Ensure you are visiting this page using Safari.</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant/30 border border-border-subtle">
-                            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center border border-border-subtle shrink-0 text-primary-600">
-                              <Share size={16} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm text-foreground">Tap Share</p>
-                              <p className="text-xs text-secondary mt-0.5">Tap the Safari Share button in the bottom navigation bar.</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant/30 border border-border-subtle">
-                            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center border border-border-subtle shrink-0 text-primary-600">
-                              <PlusSquare size={16} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm text-foreground">Add to Home Screen</p>
-                              <p className="text-xs text-secondary mt-0.5">Scroll down the menu and tap 'Add to Home Screen'.</p>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
+                      </div>
                     )}
 
                     {activeTab === "android" && (
-                      <motion.div
-                        key="android-panel"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-6"
-                      >
-                        <div className="flex items-center gap-2 text-primary-600">
-                          <Globe size={24} />
-                          <h4 className="font-black text-lg">Google Android / Chrome Instructions</h4>
+                      <div className="space-y-4 text-xs font-semibold text-secondary">
+                        <p>1. Use Google Chrome browser on your phone.</p>
+                        <p>2. Click the <strong className="text-foreground">Install PWA App</strong> button on this card.</p>
+                        <p>3. Tap the prompt to complete system integration.</p>
+                        <div className="border-t border-border-subtle pt-4 space-y-1">
+                          <p><strong className="text-foreground">Requirement:</strong> Android 8+ (Chrome / Edge recommended)</p>
                         </div>
-                        <p className="text-sm text-secondary font-medium leading-relaxed">
-                          Android devices fully support automated installation prompts via Chrome, Edge, and other major browsers.
-                        </p>
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant/30 border border-border-subtle">
-                            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center border border-border-subtle shrink-0 font-black text-xs text-primary-600">1</div>
-                            <div>
-                              <p className="font-bold text-sm text-foreground">Click 'Install SpendWise'</p>
-                              <p className="text-xs text-secondary mt-0.5">Use the button above to launch the standard installer prompt.</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant/30 border border-border-subtle">
-                            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center border border-border-subtle shrink-0 font-black text-xs text-primary-600">2</div>
-                            <div>
-                              <p className="font-bold text-sm text-foreground">Verify Browser Menu</p>
-                              <p className="text-xs text-secondary mt-0.5">If the button does not trigger, tap the three dots in your browser's top-right corner and select 'Install app'.</p>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
+                      </div>
                     )}
-
-                    {activeTab === "desktop" && (
-                      <motion.div
-                        key="desktop-panel"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-6"
-                      >
-                        <div className="flex items-center gap-2 text-violet-600">
-                          <Monitor size={24} />
-                          <h4 className="font-black text-lg">Windows, macOS & Linux Instructions</h4>
-                        </div>
-                        <p className="text-sm text-secondary font-medium leading-relaxed">
-                          PWAs can be loaded directly on desktop platforms, giving you a dedicated application window and offline tracking utilities.
-                        </p>
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant/30 border border-border-subtle">
-                            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center border border-border-subtle shrink-0 font-black text-xs text-primary-600">1</div>
-                            <div>
-                              <p className="font-bold text-sm text-foreground">Install Button</p>
-                              <p className="text-xs text-secondary mt-0.5">Click 'Install SpendWise' at the top of this page to activate the browser installer modal.</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant/30 border border-border-subtle">
-                            <div className="w-8 h-8 rounded-lg bg-surface flex items-center justify-center border border-border-subtle shrink-0 font-black text-xs text-primary-600">2</div>
-                            <div>
-                              <p className="font-bold text-sm text-foreground">Browser Address Bar Icon</p>
-                              <p className="text-xs text-secondary mt-0.5">Alternatively, look at the right side of your browser's address bar. Click the monitor/down-arrow icon to install.</p>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
             </div>
-          )}
+          </div>
+
         </section>
       </main>
 

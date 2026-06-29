@@ -50,6 +50,15 @@ const PWAInstallBanner = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     if (isStandalone) return;
 
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isMobileOrTablet = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+    
+    // Do not show on desktop at all
+    if (!isMobileOrTablet) {
+      setShowBanner(false);
+      return;
+    }
+
     const isDownloadPage = pathname === '/download';
     const isHomePage = pathname === '/';
 
@@ -64,7 +73,6 @@ const PWAInstallBanner = () => {
     // Home page on FIRST EVER visit: show once, then mark as shown
     const hasSeenBanner = localStorage.getItem('pwa-banner-first-visit-shown');
     if (isHomePage && !hasSeenBanner) {
-      const userAgent = window.navigator.userAgent.toLowerCase();
       const isIOS = /iphone|ipad|ipod/.test(userAgent);
       const delay = isIOS ? 5000 : 2000;
 
