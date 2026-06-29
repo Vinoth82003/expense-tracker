@@ -70,13 +70,15 @@ export function Navbar() {
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" } as const}
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
         isScrolled 
-          ? "py-3 glass shadow-lg" 
-          : "py-5 bg-transparent border-b border-transparent"
+          ? "py-3 shadow-lg border-border-subtle" 
+          : "py-4 border-border-subtle/50"
       )}
       style={{
-        backgroundColor: isScrolled ? "rgba(var(--bg-surface-rgb), 0.82)" : "transparent",
+        backgroundColor: "rgba(var(--bg-surface-rgb), 0.75)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
       }}
     >
       <nav className="max-w-7xl mx-auto px-5 md:px-10 flex items-center justify-between">
