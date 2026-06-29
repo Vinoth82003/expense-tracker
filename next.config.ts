@@ -48,9 +48,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: (() => {
               const isDev = process.env.NODE_ENV === "development";
-              const scriptSrc = isDev
-                ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.googletagmanager.com"
-                : "script-src 'self' https://accounts.google.com https://www.googletagmanager.com";
+              const scriptSrc = "script-src 'self' 'unsafe-inline' " + (isDev ? "'unsafe-eval' " : "") + "https://accounts.google.com https://www.googletagmanager.com";
               
               const connectSrc = isDev
                 ? "connect-src 'self' ws: wss: https://generativelanguage.googleapis.com https://api.openai.com https://www.google-analytics.com https://www.googletagmanager.com"
