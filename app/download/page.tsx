@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DownloadClient } from "./DownloadClient";
+import  DownloadClient  from "./DownloadClient";
 
 export const metadata: Metadata = {
   title: "Download App — SpendWise",
