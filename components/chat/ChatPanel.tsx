@@ -191,6 +191,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                     <span className="text-[10px] font-black tracking-widest uppercase text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded-md">AI</span>
                   </h3>
                   <p className="text-xs text-muted">Ready to manage your budget</p>
+                  <span className="text-[10px] font-black tracking-widest uppercase text-emerald-500 bg-primary-500/10 px-1.5 py-0.5 rounded-md">BETA</span>
                 </div>
               </div>
               <button
