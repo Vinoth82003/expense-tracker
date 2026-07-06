@@ -48,9 +48,18 @@ export async function POST(request: Request) {
       switch (body.intentType) {
         case "add_expense": {
           const result = await createExpense(userId, body.details || {});
+          if (!result.success && result.followUp) {
+            return NextResponse.json({
+              reply: result.message,
+              success: false,
+              followUp: result.followUp,
+            });
+          }
           return NextResponse.json({
             reply: result.message,
             success: !!result.success,
+            eventType: (result as any).eventType,
+            data: result.data,
           });
         }
         case "add_income": {
@@ -58,6 +67,8 @@ export async function POST(request: Request) {
           return NextResponse.json({
             reply: result.message,
             success: !!result.success,
+            eventType: (result as any).eventType,
+            data: result.data,
           });
         }
         case "update_budget": {
@@ -65,6 +76,8 @@ export async function POST(request: Request) {
           return NextResponse.json({
             reply: result.message,
             success: !!result.success,
+            eventType: (result as any).eventType,
+            data: result.data,
           });
         }
         default:
@@ -133,13 +146,16 @@ export async function POST(request: Request) {
         break;
       case "add_expense": {
         const result = await createExpense(userId, intent.details || {});
-        // If server asks for follow-up (multi-turn), return structured followUp payload with the original details
+        // If server returns a followUp (e.g. sports category suggestion), pass it through
+        if (!result.success && result.followUp) {
+          return NextResponse.json({
+            reply: result.message,
+            success: false,
+            followUp: result.followUp,
+          });
+        }
         if (!result.success) {
-          const missing = result.message?.toLowerCase().includes("date")
-            ? "date"
-            : result.message?.toLowerCase().includes("category")
-              ? "category"
-              : "info";
+          const missing = result.message?.toLowerCase().includes("date") ? "date" : "info";
           return NextResponse.json({
             reply: result.message,
             success: false,
@@ -149,18 +165,30 @@ export async function POST(request: Request) {
             },
           });
         }
-        reply = result.message;
-        break;
+        return NextResponse.json({
+          reply: result.message,
+          success: true,
+          eventType: (result as any).eventType,
+          data: result.data,
+        });
       }
       case "add_income": {
         const result = await createIncome(userId, intent.details || {});
-        reply = result.message;
-        break;
+        return NextResponse.json({
+          reply: result.message,
+          success: !!result.success,
+          eventType: (result as any).eventType,
+          data: result.data,
+        });
       }
       case "update_budget": {
         const result = await updateBudget(userId, intent.details || {});
-        reply = result.message;
-        break;
+        return NextResponse.json({
+          reply: result.message,
+          success: !!result.success,
+          eventType: (result as any).eventType,
+          data: result.data,
+        });
       }
       default:
         break;
@@ -175,7 +203,7 @@ export async function POST(request: Request) {
       userId,
     );
 
-    return NextResponse.json({ reply });
+    return NextResponse.json({ reply, success: false });
   } catch (error) {
     const session = await getServerSession(authOptions);
     const userId = (session?.user as any)?.id;

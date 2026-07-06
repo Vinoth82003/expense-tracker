@@ -112,12 +112,51 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (session) {
       fetchDashboardData();
       
-      const handleRefresh = () => fetchDashboardData();
-      window.addEventListener('expenseAdded', handleRefresh);
-      window.addEventListener('incomeAdded', handleRefresh);
+      const handleExpenseAdded = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        if (detail) {
+          setExpenses((prev) => {
+            if (prev.some((x) => x.id === detail.id)) return prev;
+            return [detail, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          });
+        } else {
+          fetchDashboardData();
+        }
+      };
+
+      const handleIncomeAdded = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        if (detail) {
+          setIncomes((prev) => {
+            if (prev.some((x) => x.id === detail.id)) return prev;
+            return [detail, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          });
+        } else {
+          fetchDashboardData();
+        }
+      };
+
+      const handleBudgetUpdated = (e: Event) => {
+        const detail = (e as CustomEvent).detail;
+        if (detail) {
+          if (typeof detail.limit === "number") {
+            setMonthlyLimit(detail.limit);
+          }
+          if (detail.expenseMode) {
+            setExpenseMode(detail.expenseMode);
+          }
+        } else {
+          fetchDashboardData();
+        }
+      };
+
+      window.addEventListener("expenseAdded", handleExpenseAdded);
+      window.addEventListener("incomeAdded", handleIncomeAdded);
+      window.addEventListener("budgetUpdated", handleBudgetUpdated);
       return () => {
-        window.removeEventListener('expenseAdded', handleRefresh);
-        window.removeEventListener('incomeAdded', handleRefresh);
+        window.removeEventListener("expenseAdded", handleExpenseAdded);
+        window.removeEventListener("incomeAdded", handleIncomeAdded);
+        window.removeEventListener("budgetUpdated", handleBudgetUpdated);
       };
     }
   }, [session, fetchDashboardData]);

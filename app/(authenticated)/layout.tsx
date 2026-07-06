@@ -489,7 +489,7 @@ export default function DashboardLayout({
         isOpen={isAddExpenseOpen}
         onClose={() => setIsAddExpenseOpen(false)}
         onSuccess={() => {
-          router.refresh();
+          // DashboardContext handles the 'expenseAdded' custom event triggered inside AddExpenseModal
         }}
       />
     </div>

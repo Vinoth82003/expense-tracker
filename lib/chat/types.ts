@@ -20,4 +20,6 @@ export type ChatAPIResponse = {
   // optional structured response from server for richer UI handling
   success?: boolean;
   followUp?: { type: string; payload?: any };
+  /** Custom window event name dispatched to sync DashboardContext in real-time */
+  eventType?: "expenseAdded" | "incomeAdded" | "budgetUpdated";
 };

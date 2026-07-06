@@ -27,6 +27,15 @@ const initialMessages: ChatMessage[] = [
   },
 ];
 
+/**
+ * Dispatches a browser CustomEvent so DashboardContext (and any other
+ * listener) can refresh data instantly without a full page reload.
+ */
+function dispatchSyncEvent(eventType?: string, detail?: any) {
+  if (!eventType || typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(eventType, { detail }));
+}
+
 export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -35,6 +44,8 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [pendingFollowUp, setPendingFollowUp] = useState<any | null>(null);
   const [customCategoryInput, setCustomCategoryInput] = useState("");
+  // Suggestions are ALWAYS visible by default and the user can toggle them.
+  // They do NOT auto-collapse when a message is sent.
   const [showSuggestions, setShowSuggestions] = useState(true);
 
   const messageListRef = useRef<HTMLDivElement | null>(null);
@@ -89,8 +100,8 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       addMessage(assistantMessage);
 
       if (response.success) {
-        // Sync context/state in real time on success
-        router.refresh();
+        // Dispatch custom event so DashboardContext refreshes data in real-time
+        dispatchSyncEvent((response as any).eventType, (response as any).data);
       }
 
       if (response.success === false && response.followUp) {
@@ -108,6 +119,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const sendFollowUp = async (details: any, intentType = "add_expense") => {
     setIsLoading(true);
     setError(null);
+    setCustomCategoryInput("");
     try {
       const response = await sendChatMessage(undefined, details, intentType);
       const assistantMessage: ChatMessage = {
@@ -119,8 +131,8 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       addMessage(assistantMessage);
       if (response.success) {
         setPendingFollowUp(null);
-        // Sync page UI
-        router.refresh();
+        // Dispatch sync event for real-time dashboard update
+        dispatchSyncEvent((response as any).eventType, (response as any).data);
       } else if (response.followUp) {
         setPendingFollowUp(response.followUp.payload);
       }
@@ -147,7 +159,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop (mobile only, or to click away on desktop) */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -156,7 +168,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px]"
           />
 
-          {/* Chat Side Drawer / Sheet */}
+          {/* Chat Side Drawer */}
           <motion.div
             initial={{ x: "100%", opacity: 0.95 }}
             animate={{ x: 0, opacity: 1 }}
@@ -167,7 +179,6 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4 bg-surface-variant/40">
               <div className="flex items-center gap-3">
-                {/* Sage Avatar with glowing status dot */}
                 <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20">
                   <Sparkles size={18} className="animate-pulse" />
                   <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface bg-emerald-500">
@@ -258,6 +269,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                     <Sparkles size={14} />
                   </div>
                   <div className="flex-1 rounded-2xl border border-border-subtle bg-surface p-4 shadow-md chat-msg-ai space-y-3">
+                    {/* Follow-up header */}
                     <div className="flex items-start gap-2.5 text-xs font-bold text-foreground">
                       {pendingFollowUp.missing === "date" ? (
                         <>
@@ -266,8 +278,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                         </>
                       ) : pendingFollowUp.missing === "sports_category" ? (
                         <>
-                          <Trophy size={15} className="text-primary-500 shrink-0 mt-0.5" />
-                          <span>Suggest new Sports category</span>
+                          <Trophy size={15} className="text-amber-500 shrink-0 mt-0.5" />
+                          <span>
+                            Create a new <span className="text-primary-500">"{pendingFollowUp.suggestedCategory || "Sports"}"</span> category?
+                          </span>
                         </>
                       ) : (
                         <>
@@ -277,6 +291,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                       )}
                     </div>
 
+                    {/* Date picker */}
                     {pendingFollowUp.missing === "date" ? (
                       <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
@@ -295,9 +310,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                             onClick={() =>
                               sendFollowUp({
                                 ...pendingFollowUp.details,
-                                date: new Date(
-                                  Date.now() - 24 * 60 * 60 * 1000
-                                ).toISOString(),
+                                date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
                               })
                             }
                             className="flex-1 rounded-xl py-2 text-xs font-bold bg-surface-variant border border-border-subtle text-foreground hover:bg-border-hover active:scale-95 transition-all"
@@ -320,21 +333,28 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                           />
                         </div>
                       </div>
+
                     ) : pendingFollowUp.missing === "sports_category" ? (
+                      /* Sports / repetitive category suggestion */
                       <div className="space-y-3">
+                        <p className="text-[11px] text-muted leading-relaxed">
+                          Based on your past expenses, we suggest creating a <strong>"{pendingFollowUp.suggestedCategory || "Sports"}"</strong> category to better track these activities.
+                        </p>
                         <div className="flex gap-2">
+                          {/* Option 1: Auto-suggested category */}
                           <button
                             onClick={() =>
                               sendFollowUp({
                                 ...pendingFollowUp.details,
-                                category: "Sports",
+                                category: pendingFollowUp.suggestedCategory || "Sports",
                                 createCategory: true,
                               })
                             }
                             className="flex-1 rounded-xl py-2 text-xs font-bold bg-primary-500 text-white hover:bg-primary-600 active:scale-95 transition-all shadow-sm"
                           >
-                            1. Sports (Auto)
+                            ✦ {pendingFollowUp.suggestedCategory || "Sports"}
                           </button>
+                          {/* Option 3: Skip */}
                           <button
                             onClick={() =>
                               sendFollowUp({
@@ -345,13 +365,14 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                             }
                             className="flex-1 rounded-xl py-2 text-xs font-bold bg-surface-variant border border-border-subtle text-foreground hover:bg-border-hover active:scale-95 transition-all"
                           >
-                            3. Skip (Other)
+                            Skip (Other)
                           </button>
                         </div>
+                        {/* Option 2: Custom category input */}
                         <div className="flex gap-2">
                           <input
                             type="text"
-                            placeholder="2. Enter custom category..."
+                            placeholder="Or enter a custom category name…"
                             value={customCategoryInput}
                             onChange={(e) => setCustomCategoryInput(e.target.value)}
                             onKeyDown={(e) => {
@@ -382,7 +403,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                           </button>
                         </div>
                       </div>
+
                     ) : (
+                      /* Generic new-category confirmation */
                       <div className="space-y-3">
                         <div className="flex gap-2">
                           <button
@@ -411,7 +434,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                         <div className="flex gap-2">
                           <input
                             type="text"
-                            placeholder="Or rename category..."
+                            placeholder="Or rename category…"
                             value={customCategoryInput}
                             onChange={(e) => setCustomCategoryInput(e.target.value)}
                             onKeyDown={(e) => {
@@ -450,29 +473,42 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
             {/* Input & Suggested Prompts Area */}
             <div className="border-t border-border-subtle p-4 bg-surface animate-fade-in">
-              {/* Contextual Suggested Prompts - collapsible toggle */}
+              {/* Collapsible Suggested Prompts — PERSISTENT, never auto-hidden */}
               <div className="mb-2">
                 <button
                   onClick={() => setShowSuggestions((prev) => !prev)}
                   className="flex items-center gap-1.5 text-[10px] font-black tracking-widest uppercase text-muted hover:text-foreground transition-all"
+                  aria-label={showSuggestions ? "Hide suggested prompts" : "Show suggested prompts"}
                 >
                   Suggested prompts
-                  {showSuggestions ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                  {/* ChevronUp = currently visible (click to collapse), ChevronDown = hidden (click to expand) */}
+                  {showSuggestions ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                 </button>
 
-                {showSuggestions && (
-                  <div className="flex flex-col gap-2 mt-2">
-                    {suggestedPrompts.map((prompt) => (
-                      <button
-                        key={prompt}
-                        onClick={() => handlePromptClick(prompt)}
-                        className="rounded-xl border border-border-subtle bg-surface px-3.5 py-2 text-left text-xs font-semibold text-foreground/80 hover:border-primary-500 hover:text-foreground active:bg-surface-variant transition-all"
-                      >
-                        {prompt}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <AnimatePresence initial={false}>
+                  {showSuggestions && (
+                    <motion.div
+                      key="suggestions"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex flex-col gap-2 mt-2">
+                        {suggestedPrompts.map((prompt) => (
+                          <button
+                            key={prompt}
+                            onClick={() => handlePromptClick(prompt)}
+                            className="rounded-xl border border-border-subtle bg-surface px-3.5 py-2 text-left text-xs font-semibold text-foreground/80 hover:border-primary-500 hover:text-foreground active:bg-surface-variant transition-all"
+                          >
+                            {prompt}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {error && (
@@ -497,7 +533,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleInputKeyDown}
-                  placeholder="Ask Sage anything..."
+                  placeholder="Ask Sage anything…"
                   disabled={isLoading}
                   className="w-full h-12 rounded-2xl border border-border-subtle bg-background pl-4 pr-12 text-sm text-foreground placeholder:text-muted outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 disabled:opacity-60"
                 />
@@ -511,7 +547,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 </button>
               </div>
               <span className="text-[10px] text-muted text-center block mt-2 font-bold tracking-tight">
-                Sage can link categories and dates automatically
+                Sage auto-matches your categories in real time
               </span>
             </div>
           </motion.div>

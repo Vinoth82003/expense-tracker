@@ -3,21 +3,59 @@ import { logger } from "@/lib/logger";
 import { BudgetDetails, ExpenseDetails, DateRange } from "./intent";
 import { validateBudgetDetails, validateExpenseDetails, validateIncomeDetails } from "./validators";
 import { endOfDay, endOfMonth, format, startOfDay, startOfMonth } from "date-fns";
+import { KEYWORD_ALIASES, SPORTS_KEYWORDS } from "@/types/keywords";
 
-const defaultCategories = [
-  "Needs",
-  "Wants",
-  "Food",
-  "Transport",
-  "Travel",
-  "Rent",
-  "Utilities",
-  "Health",
-  "Education",
-  "Entertainment",
-  "Shopping",
-  "Other",
-];
+// ─── Category helpers ────────────────────────────────────────────────────────
+
+/**
+ * Returns all categories available to a user (global defaults + user-created).
+ */
+async function getUserCategories(userId: string) {
+  const [globalCats, userCats] = await Promise.all([
+    prisma.category.findMany({ where: { userId: null, isDefault: true } }),
+    prisma.category.findMany({ where: { userId } }),
+  ]);
+  return [...globalCats, ...userCats];
+}
+
+type CategoryRecord = Awaited<ReturnType<typeof getUserCategories>>[number];
+
+
+function matchCategoryFromText(text: string, categories: CategoryRecord[]): CategoryRecord | null {
+  const lower = text.toLowerCase();
+
+  // 1. Direct name match
+  const direct = categories.find((c) => lower.includes(c.name.toLowerCase()));
+  if (direct) return direct;
+
+  // 2. Alias keyword match — find the first keyword present in text
+  for (const [keyword, aliases] of Object.entries(KEYWORD_ALIASES)) {
+    // Use word-boundary-like check
+    const wordRe = new RegExp(`\\b${keyword}\\b`, "i");
+    if (wordRe.test(text)) {
+      // Walk the alias priority list and find the first one that exists in DB
+      for (const alias of aliases) {
+        const found = categories.find((c) => c.name.toLowerCase() === alias.toLowerCase());
+        if (found) return found;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns the primary sports keyword found in text, if any.
+ */
+function extractSportsKeyword(text: string): string | null {
+  const lower = text.toLowerCase();
+  for (const kw of SPORTS_KEYWORDS) {
+    if (new RegExp(`\\b${kw}\\b`, "i").test(lower)) return kw;
+  }
+  return null;
+}
+
+// ─── Formatting ──────────────────────────────────────────────────────────────
 
 function formatCurrency(value: number) {
   return `₹${value.toFixed(2)}`;
@@ -28,15 +66,14 @@ function formatDate(date?: Date) {
   return format(date, "yyyy-MM-dd");
 }
 
+// ─── Read operations ─────────────────────────────────────────────────────────
+
 export async function getExpenseSummary(userId: string, range: DateRange) {
   await logger.info("Chat read: getExpenseSummary", { userId, range: range.label }, "API", undefined, userId);
   const expenses = await prisma.expense.findMany({
     where: {
       userId,
-      date: {
-        gte: range.start,
-        lte: range.end,
-      },
+      date: { gte: range.start, lte: range.end },
     },
   });
 
@@ -64,10 +101,7 @@ export async function getIncomeSummary(userId: string, range: DateRange) {
   const incomes = await prisma.income.findMany({
     where: {
       userId,
-      date: {
-        gte: range.start,
-        lte: range.end,
-      },
+      date: { gte: range.start, lte: range.end },
     },
   });
 
@@ -101,13 +135,7 @@ export async function getBudgetStatus(userId: string) {
   const monthEnd = endOfMonth(now);
 
   const expenses = await prisma.expense.findMany({
-    where: {
-      userId,
-      date: {
-        gte: monthStart,
-        lte: monthEnd,
-      },
-    },
+    where: { userId, date: { gte: monthStart, lte: monthEnd } },
   });
 
   const total = expenses.reduce((sum, item) => sum + item.amount, 0);
@@ -118,6 +146,8 @@ export async function getBudgetStatus(userId: string) {
   return `Your monthly budget is ${formatCurrency(user.monthlyLimit)}. You've spent ${formatCurrency(total)} this month and have ${formatCurrency(remaining)} left. Your current budget status is ${status}.`;
 }
 
+// ─── Write operations ─────────────────────────────────────────────────────────
+
 export async function createExpense(userId: string, details: ExpenseDetails) {
   const validation = validateExpenseDetails(details);
   if (!validation.valid) {
@@ -125,138 +155,133 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
   }
 
   const expense = validation.details;
-  // Normalize inputs
   const providedCategory = expense.category?.toString().trim();
   const note = expense.note || "Created via chat assistant";
-
-  // Default date to today if not provided
+  const originalMsg = (details as any).originalMessage || "";
   const date = expense.date ? new Date(expense.date) : new Date();
 
-  // Load categories (global + user) to check existence
-  const globalCategories = prisma?.category?.findMany ? (await prisma.category.findMany({ where: { userId: null, isDefault: true } })) || [] : [];
-  const userCategories = prisma?.category?.findMany ? (await prisma.category.findMany({ where: { userId } })) || [] : [];
-  const allCategories = [...globalCategories, ...userCategories];
+  // ── Step 1: Load all available categories for this user ──
+  const allCategories = await getUserCategories(userId);
 
-  // Helper: case-insensitive find
-  const findCategoryByName = (name?: string) => {
-    if (!name) return null;
-    const lower = name.toLowerCase();
-    return allCategories.find((c) => c.name.toLowerCase() === lower) || null;
-  };
+  // ── Step 2: Try to match a category using the combined text (note + providedCategory + original message) ──
+  // Include originalMessage so that even when parseNote can't extract a clean
+  // note (e.g. "Cricket Turf 200 today"), the raw user text is still searched
+  // against KEYWORD_ALIASES for correct categorisation.
+  const searchText = [
+    providedCategory,
+    note !== "Created via chat assistant" ? note : "",
+    originalMsg
+  ].filter(Boolean).join(" ");
+  let categoryRecord = matchCategoryFromText(searchText, allCategories);
 
-  // Simple keyword -> suggested category mapping
-  const keywordMap: Record<string, string> = {
-    taxi: "Travel",
-    cab: "Travel",
-    uber: "Travel",
-    bus: "Transport",
-    flight: "Travel",
-    petrol: "Transport",
-    fuel: "Transport",
-    groceries: "Food",
-    grocery: "Food",
-    dinner: "Food",
-    lunch: "Food",
-    breakfast: "Food",
-    hotel: "Travel",
-    football: "Sports",
-    badminton: "Sports",
-    cricket: "Sports",
-    sports: "Sports",
-    cinema: "Entertainment",
-    movie: "Entertainment",
-  };
+  // ── Step 3: Sports history check ──
+  // If no category matched AND text contains a sports keyword AND "Sports" (or similar) doesn't exist
+  if (!categoryRecord && !expense.createCategory) {
+    const sportsKw = extractSportsKeyword(searchText);
+    if (sportsKw) {
+      // Check if any sports-like category exists already
+      const sportsCatExists = allCategories.find((c) =>
+        ["sports", "fitness"].includes(c.name.toLowerCase())
+      );
 
-  // Determine category record to use
-  let categoryRecord = findCategoryByName(providedCategory || undefined);
+      if (!sportsCatExists) {
+        // Look for past sports expenses categorised under "Other"
+        const pastSportsExpenses = await prisma.expense.findMany({
+          where: {
+            userId,
+            OR: SPORTS_KEYWORDS.map((kw) => ({
+              note: { contains: kw, mode: "insensitive" as const },
+            })),
+          },
+          take: 5,
+          orderBy: { date: "desc" },
+        });
 
-  // If providedCategory is missing or empty, infer from the note
-  if (!categoryRecord) {
-    const lowerNote = note.toLowerCase();
-    const suggestionKey = Object.keys(keywordMap).find((k) => lowerNote.includes(k));
-    if (suggestionKey) {
-      const suggestedName = keywordMap[suggestionKey];
-      categoryRecord = findCategoryByName(suggestedName);
+        if (pastSportsExpenses.length > 0) {
+          const exampleNote = pastSportsExpenses[0].note || "sports activity";
+          return {
+            success: false,
+            message: `I noticed you've logged sports-related expenses like "${exampleNote}" before. Since there's no "Sports" category yet, would you like to create one for "${sportsKw}" and similar activities?`,
+            followUp: {
+              type: "sports_suggestion",
+              payload: {
+                missing: "sports_category",
+                suggestedCategory: "Sports",
+                details: expense,
+              },
+            },
+          };
+        }
+      }
     }
   }
 
-  // If still not found, check sports suggestion history
-  if (!categoryRecord && providedCategory && (providedCategory.toLowerCase() === "sports" || ["badminton", "cricket", "football", "turf"].some(kw => note.toLowerCase().includes(kw)))) {
-    const hasSportsCategory = findCategoryByName("Sports");
-    if (!hasSportsCategory && !expense.createCategory) {
-      // Find past user transactions that could be sports related in the Other category
-      const recentOtherSports = await prisma.expense.findMany({
-        where: {
-          userId,
-          subcategory: "Other",
-          OR: [
-            { note: { contains: "turf", mode: "insensitive" } },
-            { note: { contains: "football", mode: "insensitive" } },
-            { note: { contains: "cricket", mode: "insensitive" } },
-            { note: { contains: "badminton", mode: "insensitive" } },
-          ],
-        },
-      });
+  // ── Step 3.5: Alias suggestions & confirmation flow ──
+  // If no category matched, check if any keyword in KEYWORD_ALIASES matches our search text
+  // Only suggest if the user hasn't already confirmed or declined category creation in a follow-up
+  if (!categoryRecord && expense.createCategory === undefined) {
+    let matchedAliases: string[] | undefined;
+    for (const [keyword, aliases] of Object.entries(KEYWORD_ALIASES)) {
+      const wordRe = new RegExp(`\\b${keyword}\\b`, "i");
+      if (wordRe.test(searchText)) {
+        matchedAliases = aliases;
+        break;
+      }
+    }
 
-      if (recentOtherSports.length > 0) {
+    if (matchedAliases && matchedAliases.length > 0) {
+      const suggestedName = matchedAliases[0];
+      const suggestedRecord = allCategories.find((c) => c.name.toLowerCase() === suggestedName.toLowerCase());
+      if (suggestedRecord) {
+        categoryRecord = suggestedRecord;
+      } else if (providedCategory) {
+        // Only prompt user to create category if they explicitly provided a category name
         return {
           success: false,
-          message: `I noticed sports expenses like "${recentOtherSports[0].note}" under "Other" in your history. Would you like to create a new "Sports" category?`,
+          message: `I couldn't find a category named '${providedCategory}'. Would you like me to create a new category named '${suggestedName}' and add this expense there?`,
           followUp: {
-            type: "sports_suggestion",
-            payload: { missing: "sports_category", details: expense },
+            type: "add_expense_requirements",
+            payload: {
+              missing: "category",
+              suggestedCategory: suggestedName,
+              details: {
+                ...expense,
+                category: suggestedName,
+              },
+            },
           },
         };
       }
     }
   }
 
-  // If provided category not found, try to suggest via keyword map
-  if (!categoryRecord && providedCategory) {
-    const lower = providedCategory.toLowerCase();
-    const suggestionKey = Object.keys(keywordMap).find((k) => lower.includes(k));
-    if (suggestionKey) {
-      const suggestedName = keywordMap[suggestionKey];
-      const suggestedRecord = findCategoryByName(suggestedName);
-      if (suggestedRecord) {
-        categoryRecord = suggestedRecord;
-      } else if (expense.createCategory) {
-        // Create the suggested category for the user
-        const newCat = await prisma.category.create({ data: { name: suggestedName, type: "Wants", isDefault: false, userId } });
-        categoryRecord = newCat;
-      } else {
-        return {
-          success: false,
-          message: `I couldn't find a category named '${providedCategory}'. Would you like me to create a new category named '${suggestedName}' and add this expense there?`,
-        };
-      }
-    }
-  }
-
-  // If still not found and createCategory flag provided with a name, create it
+  // ── Step 4: If createCategory flag is set with a name, create that category ──
   if (!categoryRecord && expense.createCategory && providedCategory) {
     try {
-      const newCat = await prisma.category.create({ data: { name: providedCategory, type: "Wants", isDefault: false, userId } });
+      const newCat = await prisma.category.create({
+        data: { name: providedCategory, type: "Wants", isDefault: false, userId },
+      });
       categoryRecord = newCat;
     } catch (e) {
       console.error("Failed to create category from chat flow:", e);
     }
   }
 
-  // Default fallback
+  // ── Step 5: Default fallback — classify as Needs/Wants heuristically ──
   if (!categoryRecord) {
-    // classify as Needs/Wants heuristically using keywords
     const needsKeywords = ["rent", "utility", "utilities", "electricity", "water", "medicine", "hospital", "health", "doctor", "loan"];
-    const lowerNote = (note || "").toLowerCase();
-    const inferredType = needsKeywords.some((k) => lowerNote.includes(k) || (providedCategory && providedCategory.toLowerCase().includes(k))) ? "Needs" : "Wants";
-    // use 'Other' subcategory
+    const lowerSearch = searchText.toLowerCase();
+    const inferredType = needsKeywords.some((k) => lowerSearch.includes(k)) ? "Needs" : "Wants";
     categoryRecord = { id: "", name: "Other", type: inferredType, isDefault: true, userId: null } as any;
   }
 
   const subcategory = categoryRecord!.name;
-  const categoryType = categoryRecord!.type === "Needs" || categoryRecord!.type === "Wants" ? categoryRecord!.type : "Wants";
+  const categoryType =
+    categoryRecord!.type === "Needs" || categoryRecord!.type === "Wants"
+      ? categoryRecord!.type
+      : "Wants";
 
-  await prisma.expense.create({
+  const created = await prisma.expense.create({
     data: {
       amount: expense.amount,
       category: categoryType,
@@ -267,11 +292,19 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
     },
   });
 
-  await logger.info("Chat created expense", { userId, amount: expense.amount, category: subcategory, date: formatDate(date) }, "API", undefined, userId);
+  await logger.info(
+    "Chat created expense",
+    { userId, amount: expense.amount, category: subcategory, date: formatDate(date) },
+    "API",
+    undefined,
+    userId
+  );
 
   return {
     success: true,
     message: `Added an expense of ${formatCurrency(expense.amount)} for ${subcategory} (${categoryType}) on ${formatDate(date)}.`,
+    eventType: "expenseAdded",
+    data: created,
   };
 }
 
@@ -286,7 +319,7 @@ export async function createIncome(userId: string, details: ExpenseDetails) {
   const source = income.note || "Income";
   const note = income.note ? income.note : "Created via chat assistant";
 
-  await prisma.income.create({
+  const created = await prisma.income.create({
     data: {
       amount: income.amount,
       source,
@@ -296,11 +329,19 @@ export async function createIncome(userId: string, details: ExpenseDetails) {
     },
   });
 
-  await logger.info("Chat created income", { userId, amount: income.amount, source, date: formatDate(date) }, "API", undefined, userId);
+  await logger.info(
+    "Chat created income",
+    { userId, amount: income.amount, source, date: formatDate(date) },
+    "API",
+    undefined,
+    userId
+  );
 
   return {
     success: true,
     message: `Added income of ${formatCurrency(income.amount)} on ${formatDate(date)}.`,
+    eventType: "incomeAdded",
+    data: created,
   };
 }
 
@@ -324,5 +365,10 @@ export async function updateBudget(userId: string, details: BudgetDetails) {
   return {
     success: true,
     message: `Your monthly budget has been set to ${formatCurrency(budget.amount)}.`,
+    eventType: "budgetUpdated",
+    data: {
+      limit: budget.amount,
+      expenseMode: "limit"
+    },
   };
 }
