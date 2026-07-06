@@ -336,13 +336,7 @@ export default function DashboardLayout({
               Add Expense
             </button>
 
-            <button
-              onClick={() => setIsChatOpen(true)}
-              className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border-subtle bg-surface text-secondary hover:bg-surface-variant hover:text-foreground transition-all active:scale-95"
-            >
-              <MessageSquare size={18} />
-              Chat
-            </button>
+
 
             <NotificationDropdown />
 
@@ -472,9 +466,19 @@ export default function DashboardLayout({
         )}
       </AnimatePresence>
 
+      {/* Floating Action Button (FAB) for Chat */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-xl shadow-indigo-600/30 hover:scale-110 active:scale-95 transition-all chat-fab-ring"
+        aria-label="Open Sage Assistant"
+      >
+        <Sparkles size={22} className="animate-pulse" />
+      </button>
+
+      {/* Mobile Add Expense Button (shifted to the left slightly or stacked with FAB) */}
       <button
         onClick={() => setIsAddExpenseOpen(true)}
-        className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-2xl bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"
+        className="sm:hidden fixed bottom-6 right-24 w-14 h-14 rounded-2xl bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"
       >
         <Plus size={32} />
       </button>

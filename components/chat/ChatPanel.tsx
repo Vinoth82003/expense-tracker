@@ -2,7 +2,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { MessageSquare, X, Send, Loader2 } from "lucide-react";
+import { X, Send, Sparkles, AlertCircle, RefreshCw, Calendar, FolderPlus, ChevronUp, ChevronDown, Trophy } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { sendChatMessage } from "@/lib/chat/service";
 import { ChatMessage } from "@/lib/chat/types";
 
@@ -13,33 +14,47 @@ interface ChatPanelProps {
 
 const suggestedPrompts = [
   "What did I spend on groceries this month?",
-  "Add an expense of ₹250 for taxi today.",
-  "Add income of ₹20,000 for salary this month.",
-  "Set my monthly budget to ₹15,000.",
-  "How is my budget performing this week?",
+  "Add ₹250 for taxi today.",
+  "Add salary of ₹20,000 this month.",
+  "Set monthly budget to ₹15,000.",
 ];
 
 const initialMessages: ChatMessage[] = [
   {
     id: "assistant-welcome",
     role: "assistant",
-    text: "Hi there! I can help you understand your expenses, income, budget, and reports. Ask me anything.",
+    text: "Hi there! I'm Sage, your personal financial assistant. I can help you log transactions, analyze budgets, or answer questions about your habits. Ask me anything!",
   },
 ];
 
 export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const messageListRef = useRef<HTMLDivElement | null>(null);
   const [pendingFollowUp, setPendingFollowUp] = useState<any | null>(null);
+  const [customCategoryInput, setCustomCategoryInput] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(true);
 
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Auto-scroll to bottom
   useEffect(() => {
     if (messageListRef.current) {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
-  }, [messages, isOpen]);
+  }, [messages, isLoading, pendingFollowUp]);
+
+  // Focus input when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 300);
+    }
+  }, [isOpen]);
 
   const addMessage = (message: ChatMessage) => {
     setMessages((prev) => [...prev, message]);
@@ -47,14 +62,13 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
   const sendMessage = async () => {
     const trimmed = input.trim();
-    if (!trimmed) {
-      return;
-    }
+    if (!trimmed) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
       text: trimmed,
+      timestamp: new Date(),
     };
 
     addMessage(userMessage);
@@ -70,10 +84,15 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         text:
           response.reply ||
           "I couldn't generate a response. Please try again in a moment.",
+        timestamp: new Date(),
       };
       addMessage(assistantMessage);
 
-      // If server indicates follow-up required, store payload to present UI
+      if (response.success) {
+        // Sync context/state in real time on success
+        router.refresh();
+      }
+
       if (response.success === false && response.followUp) {
         setPendingFollowUp(response.followUp.payload);
       } else {
@@ -95,10 +114,13 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         text: response.reply || "",
+        timestamp: new Date(),
       };
       addMessage(assistantMessage);
       if (response.success) {
         setPendingFollowUp(null);
+        // Sync page UI
+        router.refresh();
       } else if (response.followUp) {
         setPendingFollowUp(response.followUp.payload);
       }
@@ -109,8 +131,8 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     }
   };
 
-  const handleInputKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
       event.preventDefault();
       sendMessage();
     }
@@ -118,215 +140,382 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
   const handlePromptClick = (prompt: string) => {
     setInput(prompt);
+    inputRef.current?.focus();
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-        >
+        <>
+          {/* Backdrop (mobile only, or to click away on desktop) */}
           <motion.div
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 40, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 260, damping: 22 }}
-            className="w-full max-w-3xl rounded-[2rem] border border-border-subtle bg-surface shadow-2xl shadow-black/20 overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px]"
+          />
+
+          {/* Chat Side Drawer / Sheet */}
+          <motion.div
+            initial={{ x: "100%", opacity: 0.95 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "100%", opacity: 0.95 }}
+            transition={{ type: "spring", damping: 26, stiffness: 220 }}
+            className="fixed inset-y-0 right-0 z-50 flex h-full w-full flex-col border-l border-border-subtle bg-surface shadow-2xl transition-all sm:max-w-md lg:max-w-[420px]"
           >
-            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-border-subtle bg-background/80">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4 bg-surface-variant/40">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-primary-500/10 text-primary-600 grid place-items-center">
-                  <MessageSquare size={20} />
+                {/* Sage Avatar with glowing status dot */}
+                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20">
+                  <Sparkles size={18} className="animate-pulse" />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface bg-emerald-500">
+                    <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
+                  </span>
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">Expense Assistant</h2>
-                  <p className="text-sm text-muted">
-                    Ask about your spending, budgets, and reports.
-                  </p>
+                  <h3 className="font-bold text-sm leading-tight text-foreground flex items-center gap-1.5">
+                    Sage
+                    <span className="text-[10px] font-black tracking-widest uppercase text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded-md">AI</span>
+                  </h3>
+                  <p className="text-xs text-muted">Ready to manage your budget</p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="rounded-2xl p-3 text-secondary hover:bg-surface-variant transition-all"
+                className="rounded-xl p-2 text-secondary hover:bg-surface-variant hover:text-foreground transition-all"
+                aria-label="Close panel"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className="max-h-[60vh] overflow-hidden">
-              <div
-                ref={messageListRef}
-                className="space-y-4 p-6 overflow-y-auto max-h-[42vh] text-sm text-foreground"
-              >
-                {messages.map((message) => (
+            {/* Message Area */}
+            <div
+              ref={messageListRef}
+              className="flex-1 overflow-y-auto p-5 space-y-4 chat-scroll bg-gradient-to-b from-transparent to-surface-variant/10"
+            >
+              {messages.map((message) => {
+                const isUser = message.role === "user";
+                return (
                   <div
                     key={message.id}
-                    className={`rounded-3xl p-4 ${message.role === "user" ? "bg-primary-500/10 self-end text-primary-900" : "bg-surface-variant"}`}
+                    className={`flex gap-3 max-w-[85%] ${isUser ? "ml-auto flex-row-reverse" : "mr-auto"}`}
                   >
-                    <p className="whitespace-pre-wrap break-words">
-                      {message.text}
-                    </p>
+                    {!isUser && (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-violet-600/10 text-primary-600 border border-primary-500/10">
+                        <Sparkles size={14} />
+                      </div>
+                    )}
+                    <div className="space-y-1">
+                      <div
+                        className={`rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                          isUser
+                            ? "bg-gradient-to-br from-indigo-600 to-indigo-500 text-white chat-msg-user"
+                            : "bg-surface-variant/80 text-foreground border border-border-subtle/50 chat-msg-ai"
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap break-words leading-relaxed">
+                          {message.text}
+                        </p>
+                      </div>
+                      <span
+                        className={`block text-[10px] text-muted font-bold ${
+                          isUser ? "text-right mr-1" : "text-left ml-1"
+                        }`}
+                      >
+                        {message.timestamp
+                          ? message.timestamp.toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                );
+              })}
 
-            <div className="border-t border-border-subtle p-6 bg-background/80">
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {suggestedPrompts.map((prompt) => (
-                    <button
-                      key={prompt}
-                      onClick={() => handlePromptClick(prompt)}
-                      className="rounded-2xl border border-border-subtle bg-surface px-4 py-3 text-left text-xs text-foreground/80 hover:border-primary-500 hover:text-foreground transition-all"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
+              {/* Thinking / Typing Animation */}
+              {isLoading && (
+                <div className="flex gap-3 max-w-[85%] mr-auto">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-violet-600/10 text-primary-600 border border-primary-500/10">
+                    <Sparkles size={14} />
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-2xl bg-surface-variant/80 px-4 py-3.5 border border-border-subtle/50 chat-msg-ai">
+                    <span className="chat-dot-1 h-2.5 w-2.5 rounded-full bg-primary-500 block" />
+                    <span className="chat-dot-2 h-2.5 w-2.5 rounded-full bg-primary-500 block" />
+                    <span className="chat-dot-3 h-2.5 w-2.5 rounded-full bg-primary-500 block" />
+                  </div>
                 </div>
+              )}
 
-                {error ? (
-                  <p className="text-sm text-rose-500">{error}</p>
-                ) : null}
+              {/* Inline Interactive Follow-ups */}
+              {pendingFollowUp && !isLoading && (
+                <div className="flex gap-3 max-w-[90%] mr-auto">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-violet-600/10 text-primary-600 border border-primary-500/10">
+                    <Sparkles size={14} />
+                  </div>
+                  <div className="flex-1 rounded-2xl border border-border-subtle bg-surface p-4 shadow-md chat-msg-ai space-y-3">
+                    <div className="flex items-start gap-2.5 text-xs font-bold text-foreground">
+                      {pendingFollowUp.missing === "date" ? (
+                        <>
+                          <Calendar size={15} className="text-primary-500 shrink-0 mt-0.5" />
+                          <span>Select a date for this transaction:</span>
+                        </>
+                      ) : pendingFollowUp.missing === "sports_category" ? (
+                        <>
+                          <Trophy size={15} className="text-primary-500 shrink-0 mt-0.5" />
+                          <span>Suggest new Sports category</span>
+                        </>
+                      ) : (
+                        <>
+                          <FolderPlus size={15} className="text-primary-500 shrink-0 mt-0.5" />
+                          <span>Create category "{pendingFollowUp.details?.category}"?</span>
+                        </>
+                      )}
+                    </div>
 
-                {pendingFollowUp ? (
-                  <div className="rounded-2xl border border-border-subtle bg-surface px-4 py-3 text-sm">
-                    <p className="mb-2">
-                      {pendingFollowUp.missing === "date"
-                        ? "Please select a date for this expense:"
-                        : "I couldn't find the category — would you like to create it?"}
-                    </p>
                     {pendingFollowUp.missing === "date" ? (
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() =>
-                            sendFollowUp({
-                              ...pendingFollowUp.details,
-                              date: new Date().toISOString(),
-                            })
-                          }
-                          className="rounded-2xl px-3 py-2 bg-primary-500 text-white"
-                        >
-                          Today
-                        </button>
-                        <button
-                          onClick={() =>
-                            sendFollowUp({
-                              ...pendingFollowUp.details,
-                              date: new Date(
-                                Date.now() - 24 * 60 * 60 * 1000,
-                              ).toISOString(),
-                            })
-                          }
-                          className="rounded-2xl px-3 py-2 bg-primary-500 text-white"
-                        >
-                          Yesterday
-                        </button>
-                        <label className="rounded-2xl px-3 py-2 bg-surface border cursor-pointer">
-                          <input
-                            type="date"
-                            onChange={(e) =>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() =>
                               sendFollowUp({
                                 ...pendingFollowUp.details,
-                                date: e.target.value,
+                                date: new Date().toISOString(),
                               })
                             }
-                          />
-                        </label>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2 flex-wrap items-center">
-                        <button
-                          onClick={() =>
-                            sendFollowUp({
-                              ...pendingFollowUp.details,
-                              createCategory: true,
-                            })
-                          }
-                          className="rounded-2xl px-3 py-2 bg-primary-500 text-white"
-                        >
-                          Yes, create it
-                        </button>
-                        <button
-                          onClick={() =>
-                            sendFollowUp({
-                              ...pendingFollowUp.details,
-                              createCategory: false,
-                            })
-                          }
-                          className="rounded-2xl px-3 py-2 bg-surface border"
-                        >
-                          No, put in Other
-                        </button>
-                        <div className="flex items-center gap-2">
-                          <input
-                            placeholder="Category name"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                const val = (
-                                  e.target as HTMLInputElement
-                                ).value.trim();
-                                if (val)
-                                  sendFollowUp({
-                                    ...pendingFollowUp.details,
-                                    category: val,
-                                    createCategory: true,
-                                  });
-                              }
-                            }}
-                            className="rounded px-2 py-1 border"
-                          />
+                            className="flex-1 rounded-xl py-2 text-xs font-bold bg-primary-500 text-white hover:bg-primary-600 active:scale-95 transition-all shadow-sm"
+                          >
+                            Today
+                          </button>
                           <button
-                            onClick={(e) => {
-                              const inputEl = e.currentTarget
-                                .previousSibling as HTMLInputElement;
-                              const val = inputEl?.value?.trim();
-                              if (val)
+                            onClick={() =>
+                              sendFollowUp({
+                                ...pendingFollowUp.details,
+                                date: new Date(
+                                  Date.now() - 24 * 60 * 60 * 1000
+                                ).toISOString(),
+                              })
+                            }
+                            className="flex-1 rounded-xl py-2 text-xs font-bold bg-surface-variant border border-border-subtle text-foreground hover:bg-border-hover active:scale-95 transition-all"
+                          >
+                            Yesterday
+                          </button>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            onChange={(e) => {
+                              if (e.target.value) {
                                 sendFollowUp({
                                   ...pendingFollowUp.details,
-                                  category: val,
+                                  date: e.target.value,
+                                });
+                              }
+                            }}
+                            className="w-full rounded-xl border border-border-subtle bg-surface px-3 py-2 text-xs font-semibold text-foreground outline-none focus:border-primary-500"
+                          />
+                        </div>
+                      </div>
+                    ) : pendingFollowUp.missing === "sports_category" ? (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() =>
+                              sendFollowUp({
+                                ...pendingFollowUp.details,
+                                category: "Sports",
+                                createCategory: true,
+                              })
+                            }
+                            className="flex-1 rounded-xl py-2 text-xs font-bold bg-primary-500 text-white hover:bg-primary-600 active:scale-95 transition-all shadow-sm"
+                          >
+                            1. Sports (Auto)
+                          </button>
+                          <button
+                            onClick={() =>
+                              sendFollowUp({
+                                ...pendingFollowUp.details,
+                                category: "Other",
+                                createCategory: false,
+                              })
+                            }
+                            className="flex-1 rounded-xl py-2 text-xs font-bold bg-surface-variant border border-border-subtle text-foreground hover:bg-border-hover active:scale-95 transition-all"
+                          >
+                            3. Skip (Other)
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="2. Enter custom category..."
+                            value={customCategoryInput}
+                            onChange={(e) => setCustomCategoryInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && customCategoryInput.trim()) {
+                                sendFollowUp({
+                                  ...pendingFollowUp.details,
+                                  category: customCategoryInput.trim(),
                                   createCategory: true,
                                 });
+                              }
                             }}
-                            className="rounded-2xl px-3 py-2 bg-primary-500 text-white"
+                            className="flex-1 rounded-xl border border-border-subtle bg-surface px-3 py-1.5 text-xs text-foreground outline-none focus:border-primary-500"
+                          />
+                          <button
+                            disabled={!customCategoryInput.trim()}
+                            onClick={() => {
+                              if (customCategoryInput.trim()) {
+                                sendFollowUp({
+                                  ...pendingFollowUp.details,
+                                  category: customCategoryInput.trim(),
+                                  createCategory: true,
+                                });
+                              }
+                            }}
+                            className="rounded-xl bg-primary-500/10 border border-primary-500/20 px-3 text-xs font-bold text-primary-600 hover:bg-primary-500/20 active:scale-95 transition-all disabled:opacity-50"
                           >
                             Create
                           </button>
                         </div>
                       </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() =>
+                              sendFollowUp({
+                                ...pendingFollowUp.details,
+                                createCategory: true,
+                              })
+                            }
+                            className="flex-1 rounded-xl py-2 text-xs font-bold bg-primary-500 text-white hover:bg-primary-600 active:scale-95 transition-all shadow-sm"
+                          >
+                            Yes, create it
+                          </button>
+                          <button
+                            onClick={() =>
+                              sendFollowUp({
+                                ...pendingFollowUp.details,
+                                createCategory: false,
+                              })
+                            }
+                            className="flex-1 rounded-xl py-2 text-xs font-bold bg-surface-variant border border-border-subtle text-foreground hover:bg-border-hover active:scale-95 transition-all"
+                          >
+                            Use "Other"
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Or rename category..."
+                            value={customCategoryInput}
+                            onChange={(e) => setCustomCategoryInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && customCategoryInput.trim()) {
+                                sendFollowUp({
+                                  ...pendingFollowUp.details,
+                                  category: customCategoryInput.trim(),
+                                  createCategory: true,
+                                });
+                              }
+                            }}
+                            className="flex-1 rounded-xl border border-border-subtle bg-surface px-3 py-1.5 text-xs text-foreground outline-none focus:border-primary-500"
+                          />
+                          <button
+                            disabled={!customCategoryInput.trim()}
+                            onClick={() => {
+                              if (customCategoryInput.trim()) {
+                                sendFollowUp({
+                                  ...pendingFollowUp.details,
+                                  category: customCategoryInput.trim(),
+                                  createCategory: true,
+                                });
+                              }
+                            }}
+                            className="rounded-xl bg-primary-500/10 border border-primary-500/20 px-3 text-xs font-bold text-primary-600 hover:bg-primary-500/20 active:scale-95 transition-all disabled:opacity-50"
+                          >
+                            Rename
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
-                ) : null}
+                </div>
+              )}
+            </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                  <textarea
-                    value={input}
-                    onChange={(event) => setInput(event.target.value)}
-                    onKeyDown={handleInputKeyDown}
-                    className="min-h-[96px] w-full resize-none rounded-3xl border border-border-subtle bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
-                    placeholder="Type your question or instruction..."
-                  />
+            {/* Input & Suggested Prompts Area */}
+            <div className="border-t border-border-subtle p-4 bg-surface animate-fade-in">
+              {/* Contextual Suggested Prompts - collapsible toggle */}
+              <div className="mb-2">
+                <button
+                  onClick={() => setShowSuggestions((prev) => !prev)}
+                  className="flex items-center gap-1.5 text-[10px] font-black tracking-widest uppercase text-muted hover:text-foreground transition-all"
+                >
+                  Suggested prompts
+                  {showSuggestions ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                </button>
+
+                {showSuggestions && (
+                  <div className="flex flex-col gap-2 mt-2">
+                    {suggestedPrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        onClick={() => handlePromptClick(prompt)}
+                        className="rounded-xl border border-border-subtle bg-surface px-3.5 py-2 text-left text-xs font-semibold text-foreground/80 hover:border-primary-500 hover:text-foreground active:bg-surface-variant transition-all"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {error && (
+                <div className="mb-3 flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-xs text-rose-600">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <p className="flex-1 font-semibold">{error}</p>
                   <button
-                    type="button"
                     onClick={sendMessage}
-                    disabled={isLoading}
-                    className="inline-flex h-14 shrink-0 items-center justify-center gap-2 rounded-3xl bg-primary-500 px-6 text-sm font-bold text-white transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="p-1 rounded-lg hover:bg-rose-500/10 text-rose-700"
+                    title="Retry"
                   >
-                    {isLoading ? (
-                      <Loader2 className="animate-spin" size={18} />
-                    ) : (
-                      <Send size={18} />
-                    )}
-                    Send
+                    <RefreshCw size={12} />
                   </button>
                 </div>
+              )}
+
+              {/* Chat Input Field */}
+              <div className="flex items-center gap-2 relative mt-2">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleInputKeyDown}
+                  placeholder="Ask Sage anything..."
+                  disabled={isLoading}
+                  className="w-full h-12 rounded-2xl border border-border-subtle bg-background pl-4 pr-12 text-sm text-foreground placeholder:text-muted outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/10 disabled:opacity-60"
+                />
+                <button
+                  type="button"
+                  onClick={sendMessage}
+                  disabled={isLoading || !input.trim()}
+                  className="absolute right-1.5 h-9 w-9 inline-flex items-center justify-center rounded-xl bg-primary-500 text-white transition hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                >
+                  <Send size={15} />
+                </button>
               </div>
+              <span className="text-[10px] text-muted text-center block mt-2 font-bold tracking-tight">
+                Sage can link categories and dates automatically
+              </span>
             </div>
           </motion.div>
-        </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

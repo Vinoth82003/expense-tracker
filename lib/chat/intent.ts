@@ -122,34 +122,62 @@ function parseAmount(text: string): number | undefined {
 
 function parseCategory(text: string): string | undefined {
   const normalized = text.toLowerCase();
-  return categoryKeywords.find((keyword) => normalized.includes(keyword));
+  // If matched a specific category keyword
+  const keyword = categoryKeywords.find((kw) => normalized.includes(kw));
+  if (keyword) return keyword;
+
+  // Otherwise check if a generic word is used as the category context
+  const taxiMatch = /\b(taxi|cab|uber|ride|travel|bus|train|flight)\b/i.test(normalized);
+  if (taxiMatch) return "travel";
+
+  const sportsMatch = /\b(badminton|football|cricket|turf|sports|gym|tennis)\b/i.test(normalized);
+  if (sportsMatch) return "sports";
+
+  return undefined;
 }
 
 function parseNote(text: string, category?: string): string | undefined {
   const lower = text.toLowerCase();
-  const marker = "for ";
-  const index = lower.indexOf(marker);
-  if (index !== -1) {
-    const note = text.slice(index + marker.length).trim();
-    if (category && note.toLowerCase().includes(category)) {
-      return note;
+  
+  // Look for "for <item>" or "on <item>" or "bought <item>"
+  let note: string | undefined = undefined;
+  
+  const boughtMatch = text.match(/\bbought\s+(.*?)\s+(?:for|at)\b/i);
+  if (boughtMatch) {
+    note = boughtMatch[1].trim();
+  } else {
+    const forIndex = lower.indexOf("for ");
+    if (forIndex !== -1) {
+      note = text.slice(forIndex + 4).trim();
+    } else {
+      const onIndex = lower.indexOf("on ");
+      if (onIndex !== -1) {
+        note = text.slice(onIndex + 3).trim();
+      }
     }
-    return note;
   }
+
+  if (note) {
+    // Clean up trailing date markers
+    note = note.replace(/\b(today|yesterday|tomorrow)\b.*$/i, "").trim();
+    note = note.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").trim();
+    return note || undefined;
+  }
+
   return undefined;
 }
 
 export function getChatIntent(message: string): ChatIntent {
   const normalized = message.trim().toLowerCase();
-  const hasExpenseKeyword = /\b(expense|spent|spend|purchase|bought|pay|purchase)\b/.test(normalized);
+  const hasExpenseKeyword = /\b(expense|spent|spend|purchase|bought|pay|paid|dinner|lunch|breakfast|taxi|cab|uber|coffee|shopping|shoes?|puma)\b/.test(normalized);
   const hasIncomeKeyword = /\b(income|salary|earned|revenue|received|paid)\b/.test(normalized);
   const hasBudgetKeyword = /\b(budget|limit|monthly limit|monthly budget|overspend|overspending|remaining balance|under budget|over budget|save|savings)\b/.test(normalized);
-  const hasAddExpenseKeyword = /\b(add|create|record|log|spent|bought|paid)\b.*\b(expense|spent|purchase|bill|dinner|lunch|breakfast|taxi|coffee|shopping)\b/.test(normalized) || /\b(expense|spent|purchase|bill|dinner|lunch|breakfast|taxi|coffee|shopping)\b.*\b(add|create|record|log|spent|bought|paid)\b/.test(normalized);
-  const hasAddIncomeKeyword = /\b(add|create|record|log|received|earned|paid)\b.*\b(income|salary|revenue|payment|bonus)\b/.test(normalized) || /\b(income|salary|revenue|payment|bonus)\b.*\b(add|create|record|log|received|earned|paid)\b/.test(normalized);
-  const hasUpdateBudgetKeyword = /\b(set|update|change|adjust|raise|lower)\b.*\b(budget|monthly limit|monthly budget|limit)\b/.test(normalized) || /\b(budget|monthly limit|monthly budget|limit)\b.*\b(set|update|change|adjust|raise|lower)\b/.test(normalized);
-  const hasQuestionIntent = /\b(what|show|tell|how|did|do|is|are|list|compare|summary|report)\b/.test(normalized);
+  
   const amount = parseAmount(message);
   const timeframe = buildDateRange(message);
+  const hasQuestionIntent = /\b(what|show|tell|how|did|do|is|are|list|compare|summary|report)\b/.test(normalized);
+
+  const hasUpdateBudgetKeyword = /\b(set|update|change|adjust|raise|lower)\b.*\b(budget|monthly limit|monthly budget|limit)\b/.test(normalized) || /\b(budget|monthly limit|monthly budget|limit)\b.*\b(set|update|change|adjust|raise|lower)\b/.test(normalized);
 
   if (hasUpdateBudgetKeyword || (hasBudgetKeyword && amount && !hasQuestionIntent)) {
     return {
@@ -160,7 +188,11 @@ export function getChatIntent(message: string): ChatIntent {
     };
   }
 
-  if (hasAddIncomeKeyword || (hasIncomeKeyword && amount && !hasQuestionIntent)) {
+  // Determine if it is a request to log income
+  const isAddIncome = /\b(add|create|record|log|received|earned)\b.*\b(income|salary|revenue|payment|bonus)\b/.test(normalized) || 
+                      (hasIncomeKeyword && amount && !hasQuestionIntent && !normalized.includes("bought") && !normalized.includes("spent"));
+
+  if (isAddIncome) {
     const incomeDate = parseDateFromPhrase(message);
     return {
       type: "add_income",
@@ -172,16 +204,22 @@ export function getChatIntent(message: string): ChatIntent {
     };
   }
 
-  if (hasAddExpenseKeyword || (hasExpenseKeyword && amount && !hasQuestionIntent)) {
+  // Determine if it is a request to log expense
+  const isAddExpense = /\b(add|create|record|log|spent|bought|paid)\b.*\b(expense|spent|purchase|bill|dinner|lunch|breakfast|taxi|cab|uber|coffee|shopping|shoes?|puma)\b/.test(normalized) || 
+                       (hasExpenseKeyword && amount && !hasQuestionIntent) ||
+                       (amount && (normalized.startsWith("spent") || normalized.startsWith("bought") || normalized.startsWith("paid")));
+
+  if (isAddExpense) {
     const expenseDate = parseDateFromPhrase(message);
     const category = parseCategory(message);
+    const note = parseNote(message, category);
     return {
       type: "add_expense",
       details: {
         amount,
         category,
         date: expenseDate,
-        note: parseNote(message, category),
+        note: note || (category ? `Expense for ${category}` : "Expense"),
       },
     };
   }

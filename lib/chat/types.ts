@@ -4,6 +4,7 @@ export type ChatMessage = {
   id: string;
   role: ChatRole;
   text: string;
+  timestamp?: Date;
 };
 
 export type ChatAPIRequest = {

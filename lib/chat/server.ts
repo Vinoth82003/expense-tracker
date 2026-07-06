@@ -129,7 +129,6 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
   const providedCategory = expense.category?.toString().trim();
   const note = expense.note || "Created via chat assistant";
 
-
   // Default date to today if not provided
   const date = expense.date ? new Date(expense.date) : new Date();
 
@@ -162,6 +161,7 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
     hotel: "Travel",
     football: "Sports",
     badminton: "Sports",
+    cricket: "Sports",
     sports: "Sports",
     cinema: "Entertainment",
     movie: "Entertainment",
@@ -169,6 +169,47 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
 
   // Determine category record to use
   let categoryRecord = findCategoryByName(providedCategory || undefined);
+
+  // If providedCategory is missing or empty, infer from the note
+  if (!categoryRecord) {
+    const lowerNote = note.toLowerCase();
+    const suggestionKey = Object.keys(keywordMap).find((k) => lowerNote.includes(k));
+    if (suggestionKey) {
+      const suggestedName = keywordMap[suggestionKey];
+      categoryRecord = findCategoryByName(suggestedName);
+    }
+  }
+
+  // If still not found, check sports suggestion history
+  if (!categoryRecord && providedCategory && (providedCategory.toLowerCase() === "sports" || ["badminton", "cricket", "football", "turf"].some(kw => note.toLowerCase().includes(kw)))) {
+    const hasSportsCategory = findCategoryByName("Sports");
+    if (!hasSportsCategory && !expense.createCategory) {
+      // Find past user transactions that could be sports related in the Other category
+      const recentOtherSports = await prisma.expense.findMany({
+        where: {
+          userId,
+          subcategory: "Other",
+          OR: [
+            { note: { contains: "turf", mode: "insensitive" } },
+            { note: { contains: "football", mode: "insensitive" } },
+            { note: { contains: "cricket", mode: "insensitive" } },
+            { note: { contains: "badminton", mode: "insensitive" } },
+          ],
+        },
+      });
+
+      if (recentOtherSports.length > 0) {
+        return {
+          success: false,
+          message: `I noticed sports expenses like "${recentOtherSports[0].note}" under "Other" in your history. Would you like to create a new "Sports" category?`,
+          followUp: {
+            type: "sports_suggestion",
+            payload: { missing: "sports_category", details: expense },
+          },
+        };
+      }
+    }
+  }
 
   // If provided category not found, try to suggest via keyword map
   if (!categoryRecord && providedCategory) {
@@ -184,29 +225,9 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
         const newCat = await prisma.category.create({ data: { name: suggestedName, type: "Wants", isDefault: false, userId } });
         categoryRecord = newCat;
       } else {
-        // Check user's recent expenses for similar entries to suggest grouping
-        const recentSimilar = await prisma.expense.findMany({
-          where: {
-            userId,
-            OR: [
-              { subcategory: { contains: providedCategory, mode: "insensitive" } },
-              { note: { contains: providedCategory, mode: "insensitive" } },
-            ],
-          },
-          take: 5,
-          orderBy: { date: "desc" },
-        });
-
-        if (recentSimilar.length > 0) {
-          return {
-            success: false,
-            message: `I found similar past expenses (e.g. '${recentSimilar[0].note || recentSimilar[0].subcategory}') that could belong to a category like '${suggestedName}'. Would you like me to create '${suggestedName}' and move future entries there? Reply 'yes' to create, provide a name, or 'no' to add it to Other.`,
-          };
-        }
-
         return {
           success: false,
-          message: `I couldn't find a category named '${providedCategory}'. Would you like me to create a new category named '${suggestedName}' and add this expense there? Reply 'yes' to create, provide a name, or 'no' to add it to Other.`,
+          message: `I couldn't find a category named '${providedCategory}'. Would you like me to create a new category named '${suggestedName}' and add this expense there?`,
         };
       }
     }
@@ -233,11 +254,12 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
   }
 
   const subcategory = categoryRecord!.name;
+  const categoryType = categoryRecord!.type === "Needs" || categoryRecord!.type === "Wants" ? categoryRecord!.type : "Wants";
 
   await prisma.expense.create({
     data: {
       amount: expense.amount,
-      category: categoryRecord!.type === "Needs" || categoryRecord!.type === "Wants" ? categoryRecord!.type : "Needs",
+      category: categoryType,
       subcategory,
       note,
       date,
@@ -249,7 +271,7 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
 
   return {
     success: true,
-    message: `Added an expense of ${formatCurrency(expense.amount)} for ${subcategory} on ${formatDate(date)}.`,
+    message: `Added an expense of ${formatCurrency(expense.amount)} for ${subcategory} (${categoryType}) on ${formatDate(date)}.`,
   };
 }
 
