@@ -36,6 +36,10 @@ const footerLinks: Record<string, FooterLink[]> = {
     { label: "Share Feedback", href: "/contact" },
     { label: "System Status", href: "/status" },
   ],
+  Learn: [
+    { label: "What is Sage AI?", href: "/docs/sage-ai-the-spendwise-chatbot" },
+    { label: "How to use Sage AI?", href: "/docs/sage-ai-query-guide" },
+  ],
   Legal: [
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms of Service", href: "/terms" },

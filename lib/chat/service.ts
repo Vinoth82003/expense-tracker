@@ -5,6 +5,7 @@ export async function sendChatMessage(
   message?: string,
   details?: any,
   intentType?: string,
+  context?: any,
 ): Promise<ChatAPIResponse> {
   const start = Date.now();
   try {
@@ -12,6 +13,7 @@ export async function sendChatMessage(
     if (message) body.message = message;
     if (details) body.details = details;
     if (intentType) body.intentType = intentType;
+    if (context) body.context = context;
 
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -69,3 +71,4 @@ export async function sendChatMessage(
     throw err;
   }
 }
+

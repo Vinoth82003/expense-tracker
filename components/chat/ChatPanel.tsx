@@ -13,17 +13,17 @@ interface ChatPanelProps {
 }
 
 const suggestedPrompts = [
-  "What did I spend on groceries this month?",
+  "How has my spending changed compared to last month?",
+  "What are my top spending categories?",
+  "Give me financial insights or advice on my budget.",
   "Add ₹250 for taxi today.",
-  "Add salary of ₹20,000 this month.",
-  "Set monthly budget to ₹15,000.",
 ];
 
 const initialMessages: ChatMessage[] = [
   {
     id: "assistant-welcome",
     role: "assistant",
-    text: "Hi there! I'm Sage, your personal financial assistant. I can help you log transactions, analyze budgets, or answer questions about your habits. Ask me anything!",
+    text: "Hi there! I'm Sage, your personal financial assistant. I can help you log transactions, analyze budgets, compare spending across months, or offer savings insights. Ask me anything!",
   },
 ];
 
@@ -36,6 +36,49 @@ function dispatchSyncEvent(eventType?: string, detail?: any) {
   window.dispatchEvent(new CustomEvent(eventType, { detail }));
 }
 
+/**
+ * Helper component to render simple markdown formatting: bold text (**text**)
+ * and styled bullet lists (line breaks with •).
+ */
+function FormattedMessageText({ text }: { text: string }) {
+  if (!text) return null;
+  const lines = text.split("\n");
+
+  return (
+    <>
+      {lines.map((line, lineIdx) => {
+        // Check if line starts with a bullet point
+        const isBullet = line.trim().startsWith("•");
+        const cleanLine = isBullet ? line.trim().substring(1).trim() : line;
+
+        // Simple parse for bold formatting (**bold**)
+        const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
+        const parsedLine = parts.map((part, partIdx) => {
+          if (part.startsWith("**") && part.endsWith("**")) {
+            return <strong key={partIdx} className="font-extrabold text-foreground">{part.slice(2, -2)}</strong>;
+          }
+          return part;
+        });
+
+        if (isBullet) {
+          return (
+            <div key={lineIdx} className="flex items-start gap-1.5 my-1 pl-1">
+              <span className="text-primary-500 font-bold shrink-0 mt-0.5">•</span>
+              <span className="leading-relaxed">{parsedLine}</span>
+            </div>
+          );
+        }
+
+        return (
+          <p key={lineIdx} className={lineIdx > 0 ? "mt-1.5 leading-relaxed" : "leading-relaxed"}>
+            {parsedLine}
+          </p>
+        );
+      })}
+    </>
+  );
+}
+
 export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -44,9 +87,8 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [pendingFollowUp, setPendingFollowUp] = useState<any | null>(null);
   const [customCategoryInput, setCustomCategoryInput] = useState("");
-  // Suggestions are ALWAYS visible by default and the user can toggle them.
-  // They do NOT auto-collapse when a message is sent.
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [chatContext, setChatContext] = useState<any>(null);
 
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -88,7 +130,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setIsLoading(true);
 
     try {
-      const response = await sendChatMessage(trimmed);
+      const response = await sendChatMessage(trimmed, undefined, undefined, chatContext);
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
@@ -98,6 +140,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         timestamp: new Date(),
       };
       addMessage(assistantMessage);
+
+      if (response.context) {
+        setChatContext(response.context);
+      }
 
       if (response.success) {
         // Dispatch custom event so DashboardContext refreshes data in real-time
@@ -121,7 +167,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setError(null);
     setCustomCategoryInput("");
     try {
-      const response = await sendChatMessage(undefined, details, intentType);
+      const response = await sendChatMessage(undefined, details, intentType, chatContext);
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
@@ -129,6 +175,11 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         timestamp: new Date(),
       };
       addMessage(assistantMessage);
+
+      if (response.context) {
+        setChatContext(response.context);
+      }
+
       if (response.success) {
         setPendingFollowUp(null);
         // Dispatch sync event for real-time dashboard update
@@ -191,7 +242,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                     <span className="text-[10px] font-black tracking-widest uppercase text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded-md">AI</span>
                   </h3>
                   <p className="text-xs text-muted">Ready to manage your budget</p>
-                  <span className="text-[10px] font-black tracking-widest uppercase text-emerald-500 bg-primary-500/10 px-1.5 py-0.5 rounded-md">BETA</span>
+                  <span className="text-[10px] font-black tracking-widest uppercase text-emerald-600 bg-emerald-500/15 text-emerald-500 px-1.5 py-0.5 rounded-md">v1</span>
                 </div>
               </div>
               <button
@@ -228,9 +279,13 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                             : "bg-surface-variant/80 text-foreground border border-border-subtle/50 chat-msg-ai"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words leading-relaxed">
-                          {message.text}
-                        </p>
+                        {isUser ? (
+                          <p className="whitespace-pre-wrap break-words leading-relaxed">
+                            {message.text}
+                          </p>
+                        ) : (
+                          <FormattedMessageText text={message.text} />
+                        )}
                       </div>
                       <span
                         className={`block text-[10px] text-muted font-bold ${
@@ -255,10 +310,15 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-violet-600/10 text-primary-600 border border-primary-500/10">
                     <Sparkles size={14} />
                   </div>
-                  <div className="flex items-center gap-1.5 rounded-2xl bg-surface-variant/80 px-4 py-3.5 border border-border-subtle/50 chat-msg-ai">
-                    <span className="chat-dot-1 h-2.5 w-2.5 rounded-full bg-primary-500 block" />
-                    <span className="chat-dot-2 h-2.5 w-2.5 rounded-full bg-primary-500 block" />
-                    <span className="chat-dot-3 h-2.5 w-2.5 rounded-full bg-primary-500 block" />
+                  <div className="flex items-center gap-2.5 rounded-2xl bg-surface-variant/80 px-4 py-3 border border-border-subtle/50 chat-msg-ai">
+                    <span className="text-xs font-semibold text-muted flex items-center gap-1.5">
+                      🤔 Analyzing your data...
+                      <span className="flex items-center gap-0.5">
+                        <span className="chat-dot-1 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                        <span className="chat-dot-2 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                        <span className="chat-dot-3 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                      </span>
+                    </span>
                   </div>
                 </div>
               )}
@@ -457,7 +517,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                                   ...pendingFollowUp.details,
                                   category: customCategoryInput.trim(),
                                   createCategory: true,
-                                });
+                                  });
                               }
                             }}
                             className="rounded-xl bg-primary-500/10 border border-primary-500/20 px-3 text-xs font-bold text-primary-600 hover:bg-primary-500/20 active:scale-95 transition-all disabled:opacity-50"
@@ -548,8 +608,27 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 </button>
               </div>
               <span className="text-[10px] text-muted text-center block mt-2 font-bold tracking-tight">
-                Sage auto-matches your categories in real time
+                Sage v1 — Intelligent financial assistant
               </span>
+              <div className="mt-1.5 flex items-center justify-center gap-3">
+                <a
+                  href="https://money-spend-tracker.vercel.app/docs/sage-ai-the-spendwise-chatbot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-bold text-primary-500/70 hover:text-primary-600 transition-colors"
+                >
+                  What is Sage AI?
+                </a>
+                <span className="text-[10px] text-muted/40">•</span>
+                <a
+                  href="https://money-spend-tracker.vercel.app/docs/sage-ai-query-guide"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-bold text-primary-500/70 hover:text-primary-600 transition-colors"
+                >
+                  How to use Sage AI?
+                </a>
+              </div>
             </div>
           </motion.div>
         </>
