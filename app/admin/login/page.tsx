@@ -25,13 +25,20 @@ export default function AdminLoginPage() {
       });
 
       if (res.ok) {
-        router.push("/admin");
+        try {
+          await router.push("/admin");
+        } catch (navErr) {
+          // If App Router navigation fails (RSC fetch issues), fall back to a full page load
+          console.error("Router navigation failed, falling back to full redirect:", navErr);
+          window.location.href = "/admin";
+        }
       } else {
-        const data = await res.json();
-        setError(data.message || "Invalid credentials");
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || data.message || "Invalid credentials");
       }
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      console.error("Network or fetch error during admin login:", err);
+      setError("Network error: please check your connection and try again.");
     } finally {
       setLoading(false);
     }

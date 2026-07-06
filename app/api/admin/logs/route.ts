@@ -11,12 +11,19 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const level = searchParams.get("level");
     const service = searchParams.get("service");
+    const query = searchParams.get("query")?.trim();
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
 
     const where: any = {};
     if (level && level !== "ALL") where.level = level;
     if (service && service !== "ALL") where.service = service;
+    if (query) {
+      where.OR = [
+        { message: { contains: query, mode: "insensitive" } },
+        { details: { contains: query, mode: "insensitive" } },
+      ];
+    }
 
     const [logs, total] = await Promise.all([
       (prisma as any).systemLog.findMany({

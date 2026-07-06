@@ -48,16 +48,24 @@ export default function LogsPage() {
   const [level, setLevel] = useState("ALL");
   const [service, setService] = useState("ALL");
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
 
   useEffect(() => {
     fetchLogs();
-  }, [level, service, page]);
+  }, [level, service, page, search]);
 
   const fetchLogs = async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetch(`/api/admin/logs?level=${level}&service=${service}&page=${page}`);
+      const params = new URLSearchParams({
+        level,
+        service,
+        page: page.toString(),
+      });
+      if (search.trim()) params.set("query", search.trim());
+
+      const res = await fetch(`/api/admin/logs?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setLogs(data.logs);
@@ -169,11 +177,24 @@ export default function LogsPage() {
           </select>
         </div>
 
+        <button
+          onClick={() => {
+            setService("API");
+            setSearch("Chat");
+            setPage(1);
+          }}
+          className="rounded-full border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-bold uppercase tracking-[0.15em] text-teal-700 transition hover:bg-teal-100"
+        >
+          Chatbot events
+        </button>
+
         <div className="flex-1 min-w-[200px] relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)] group-focus-within:text-teal-500 transition-colors" size={16} />
           <input 
             type="text"
-            placeholder="Search logs (client-side)..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search message or details..."
             className="w-full pl-10 pr-4 py-2 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-xl text-sm text-[var(--admin-text-primary)] focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
           />
         </div>

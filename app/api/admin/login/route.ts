@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { signAdminSession } from "@/lib/admin-auth";
+import { rateLimiter } from "@/lib/rateLimit";
+import { sendEmail } from "@/lib/mail";
+
+// Simple in-memory failure tracker for admin login attempts per IP
+const adminFailures = new Map<string, { count: number; firstAttempt: number }>();
+const ALERT_THRESHOLD = Number(process.env.ADMIN_LOGIN_ALERT_THRESHOLD || 5);
+const ALERT_WINDOW_MS = Number(process.env.ADMIN_LOGIN_ALERT_WINDOW_MS || 15 * 60 * 1000); // 15 minutes
 
 export async function POST(req: Request) {
   try {
+    // Apply admin login rate limit
+    const adminRateLimit = rateLimiter(Number(process.env.ADMIN_RATE_LIMIT_MAX || 10), Number(process.env.ADMIN_RATE_LIMIT_WINDOW_MS || 60 * 1000));
+    const limitResult = adminRateLimit(req);
+    if (limitResult) return limitResult;
+
     const { email, password } = await req.json();
 
     const adminUser = process.env.ADMIN_USER;
@@ -11,7 +23,7 @@ export async function POST(req: Request) {
 
     if (!adminUser || !adminPass) {
       console.error("[SECURITY] ADMIN_USER or ADMIN_PASS environment variables are not set.");
-      return NextResponse.json({ message: "Server misconfiguration" }, { status: 500 });
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
     if (email === adminUser && password === adminPass) {
@@ -31,15 +43,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true }, { status: 200 });
     }
 
-    return NextResponse.json(
-      { message: "Invalid admin credentials" },
-      { status: 401 }
-    );
+    // Log minimal info about unauthorized attempts (do not log credentials)
+    const ip = (req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown").toString();
+    console.warn(`[SECURITY] Unauthorized admin access attempt to /admin from IP: ${ip}`);
+
+    // Track failures and alert support if threshold exceeded
+    try {
+      const now = Date.now();
+      const entry = adminFailures.get(ip) || { count: 0, firstAttempt: now };
+      if (now - entry.firstAttempt > ALERT_WINDOW_MS) {
+        // Reset window
+        entry.count = 1;
+        entry.firstAttempt = now;
+      } else {
+        entry.count++;
+      }
+      adminFailures.set(ip, entry);
+
+      if (entry.count >= ALERT_THRESHOLD) {
+        const support = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || process.env.EMAIL || "";
+        if (support) {
+          const subject = `Alert: Repeated admin login failures from ${ip}`;
+          const html = `<p>There have been <strong>${entry.count}</strong> failed admin login attempts from IP <strong>${ip}</strong> within the last ${Math.round(ALERT_WINDOW_MS/60000)} minutes.</p><p>Please investigate potential brute-force activity.</p>`;
+          // send async, don't block the response
+          sendEmail(support, subject, html).catch((e) => console.error("Failed to send admin-login alert email:", e));
+        }
+        // Clear the counter after alerting to avoid spamming
+        adminFailures.delete(ip);
+      }
+    } catch (e) {
+      console.error("Error tracking admin login failures:", e);
+    }
+
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   } catch (error) {
     console.error("[ADMIN LOGIN] Error during admin authentication:", error);
-    return NextResponse.json(
-      { message: "An error occurred during login" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -5,12 +5,12 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  LayoutDashboard, 
-  ReceiptIndianRupee, 
-  PieChart, 
-  Settings, 
-  User, 
+import {
+  LayoutDashboard,
+  ReceiptIndianRupee,
+  PieChart,
+  Settings,
+  User,
   LogOut,
   Plus,
   TrendingUp,
@@ -27,10 +27,12 @@ import {
   HelpCircle,
   ExternalLink,
   Sparkles,
-  Users
+  Users,
+  MessageSquare,
 } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
+import { ChatPanel } from "@/components/chat/ChatPanel";
 import { DashboardProvider } from "@/context/DashboardContext";
 
 import { useTheme } from "@/components/providers/ThemeProvider";
@@ -45,9 +47,14 @@ const navGroups = [
     title: "Intelligence",
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { name: "Forensic Analysis", href: "/analyze", icon: BrainCog, premium: true },
+      {
+        name: "Forensic Analysis",
+        href: "/analyze",
+        icon: BrainCog,
+        premium: true,
+      },
       { name: "Visual Reports", href: "/reports", icon: PieChart },
-    ]
+    ],
   },
   {
     title: "Transactions",
@@ -55,7 +62,7 @@ const navGroups = [
       { name: "Expenses", href: "/expenses", icon: ReceiptIndianRupee },
       { name: "Income", href: "/income", icon: Banknote },
       { name: "Category Map", href: "/settings/categories", icon: LayoutGrid },
-    ]
+    ],
   },
   // {
   //   title: "Community",
@@ -68,8 +75,8 @@ const navGroups = [
     items: [
       { name: "Announcements", href: "/notifications", icon: Bell },
       { name: "System Settings", href: "/settings", icon: Settings },
-    ]
-  }
+    ],
+  },
 ];
 
 export default function DashboardLayout({
@@ -83,13 +90,14 @@ export default function DashboardLayout({
   const { confirm } = useModal();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [featureFlags, setFeatureFlags] = useState<any>({ aiAnalysis: true });
   const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     fetch("/api/system/status")
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data?.featureFlags) {
           setFeatureFlags(data.featureFlags);
         }
@@ -123,7 +131,10 @@ export default function DashboardLayout({
       router.push("/onboarding");
       return;
     }
-    if (status === "authenticated" && (session?.user as any)?.twoFactorEnabled) {
+    if (
+      status === "authenticated" &&
+      (session?.user as any)?.twoFactorEnabled
+    ) {
       const cookies = document.cookie.split(";").map((c) => c.trim());
       const is2faVerified = cookies.some((c) => c.startsWith("2fa_verified="));
       if (!is2faVerified) {
@@ -135,9 +146,10 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     const isConfirmed = await confirm({
       title: "Logout?",
-      message: "Are you sure you want to end your session? You'll need to log in again to access your forensic insights.",
+      message:
+        "Are you sure you want to end your session? You'll need to log in again to access your forensic insights.",
       confirmText: "Logout",
-      danger: true
+      danger: true,
     });
 
     if (isConfirmed) {
@@ -155,7 +167,10 @@ export default function DashboardLayout({
           </div>
           <div className="space-y-4 flex-1 mt-4">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-12 w-full bg-surface-variant rounded-2xl"></div>
+              <div
+                key={i}
+                className="h-12 w-full bg-surface-variant rounded-2xl"
+              ></div>
             ))}
           </div>
           <div className="mt-auto h-12 w-full bg-surface-variant rounded-2xl"></div>
@@ -169,16 +184,19 @@ export default function DashboardLayout({
               <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-surface-variant"></div>
             </div>
           </header>
-          
+
           <main className="flex-1 p-4 lg:p-8">
-             <div className="space-y-8">
-               <div className="h-16 w-3/4 max-w-md bg-surface-variant rounded-xl"></div>
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 {[1, 2, 3].map((i) => (
-                   <div key={i} className="h-32 w-full bg-surface-variant rounded-[2rem]"></div>
-                 ))}
-               </div>
-             </div>
+            <div className="space-y-8">
+              <div className="h-16 w-3/4 max-w-md bg-surface-variant rounded-xl"></div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-32 w-full bg-surface-variant rounded-[2rem]"
+                  ></div>
+                ))}
+              </div>
+            </div>
           </main>
         </div>
       </div>
@@ -189,7 +207,10 @@ export default function DashboardLayout({
     <div className="min-h-screen flex bg-background text-foreground">
       {/* Sidebar - Desktop */}
       <aside className="hidden lg:flex flex-col w-72 bg-surface border-r border-border-subtle p-6 sticky top-0 h-screen">
-        <Link href="/dashboard" className="flex items-center gap-3 mb-10 px-2 group/logo hover:scale-[1.02] transition-all active:scale-95">
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3 mb-10 px-2 group/logo hover:scale-[1.02] transition-all active:scale-95"
+        >
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg group-hover/logo:shadow-indigo-500/30 transition-all">
             <TrendingUp size={22} color="white" strokeWidth={2.5} />
           </div>
@@ -201,8 +222,13 @@ export default function DashboardLayout({
         <div className="flex-1 space-y-8 overflow-y-auto no-scrollbar pr-2">
           {navGroups.map((group) => (
             <div key={group.title} className="space-y-3">
-              <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">{group.title}</h3>
-              <nav className="space-y-1" aria-label={`${group.title} Navigation`}>
+              <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">
+                {group.title}
+              </h3>
+              <nav
+                className="space-y-1"
+                aria-label={`${group.title} Navigation`}
+              >
                 {group.items.map((item) => {
                   const isActive = pathname === item.href;
                   return (
@@ -210,12 +236,19 @@ export default function DashboardLayout({
                       key={item.href}
                       href={item.href}
                       className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
-                        isActive 
-                          ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" 
+                        isActive
+                          ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
                           : "text-secondary hover:bg-surface-variant hover:text-foreground"
                       }`}
                     >
-                      <item.icon size={18} className={isActive ? "" : "group-hover:scale-110 transition-transform"} />
+                      <item.icon
+                        size={18}
+                        className={
+                          isActive
+                            ? ""
+                            : "group-hover:scale-110 transition-transform"
+                        }
+                      />
                       <span className="font-bold text-sm">{item.name}</span>
                       {item.premium && !isActive && (
                         <div className="ml-auto w-4 h-4 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center">
@@ -231,24 +264,39 @@ export default function DashboardLayout({
         </div>
 
         <div className="mt-8 pt-6 border-t border-border-subtle space-y-4">
-          <Link href="/profile" className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-            pathname === "/profile" ? "bg-surface-variant text-foreground shadow-sm" : "text-secondary hover:text-foreground"
-          }`}>
+          <Link
+            href="/profile"
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+              pathname === "/profile"
+                ? "bg-surface-variant text-foreground shadow-sm"
+                : "text-secondary hover:text-foreground"
+            }`}
+          >
             <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-500/10 border border-primary-500/20 flex items-center justify-center">
               {session.user?.image ? (
-                <img src={session.user.image} alt={`${session.user.name || 'User'}'s avatar`} width={32} height={32} className="w-full h-full object-cover" />
+                <img
+                  src={session.user.image}
+                  alt={`${session.user.name || "User"}'s avatar`}
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <User size={16} className="text-primary-600" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black truncate">{session.user?.name || "Profile"}</p>
-              <p className="text-[10px] text-muted font-bold truncate">{session.user?.email}</p>
+              <p className="text-xs font-black truncate">
+                {session.user?.name || "Profile"}
+              </p>
+              <p className="text-[10px] text-muted font-bold truncate">
+                {session.user?.email}
+              </p>
             </div>
             <ChevronRight size={14} className="text-muted" />
           </Link>
 
-          <button 
+          <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold group"
           >
@@ -265,7 +313,7 @@ export default function DashboardLayout({
         {/* Top Header - Sticky */}
         <header className="sticky top-0 z-30 flex items-center justify-between p-4 lg:p-6 bg-background/80 backdrop-blur-md border-b border-border-subtle lg:border-none">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open mobile navigation menu"
               className="lg:hidden p-2 rounded-xl bg-surface border border-border-subtle text-secondary focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
@@ -273,21 +321,31 @@ export default function DashboardLayout({
               <Menu size={24} />
             </button>
             <h1 className="text-xl lg:text-3xl font-black tracking-tight">
-              {navGroups.flatMap(g => g.items).find(item => item.href === pathname)?.name || "Dashboard"}
+              {navGroups
+                .flatMap((g) => g.items)
+                .find((item) => item.href === pathname)?.name || "Dashboard"}
             </h1>
           </div>
 
           <div className="flex items-center gap-3 lg:gap-4">
-            <button 
+            <button
               onClick={() => setIsAddExpenseOpen(true)}
               className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white font-bold shadow-lg shadow-primary-500/20 hover:scale-105 transition-transform active:scale-95"
             >
               <Plus size={20} />
               Add Expense
             </button>
-            
+
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border-subtle bg-surface text-secondary hover:bg-surface-variant hover:text-foreground transition-all active:scale-95"
+            >
+              <MessageSquare size={18} />
+              Chat
+            </button>
+
             <NotificationDropdown />
-            
+
             <button
               onClick={toggleTheme}
               className="p-2.5 lg:p-3 rounded-xl bg-surface border border-border-subtle text-secondary hover:text-foreground transition-all active:scale-95 shadow-sm"
@@ -295,13 +353,19 @@ export default function DashboardLayout({
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            <Link 
+            <Link
               href="/profile"
               className="relative group active:scale-95 transition-transform"
             >
               <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full overflow-hidden border-2 border-background shadow-md flex items-center justify-center transition-all group-hover:ring-2 group-hover:ring-primary-500/50">
                 {session.user?.image ? (
-                  <img src={session.user.image} alt={`${session.user.name || 'User'}'s profile picture`} width={44} height={44} className="w-full h-full object-cover" />
+                  <img
+                    src={session.user.image}
+                    alt={`${session.user.name || "User"}'s profile picture`}
+                    width={44}
+                    height={44}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-lime-500 to-green-600 flex items-center justify-center text-white font-black text-lg">
                     {session.user?.name?.charAt(0) || "U"}
@@ -327,7 +391,10 @@ export default function DashboardLayout({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 lg:hidden"
           >
-            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+            <div
+              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
             <motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
@@ -336,13 +403,22 @@ export default function DashboardLayout({
               className="absolute top-0 left-0 bottom-0 w-80 bg-surface border-r border-border-subtle p-6 flex flex-col"
             >
               <div className="flex items-center justify-between mb-10 px-2">
-                <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 group/logo">
+                <Link
+                  href="/dashboard"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-3 group/logo"
+                >
                   <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
                     <TrendingUp size={22} color="white" strokeWidth={2.5} />
                   </div>
-                  <span className="font-extrabold text-2xl tracking-tight">Spend<span className="text-primary-600">Wise</span></span>
+                  <span className="font-extrabold text-2xl tracking-tight">
+                    Spend<span className="text-primary-600">Wise</span>
+                  </span>
                 </Link>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="text-secondary">
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-secondary"
+                >
                   <X size={24} />
                 </button>
               </div>
@@ -350,8 +426,13 @@ export default function DashboardLayout({
               <div className="flex-1 space-y-8 overflow-y-auto pr-2">
                 {navGroups.map((group) => (
                   <div key={group.title} className="space-y-3">
-                    <h3 className="px-4 text-[10px] font-black uppercase tracking-widest text-muted">{group.title}</h3>
-                    <nav className="space-y-1" aria-label={`${group.title} Mobile Navigation`}>
+                    <h3 className="px-4 text-[10px] font-black uppercase tracking-widest text-muted">
+                      {group.title}
+                    </h3>
+                    <nav
+                      className="space-y-1"
+                      aria-label={`${group.title} Mobile Navigation`}
+                    >
                       {group.items.map((item) => {
                         const isActive = pathname === item.href;
                         return (
@@ -360,8 +441,8 @@ export default function DashboardLayout({
                             href={item.href}
                             onClick={() => setIsMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-                              isActive 
-                                ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" 
+                              isActive
+                                ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
                                 : "text-secondary hover:bg-surface-variant hover:text-foreground"
                             }`}
                           >
@@ -376,7 +457,7 @@ export default function DashboardLayout({
               </div>
 
               <div className="mt-auto pt-6 border-t border-border-subtle">
-                 <button 
+                <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold group"
                 >
@@ -391,12 +472,14 @@ export default function DashboardLayout({
         )}
       </AnimatePresence>
 
-      <button 
+      <button
         onClick={() => setIsAddExpenseOpen(true)}
         className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-2xl bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"
       >
         <Plus size={32} />
       </button>
+
+      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
 
       <AddExpenseModal
         isOpen={isAddExpenseOpen}
@@ -409,15 +492,10 @@ export default function DashboardLayout({
   );
 
   return (
-      <DashboardProvider>
-        <SystemStatusChecker />
-        <ActivityTracker />
-        {(session?.user as any)?.isSuspended ? (
-          <SuspendedOverlay />
-        ) : (
-          content
-        )}
-      </DashboardProvider>
-
+    <DashboardProvider>
+      <SystemStatusChecker />
+      <ActivityTracker />
+      {(session?.user as any)?.isSuspended ? <SuspendedOverlay /> : content}
+    </DashboardProvider>
   );
 }

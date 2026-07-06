@@ -1,0 +1,24 @@
+const DEFAULT_BLACKLIST = ["kill", "attack", "bomb", "suicide", "hack", "credit card", "ssn"];
+
+function loadBlacklist(): string[] {
+  const env = process?.env?.CHAT_MODERATION_BLACKLIST;
+  if (!env) return DEFAULT_BLACKLIST;
+  return env.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+}
+
+export function moderateMessage(text: string): { allowed: boolean; reason?: string } {
+  if (!text || text.trim().length === 0) return { allowed: false, reason: "empty" };
+  const lowered = text.toLowerCase();
+  const blacklist = loadBlacklist();
+  for (const term of blacklist) {
+    if (lowered.includes(term)) return { allowed: false, reason: `contains_${term}` };
+  }
+  // Basic length guard to avoid extremely long payloads
+  if (text.length > 2000) return { allowed: false, reason: "too_long" };
+  // Redact common sensitive patterns quickly (credit card-like digits, SSN-like patterns)
+  if (/\b\d{13,19}\b/.test(text)) return { allowed: false, reason: "contains_long_numeric" };
+  if (/\b\d{3}-\d{2}-\d{4}\b/.test(text)) return { allowed: false, reason: "contains_ssn_like" };
+  return { allowed: true };
+}
+
+export default moderateMessage;
