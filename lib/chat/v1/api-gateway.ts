@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
+import { getInternalApiHeaders } from "@/lib/internal-api-auth";
 
 export interface GatewayParams {
   headers?: HeadersInit;
   req?: NextRequest | Request;
+  internalUserId?: string;
 }
 
 // Utility to build internal request options including session headers / cookies
@@ -21,6 +23,10 @@ function buildRequestInit(params?: GatewayParams, method: string = "GET", body?:
     if (authorization) {
       headersObj["Authorization"] = authorization;
     }
+  }
+
+  if (params?.internalUserId) {
+    Object.assign(headersObj, getInternalApiHeaders(params.internalUserId));
   }
 
   // Support explicit custom headers overrides
@@ -115,6 +121,19 @@ export async function createIncome(data: any, params?: GatewayParams) {
   const response = await fetch(url, buildRequestInit(params, "POST", data));
   if (!response.ok) {
     const errorMsg = await response.json().then(r => r.error).catch(() => "Failed to create income");
+    throw new Error(errorMsg);
+  }
+  return response.json();
+}
+
+export async function createCategory(data: any, params?: GatewayParams) {
+  const url = `${getBaseUrl()}/api/categories`;
+  const response = await fetch(url, buildRequestInit(params, "POST", data));
+  if (!response.ok) {
+    const errorMsg = await response
+      .json()
+      .then((r) => r.error)
+      .catch(() => "Failed to create category");
     throw new Error(errorMsg);
   }
   return response.json();

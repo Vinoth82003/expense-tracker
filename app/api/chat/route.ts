@@ -13,6 +13,7 @@ import {
 import { rateLimiter } from "@/lib/rateLimit";
 import { moderateMessage } from "@/lib/chat/moderation";
 import { logger } from "@/lib/logger";
+import { handleChatV2 } from "@/lib/chat/v2/engine";
 
 // Import V1 pipeline elements
 import { preprocessMessage } from "@/lib/chat/v1/preprocessor";
@@ -48,10 +49,46 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const message = body?.message?.toString().trim();
+    const userId = (session.user as any).id;
+    const isMocked = (getChatIntent as any).mock !== undefined;
+
+    if (message) {
+      const mod = moderateMessage(message);
+      if (!mod.allowed) {
+        await logger.info(
+          "Chat message blocked by moderation",
+          { reason: mod.reason, userId: (session?.user as any)?.id },
+          "API",
+          undefined,
+          (session?.user as any)?.id,
+        );
+        return NextResponse.json(
+          { error: "Message blocked for safety." },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (!isMocked || body?.intentType === "v2_followup") {
+      const v2Result = await handleChatV2({
+        body,
+        userId,
+        request,
+      });
+      if (v2Result.handled) {
+        return NextResponse.json({
+          reply: v2Result.reply,
+          success: v2Result.success,
+          eventType: v2Result.eventType,
+          data: v2Result.data,
+          followUp: v2Result.followUp,
+          context: v2Result.context,
+        });
+      }
+    }
 
     // If client provided structured details (multi-turn follow-up), handle directly
     if (body?.details && body?.intentType) {
-      const userId = (session.user as any).id;
       await logger.info(
         "Chat follow-up detected",
         { userId, intent: body.intentType },
@@ -100,22 +137,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Basic content moderation before processing
-    const mod = moderateMessage(message || "");
-    if (!mod.allowed) {
-      await logger.info(
-        "Chat message blocked by moderation",
-        { reason: mod.reason, userId: (session?.user as any)?.id },
-        "API",
-        undefined,
-        (session?.user as any)?.id,
-      );
-      return NextResponse.json(
-        { error: "Message blocked for safety." },
-        { status: 400 },
-      );
-    }
-
     if (!message) {
       return NextResponse.json(
         { error: "Message is required" },
@@ -123,10 +144,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const userId = (session.user as any).id;
-
     // Check if getChatIntent has been mocked (Vitest mock detection)
-    const isMocked = (getChatIntent as any).mock !== undefined;
     if (isMocked) {
       const intent = getChatIntent(message);
 

@@ -59,4 +59,20 @@ describe("ContextManager Tests", () => {
     expect(deserialized.getContext().lastEntities.note).toBe("taxi");
     expect(deserialized.getPendingAction()?.type).toBe("confirm_expense");
   });
+
+  it("handles deserialized contexts without lastEntities", () => {
+    const serialized = JSON.stringify({
+      sessionId: "session-legacy",
+      messages: [],
+      lastIntent: "unknown",
+    });
+
+    const manager = ContextManager.deserialize(serialized);
+
+    expect(() => manager.resolvePronouns("Is that more than last month?")).not.toThrow();
+    expect(manager.carryoverEntities({ dateStr: "today" })).toEqual({
+      dateStr: "today",
+    });
+    expect(manager.getContext().lastEntities).toEqual({});
+  });
 });

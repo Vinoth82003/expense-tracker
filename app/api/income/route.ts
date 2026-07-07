@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUserId } from "@/lib/internal-api-auth";
 
 // GET - Fetch all income for the logged-in user
 export async function GET(request: Request) {
-  const session = await getServerSession();
-
-  if (!session?.user?.email) {
+  const userId = await getAuthenticatedUserId(request);
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -16,16 +15,7 @@ export async function GET(request: Request) {
     const fromDate = searchParams.get("fromDate");
     const toDate = searchParams.get("toDate");
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const whereClause: any = { userId: user.id };
+    const whereClause: any = { userId };
 
     if (fromDate || toDate) {
       whereClause.date = {};
@@ -56,9 +46,8 @@ export async function GET(request: Request) {
 
 // POST - Create a new income
 export async function POST(request: Request) {
-  const session = await getServerSession();
-
-  if (!session?.user?.email) {
+  const userId = await getAuthenticatedUserId(request);
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -77,22 +66,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Amount must be greater than 0" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     const income = await prisma.income.create({
       data: {
         amount: Number(amount),
         source,
         note: note || null,
         date: new Date(date),
-        userId: user.id, 
+        userId,
       } as any,
     });
 

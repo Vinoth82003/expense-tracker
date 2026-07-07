@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUserId } from "@/lib/internal-api-auth";
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  
-  const userId = (session.user as any).id;
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const month = req.nextUrl.searchParams.get("month"); // "YYYY-MM"
 
   if (!month) return NextResponse.json({ error: "Month is required" }, { status: 400 });
@@ -40,20 +37,28 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  
-  const userId = (session.user as any).id;
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   
   try {
     const { month, limit } = await req.json();
     if (!month || limit === undefined) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    const numericLimit = Number(limit);
+    if (!Number.isFinite(numericLimit) || numericLimit <= 0) {
+      return NextResponse.json({ error: "Limit must be a positive number" }, { status: 400 });
+    }
 
-    const budget = await prisma.budget.upsert({
-      where: { userId_month: { userId, month } },
-      update: { amount: Number(limit) },
-      create: { userId, month, amount: Number(limit) }
-    });
+    const [budget] = await prisma.$transaction([
+      prisma.budget.upsert({
+        where: { userId_month: { userId, month } },
+        update: { amount: numericLimit },
+        create: { userId, month, amount: numericLimit }
+      }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { expenseMode: "limit", monthlyLimit: numericLimit }
+      })
+    ]);
 
     return NextResponse.json({ success: true, budget });
   } catch (error) {

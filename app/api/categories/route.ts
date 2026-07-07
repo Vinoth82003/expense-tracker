@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
+import { getAuthenticatedUserId } from "@/lib/internal-api-auth";
 
 // Helper to get global categories with Next.js caching
 const getCachedGlobalCategories = unstable_cache(
@@ -16,29 +16,19 @@ const getCachedGlobalCategories = unstable_cache(
 );
 
 // GET - Fetch merged categories (global + user-custom)
-export async function GET() {
-  const session = await getServerSession();
-
-  if (!session?.user?.email) {
+export async function GET(request: Request) {
+  const userId = await getAuthenticatedUserId(request);
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     // 1. Get cached global categories
     const globalCategories = await getCachedGlobalCategories();
 
     // 2. Get user's custom categories
     const userCategories = await prisma.category.findMany({
-      where: { userId: user.id },
+      where: { userId },
       orderBy: { name: "asc" },
     });
 
@@ -75,13 +65,10 @@ export async function GET() {
 
 // POST - Create user-custom category
 export async function POST(req: Request) {
-  const session = await getServerSession();
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
     const { name, type } = await req.json();
     if (!name || (type !== 'Needs' && type !== 'Wants')) {
       return NextResponse.json({ error: "Invalid name or type" }, { status: 400 });
@@ -99,7 +86,7 @@ export async function POST(req: Request) {
         name,
         type,
         isDefault: false,
-        userId: user.id,
+        userId,
       }
     });
 
@@ -112,19 +99,16 @@ export async function POST(req: Request) {
 
 // PATCH - Update user-custom category
 export async function PATCH(req: Request) {
-  const session = await getServerSession();
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
     const { id, name, type } = await req.json();
     if (!id || !name || !type) return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
 
     const category = await prisma.category.findUnique({ where: { id } });
     if (!category) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (category.userId !== user.id || category.isDefault) {
+    if (category.userId !== userId || category.isDefault) {
       return NextResponse.json({ error: "Forbidden: Cannot edit default categories" }, { status: 403 });
     }
 
@@ -148,19 +132,16 @@ export async function PATCH(req: Request) {
 
 // DELETE - Delete user-custom category
 export async function DELETE(req: Request) {
-  const session = await getServerSession();
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
     const category = await prisma.category.findUnique({ where: { id } });
     if (!category) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (category.userId !== user.id || category.isDefault) {
+    if (category.userId !== userId || category.isDefault) {
       return NextResponse.json({ error: "Forbidden: Cannot delete default categories" }, { status: 403 });
     }
 

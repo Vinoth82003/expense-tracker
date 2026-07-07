@@ -3,6 +3,13 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { verifyAdminToken } from "@/lib/admin-auth";
 
+function isTrustedInternalRequest(request: NextRequest) {
+  const userId = request.headers.get("x-internal-user-id");
+  const secret = request.headers.get("x-internal-api-secret");
+  const expected = process.env.INTERNAL_API_SECRET || process.env.NEXTAUTH_SECRET;
+  return Boolean(userId && secret && expected && secret === expected);
+}
+
 // Simple in‑memory rate limiter – suitable for low‑traffic endpoints.
 const rateLimits = new Map<string, { count: number; first: number }>();
 function checkRateLimit(ip: string, key: string, limit: number, windowMs: number) {
@@ -30,9 +37,18 @@ export async function middleware(request: NextRequest) {
       return new NextResponse("Too many requests – please try again later.", { status: 429 });
     }
   }
-  if (pathname.startsWith("/api/auth") || pathname.startsWith("/api/login")) {
+  const rateLimitedAuthPaths = [
+    "/api/auth/callback",
+    "/api/auth/signin",
+    "/api/auth/signout",
+    "/api/login",
+  ];
+  if (rateLimitedAuthPaths.some((path) => pathname.startsWith(path))) {
     if (!checkRateLimit(ip, "login", 10, 15 * 60 * 1000)) {
-      return new NextResponse("Too many login attempts – please try again later.", { status: 429 });
+      return NextResponse.json(
+        { error: "Too many login attempts. Please try again later." },
+        { status: 429 }
+      );
     }
   }
   // Rate‑limit the paid AI endpoint to prevent billing abuse
@@ -81,6 +97,9 @@ export async function middleware(request: NextRequest) {
     "/api/user",
   ];
   if (protectedApiPaths.some((p) => pathname.startsWith(p))) {
+    if (isTrustedInternalRequest(request)) {
+      return NextResponse.next();
+    }
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -37,12 +37,23 @@ export class ContextManager {
     this.maxMessages = maxMessages;
   }
 
+  private normalizeContext(context: Partial<ConversationContext>): ConversationContext {
+    return {
+      sessionId: context.sessionId || this.context?.sessionId || "unknown-session",
+      messages: Array.isArray(context.messages) ? context.messages : [],
+      lastIntent: context.lastIntent || "unknown",
+      lastEntities: context.lastEntities || {},
+      pendingAction: context.pendingAction,
+      lastResponseType: context.lastResponseType,
+    };
+  }
+
   getContext(): ConversationContext {
     return this.context;
   }
 
   setContext(context: ConversationContext) {
-    this.context = context;
+    this.context = this.normalizeContext(context);
   }
 
   addMessage(role: "user" | "assistant", text: string, intent?: ChatIntentType | string, entities?: ExtractedEntities) {
@@ -85,10 +96,11 @@ export class ContextManager {
   resolvePronouns(message: string): string {
     let resolved = message;
     const pronouns = [/\bit\b/gi, /\bthat\b/gi, /\bthose\b/gi];
+    const lastEntities = this.context.lastEntities || {};
     
     // We only resolve if we have a last entity in context
-    const lastCategory = this.context.lastEntities.category;
-    const lastNote = this.context.lastEntities.note;
+    const lastCategory = lastEntities.category;
+    const lastNote = lastEntities.note;
     const replacement = lastCategory || lastNote || "";
 
     if (replacement) {
@@ -101,15 +113,16 @@ export class ContextManager {
 
   carryoverEntities(currentEntities: ExtractedEntities): ExtractedEntities {
     const result = { ...currentEntities };
+    const lastEntities = this.context.lastEntities || {};
     
     // Carry over category if missing but present in history
-    if (!result.category && this.context.lastEntities.category) {
-      result.category = this.context.lastEntities.category;
+    if (!result.category && lastEntities.category) {
+      result.category = lastEntities.category;
     }
 
     // Carry over note if missing but present in history
-    if (!result.note && this.context.lastEntities.note) {
-      result.note = this.context.lastEntities.note;
+    if (!result.note && lastEntities.note) {
+      result.note = lastEntities.note;
     }
 
     return result;

@@ -111,6 +111,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [customCategoryInput, setCustomCategoryInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [chatContext, setChatContext] = useState<any>(null);
+  const [selectedFollowUpItems, setSelectedFollowUpItems] = useState<string[]>(
+    [],
+  );
 
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -130,6 +133,18 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       }, 300);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (pendingFollowUp?.ui === "v2" && Array.isArray(pendingFollowUp.items)) {
+      setSelectedFollowUpItems(
+        pendingFollowUp.items
+          .filter((item: any) => item.checked)
+          .map((item: any) => item.id),
+      );
+      return;
+    }
+    setSelectedFollowUpItems([]);
+  }, [pendingFollowUp]);
 
   const addMessage = (message: ChatMessage) => {
     setMessages((prev) => [...prev, message]);
@@ -214,10 +229,14 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
       if (response.success) {
         setPendingFollowUp(null);
+        setSelectedFollowUpItems([]);
         // Dispatch sync event for real-time dashboard update
         dispatchSyncEvent((response as any).eventType, (response as any).data);
       } else if (response.followUp) {
         setPendingFollowUp(response.followUp.payload);
+      } else {
+        setPendingFollowUp(null);
+        setSelectedFollowUpItems([]);
       }
     } catch (err: any) {
       setError(err?.message || "Unable to connect to the assistant.");
@@ -236,6 +255,23 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const handlePromptClick = (prompt: string) => {
     setInput(prompt);
     inputRef.current?.focus();
+  };
+
+  const sendV2FollowUp = async (
+    actionId: string,
+    value?: string,
+    selectedIds?: string[],
+  ) => {
+    if (!pendingFollowUp?.sessionId) return;
+    await sendFollowUp(
+      {
+        sessionId: pendingFollowUp.sessionId,
+        actionId,
+        value,
+        selectedIds,
+      },
+      "v2_followup",
+    );
   };
 
   return (
@@ -276,10 +312,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                     </span>
                   </h3>
                   <p className="text-xs text-muted">
-                    Ready to manage your budget
+                    Ready for production chat
                   </p>
                   <span className="text-[10px] font-black tracking-widest uppercase text-emerald-600 bg-emerald-500/15 text-emerald-500 px-1.5 py-0.5 rounded-md">
-                    v1
+                    v2
                   </span>
                 </div>
               </div>
@@ -373,7 +409,15 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                   <div className="flex-1 rounded-2xl border border-border-subtle bg-surface p-4 shadow-md chat-msg-ai space-y-3">
                     {/* Follow-up header */}
                     <div className="flex items-start gap-2.5 text-xs font-bold text-foreground">
-                      {pendingFollowUp.missing === "date" ? (
+                      {pendingFollowUp.ui === "v2" ? (
+                        <>
+                          <Sparkles
+                            size={15}
+                            className="text-primary-500 shrink-0 mt-0.5"
+                          />
+                          <span>{pendingFollowUp.prompt}</span>
+                        </>
+                      ) : pendingFollowUp.missing === "date" ? (
                         <>
                           <Calendar
                             size={15}
@@ -409,8 +453,93 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                       )}
                     </div>
 
-                    {/* Date picker */}
-                    {pendingFollowUp.missing === "date" ? (
+                    {pendingFollowUp.ui === "v2" ? (
+                      <div className="space-y-3">
+                        {pendingFollowUp.helperText ? (
+                          <p className="text-[11px] text-muted leading-relaxed">
+                            {pendingFollowUp.helperText}
+                          </p>
+                        ) : null}
+
+                        {pendingFollowUp.kind === "multiselect" &&
+                        Array.isArray(pendingFollowUp.items) ? (
+                          <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                            {pendingFollowUp.items.map((item: any) => {
+                              const checked =
+                                selectedFollowUpItems.includes(item.id);
+                              return (
+                                <label
+                                  key={item.id}
+                                  className="flex items-start gap-2 rounded-xl border border-border-subtle px-3 py-2 text-xs"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      setSelectedFollowUpItems((prev) =>
+                                        e.target.checked
+                                          ? [...prev, item.id]
+                                          : prev.filter(
+                                              (current) => current !== item.id,
+                                            ),
+                                      );
+                                    }}
+                                    className="mt-0.5"
+                                  />
+                                  <span className="leading-relaxed">
+                                    {item.label}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        <div className="flex flex-wrap gap-2">
+                          {Array.isArray(pendingFollowUp.options) &&
+                            pendingFollowUp.options.map((option: any) => {
+                              const isPrimary = option.variant === "primary";
+                              const isDanger = option.variant === "danger";
+                              return (
+                                <button
+                                  key={option.id}
+                                  onClick={() =>
+                                    sendV2FollowUp(
+                                      option.id,
+                                      option.value,
+                                      option.id === "move-selected"
+                                        ? selectedFollowUpItems
+                                        : undefined,
+                                    )
+                                  }
+                                  className={`rounded-xl px-3 py-2 text-xs font-bold transition-all active:scale-95 ${
+                                    isDanger
+                                      ? "bg-rose-500/10 border border-rose-500/20 text-rose-600"
+                                      : isPrimary
+                                        ? "bg-primary-500 text-white hover:bg-primary-600 shadow-sm"
+                                        : "bg-surface-variant border border-border-subtle text-foreground hover:bg-border-hover"
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                        </div>
+
+                        {pendingFollowUp.allowDateInput ? (
+                          <input
+                            type="date"
+                            max={pendingFollowUp.maxDate}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                sendV2FollowUp("pick-date", e.target.value);
+                              }
+                            }}
+                            className="w-full rounded-xl border border-border-subtle bg-surface px-3 py-2 text-xs font-semibold text-foreground outline-none focus:border-primary-500"
+                          />
+                        ) : null}
+                      </div>
+                    ) : pendingFollowUp.missing === "date" ? (
                       <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
                           <button
@@ -688,7 +817,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 </button>
               </div>
               <span className="text-[10px] text-muted text-center block mt-2 font-bold tracking-tight">
-                Sage v1 — Intelligent financial assistant
+                Sage v2 — production financial assistant
               </span>
               <div className="mt-1.5 flex items-center justify-center gap-3">
                 <a
