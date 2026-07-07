@@ -1,4 +1,10 @@
-import { createExpense, createIncome, updateBudget, deleteExpense, fetchExpenses } from "../api-gateway";
+import {
+  createExpense,
+  createIncome,
+  updateBudget,
+  deleteExpense,
+  fetchExpenses,
+} from "../api-gateway";
 import { formatCurrency } from "../response-generator";
 import { ExtractedEntities } from "../entity-extractor";
 import { GatewayParams } from "../api-gateway";
@@ -23,17 +29,21 @@ export async function handleWrite(
   intent: string,
   entities: ExtractedEntities,
   message: string,
-  params?: GatewayParams
+  params?: GatewayParams,
 ): Promise<HandlerResult> {
   const today = new Date();
-  const dateStr = entities.fromDate 
-    ? entities.fromDate.toISOString().split("T")[0] 
+  const dateStr = entities.fromDate
+    ? entities.fromDate.toISOString().split("T")[0]
     : today.toISOString().split("T")[0];
 
   // 1. Add Expense
   if (intent === "add_expense") {
     if (!entities.amount) {
-      return { reply: "I couldn't identify the amount. Please specify the amount, e.g., 'Add ₹500 for groceries today'.", success: false };
+      return {
+        reply:
+          "I couldn't identify the amount. Please specify the amount, e.g., 'Add ₹500 for groceries today'.",
+        success: false,
+      };
     }
 
     const subcategory = entities.category || "Other";
@@ -59,7 +69,11 @@ export async function handleWrite(
   // 2. Add Income
   if (intent === "add_income") {
     if (!entities.amount) {
-      return { reply: "I couldn't find the amount. Please specify the income amount, e.g., 'Record salary of ₹45,000'.", success: false };
+      return {
+        reply:
+          "I couldn't find the amount. Please specify the income amount, e.g., 'Record salary of ₹45,000'.",
+        success: false,
+      };
     }
 
     const source = entities.note || "Salary";
@@ -81,7 +95,11 @@ export async function handleWrite(
   // 3. Update Budget
   if (intent === "update_budget") {
     if (!entities.amount) {
-      return { reply: "Please specify the limit for the budget, e.g., 'Set my budget to ₹20,000'.", success: false };
+      return {
+        reply:
+          "Please specify the limit for the budget, e.g., 'Set my budget to ₹20,000'.",
+        success: false,
+      };
     }
 
     const monthStr = dateStr.slice(0, 7); // YYYY-MM
@@ -103,18 +121,24 @@ export async function handleWrite(
     // Fetch recent expenses to find a match
     const currentMonth = dateStr.slice(0, 7);
     const { expenses } = await fetchExpenses(currentMonth, params);
-    
+
     let target = expenses[0]; // default to most recent if none specified
     if (entities.note || entities.category) {
-      const match = expenses.find((e: any) => 
-        (entities.note && e.note?.toLowerCase().includes(entities.note.toLowerCase())) ||
-        (entities.category && e.subcategory?.toLowerCase() === entities.category.toLowerCase())
+      const match = expenses.find(
+        (e: any) =>
+          (entities.note &&
+            e.note?.toLowerCase().includes(entities.note.toLowerCase())) ||
+          (entities.category &&
+            e.subcategory?.toLowerCase() === entities.category.toLowerCase()),
       );
       if (match) target = match;
     }
 
     if (!target) {
-      return { reply: "I couldn't find any recent expense to delete.", success: false };
+      return {
+        reply: "I couldn't find any recent expense to delete.",
+        success: false,
+      };
     }
 
     await deleteExpense(target.id, params);

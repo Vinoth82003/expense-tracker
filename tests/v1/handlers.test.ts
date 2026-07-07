@@ -18,9 +18,16 @@ describe("Handler Module Tests", () => {
       ok: true,
       json: async () => ({
         expenses: [
-          { id: "1", amount: 500, category: "Needs", subcategory: "Food", note: "Lunch", date: "2026-07-06" }
-        ]
-      })
+          {
+            id: "1",
+            amount: 500,
+            category: "Needs",
+            subcategory: "Food",
+            note: "Lunch",
+            date: "2026-07-06",
+          },
+        ],
+      }),
     });
     global.fetch = fetchMock;
 
@@ -34,9 +41,15 @@ describe("Handler Module Tests", () => {
       ok: true,
       json: async () => ({
         income: [
-          { id: "1", amount: 45000, source: "Salary", note: "Monthly Pay", date: "2026-07-01" }
-        ]
-      })
+          {
+            id: "1",
+            amount: 45000,
+            source: "Salary",
+            note: "Monthly Pay",
+            date: "2026-07-01",
+          },
+        ],
+      }),
     });
     global.fetch = fetchMock;
 
@@ -50,14 +63,23 @@ describe("Handler Module Tests", () => {
       if (url.includes("/api/budget")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ limit: 10000 })
+          json: async () => ({ limit: 10000 }),
         });
       }
       return Promise.resolve({
         ok: true,
         json: async () => ({
-          expenses: [{ id: "1", amount: 8000, category: "Needs", subcategory: "Food", note: "", date: "2026-07-06" }]
-        })
+          expenses: [
+            {
+              id: "1",
+              amount: 8000,
+              category: "Needs",
+              subcategory: "Food",
+              note: "",
+              date: "2026-07-06",
+            },
+          ],
+        }),
       });
     });
     global.fetch = fetchMock;
@@ -73,56 +95,104 @@ describe("Handler Module Tests", () => {
       ok: true,
       json: async () => ({
         expenses: [
-          { id: "1", amount: 300, category: "Needs", subcategory: "Food", note: "", date: "2026-07-04" }, // Saturday
-          { id: "2", amount: 200, category: "Needs", subcategory: "Transport", note: "", date: "2026-07-05" } // Sunday
-        ]
-      })
+          {
+            id: "1",
+            amount: 300,
+            category: "Needs",
+            subcategory: "Food",
+            note: "",
+            date: "2026-07-04",
+          }, // Saturday
+          {
+            id: "2",
+            amount: 200,
+            category: "Needs",
+            subcategory: "Transport",
+            note: "",
+            date: "2026-07-05",
+          }, // Sunday
+        ],
+      }),
     });
     global.fetch = fetchMock;
 
-    const dailyReply = await handleAnalysis("spending_analysis", {}, "what is my average daily spending");
+    const dailyReply = await handleAnalysis(
+      "spending_analysis",
+      {},
+      "what is my average daily spending",
+    );
     expect(dailyReply).toContain("average daily spending");
 
-    const weekendReply = await handleAnalysis("spending_analysis", {}, "what did I spend over the weekend");
+    const weekendReply = await handleAnalysis(
+      "spending_analysis",
+      {},
+      "what did I spend over the weekend",
+    );
     expect(weekendReply).toContain("weekend");
   });
 
   it("Insights Handler finds spending spikes and savings recommendations", async () => {
     const fetchMock = vi.fn().mockImplementation((url) => {
       if (url.includes("/api/income")) {
-        return Promise.resolve({ ok: true, json: async () => ({ income: [] }) });
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ income: [] }),
+        });
       }
       return Promise.resolve({
         ok: true,
         json: async () => ({
           expenses: [
-            { id: "1", amount: 2500, category: "Wants", subcategory: "Shopping", note: "Shoes", date: "2026-07-01" }
-          ]
-        })
+            {
+              id: "1",
+              amount: 2500,
+              category: "Wants",
+              subcategory: "Shopping",
+              note: "Shoes",
+              date: "2026-07-01",
+            },
+          ],
+        }),
       });
     });
     global.fetch = fetchMock;
 
-    const saveReply = await handleInsights("financial_insights", {}, "where can I save money");
+    const saveReply = await handleInsights(
+      "financial_insights",
+      {},
+      "where can I save money",
+    );
     expect(saveReply).toContain("save");
 
-    const unusualReply = await handleInsights("financial_insights", {}, "any unusual expenses");
+    const unusualReply = await handleInsights(
+      "financial_insights",
+      {},
+      "any unusual expenses",
+    );
     expect(unusualReply).toContain("Unusual");
   });
 
   it("Write Handler creates and deletes items", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ success: true })
+      json: async () => ({ success: true }),
     });
     global.fetch = fetchMock;
 
-    const expenseRes = await handleWrite("add_expense", { amount: 250, category: "Food", note: "lunch" }, "Add ₹250 for lunch");
+    const expenseRes = await handleWrite(
+      "add_expense",
+      { amount: 250, category: "Food", note: "lunch" },
+      "Add ₹250 for lunch",
+    );
     expect(expenseRes.success).toBe(true);
     expect(expenseRes.reply).toContain("250");
     expect(expenseRes.eventType).toBe("expenseAdded");
 
-    const incomeRes = await handleWrite("add_income", { amount: 5000, note: "bonus" }, "Record income of 5000");
+    const incomeRes = await handleWrite(
+      "add_income",
+      { amount: 5000, note: "bonus" },
+      "Record income of 5000",
+    );
     expect(incomeRes.success).toBe(true);
     expect(incomeRes.eventType).toBe("incomeAdded");
   });

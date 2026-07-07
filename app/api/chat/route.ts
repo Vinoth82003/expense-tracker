@@ -131,9 +131,13 @@ export async function POST(request: Request) {
       const intent = getChatIntent(message);
 
       // Multi-turn: if expense intent missing date, prompt for date without calling server logic
-      if (intent.type === "add_expense" && !(intent.details && (intent.details as any).date)) {
+      if (
+        intent.type === "add_expense" &&
+        !(intent.details && (intent.details as any).date)
+      ) {
         return NextResponse.json({
-          reply: "I didn't catch a date for this expense — would you like to set it to today, yesterday, or provide a specific date?",
+          reply:
+            "I didn't catch a date for this expense — would you like to set it to today, yesterday, or provide a specific date?",
           success: false,
           followUp: {
             type: "add_expense_requirements",
@@ -150,7 +154,8 @@ export async function POST(request: Request) {
         userId,
       );
 
-      let reply = "I'm not sure how to help with that yet. Ask me about your expenses, income, or budget status.";
+      let reply =
+        "I'm not sure how to help with that yet. Ask me about your expenses, income, or budget status.";
 
       switch (intent.type) {
         case "expense_summary":
@@ -172,7 +177,9 @@ export async function POST(request: Request) {
             });
           }
           if (!result.success) {
-            const missing = result.message?.toLowerCase().includes("date") ? "date" : "info";
+            const missing = result.message?.toLowerCase().includes("date")
+              ? "date"
+              : "info";
             return NextResponse.json({
               reply: result.message,
               success: false,
@@ -213,7 +220,12 @@ export async function POST(request: Request) {
 
       await logger.info(
         "Chat message processed (v0 fallback)",
-        { userId, intent: intent.type, success: true, replyLength: reply.length },
+        {
+          userId,
+          intent: intent.type,
+          success: true,
+          replyLength: reply.length,
+        },
         "API",
         undefined,
         userId,
@@ -226,7 +238,10 @@ export async function POST(request: Request) {
     let contextManager: ContextManager;
     if (body?.context) {
       try {
-        const ctxStr = typeof body.context === "string" ? body.context : JSON.stringify(body.context);
+        const ctxStr =
+          typeof body.context === "string"
+            ? body.context
+            : JSON.stringify(body.context);
         contextManager = ContextManager.deserialize(ctxStr);
       } catch (err) {
         contextManager = new ContextManager(userId);
@@ -246,18 +261,24 @@ export async function POST(request: Request) {
       classification.intent,
       classification.confidence,
       entities,
-      resolvedMsg
+      resolvedMsg,
     );
 
     await logger.info(
       "Chat intent detected V1",
-      { userId, intent: decision.intent, action: decision.action, confidence: decision.confidence },
+      {
+        userId,
+        intent: decision.intent,
+        action: decision.action,
+        confidence: decision.confidence,
+      },
       "API",
       undefined,
       userId,
     );
 
-    let reply = "I'm not sure how to help with that yet. Ask me about your expenses, income, or budget status.";
+    let reply =
+      "I'm not sure how to help with that yet. Ask me about your expenses, income, or budget status.";
     let success = false;
     let eventType: "expenseAdded" | "incomeAdded" | "budgetUpdated" | undefined;
     let data: any;
@@ -268,7 +289,9 @@ export async function POST(request: Request) {
       } else if (decision.action === "friendly_greeting") {
         reply = handleGreeting("greeting");
       } else if (decision.action === "clarify") {
-        const optionsStr = decision.clarificationOptions?.map((o, idx) => `• ${o}`).join("\n") || "";
+        const optionsStr =
+          decision.clarificationOptions?.map((o, idx) => `• ${o}`).join("\n") ||
+          "";
         reply = `${decision.clarificationMessage || "I'm not sure what you mean. Did you want to:"}\n${optionsStr}`;
       } else if (decision.intent === "out_of_scope") {
         reply = handleOutOfScope(resolvedMsg);
@@ -287,19 +310,37 @@ export async function POST(request: Request) {
           case "add_expense": {
             // Check if date is missing to prompt with inline picker
             if (!entities.dateStr && !entities.fromDate) {
-              contextManager.addMessage("user", message, decision.intent, entities);
+              contextManager.addMessage(
+                "user",
+                message,
+                decision.intent,
+                entities,
+              );
               return NextResponse.json({
-                reply: "I didn't catch a date for this expense — would you like to set it to today, yesterday, or provide a specific date?",
+                reply:
+                  "I didn't catch a date for this expense — would you like to set it to today, yesterday, or provide a specific date?",
                 success: false,
                 followUp: {
                   type: "add_expense_requirements",
-                  payload: { missing: "date", details: { amount: entities.amount, category: entities.category, note: entities.note } },
+                  payload: {
+                    missing: "date",
+                    details: {
+                      amount: entities.amount,
+                      category: entities.category,
+                      note: entities.note,
+                    },
+                  },
                 },
                 context: contextManager.getContext(),
               });
             }
 
-            const writeResult = await handleWrite(decision.intent, entities, resolvedMsg, { req: request });
+            const writeResult = await handleWrite(
+              decision.intent,
+              entities,
+              resolvedMsg,
+              { req: request },
+            );
             reply = writeResult.reply;
             success = !!writeResult.success;
             eventType = writeResult.eventType;
@@ -308,7 +349,12 @@ export async function POST(request: Request) {
           case "add_income":
           case "update_budget":
           case "delete_expense": {
-            const writeResult = await handleWrite(decision.intent, entities, resolvedMsg, { req: request });
+            const writeResult = await handleWrite(
+              decision.intent,
+              entities,
+              resolvedMsg,
+              { req: request },
+            );
             reply = writeResult.reply;
             success = !!writeResult.success;
             eventType = writeResult.eventType;
@@ -317,12 +363,22 @@ export async function POST(request: Request) {
           case "spending_analysis":
           case "trend_analysis":
           case "comparison": {
-            reply = await handleAnalysis(decision.intent, entities, resolvedMsg, { req: request });
+            reply = await handleAnalysis(
+              decision.intent,
+              entities,
+              resolvedMsg,
+              { req: request },
+            );
             break;
           }
           case "financial_insights":
           case "combined_query": {
-            reply = await handleInsights(decision.intent, entities, resolvedMsg, { req: request });
+            reply = await handleInsights(
+              decision.intent,
+              entities,
+              resolvedMsg,
+              { req: request },
+            );
             break;
           }
           default:
@@ -332,10 +388,13 @@ export async function POST(request: Request) {
       }
 
       // Suffix message for execution under execute_with_suffix action
-      if (decision.action === "execute_with_suffix" && decision.intent !== "unknown" && decision.intent !== "out_of_scope") {
+      if (
+        decision.action === "execute_with_suffix" &&
+        decision.intent !== "unknown" &&
+        decision.intent !== "out_of_scope"
+      ) {
         reply = `${reply}\n\n**Note:** I processed this assuming you meant to check or manage: **${decision.intent.replace("_", " ")}**`;
       }
-
     } catch (handlerError) {
       await logger.error(
         "Chat handler failed V1",
@@ -345,7 +404,8 @@ export async function POST(request: Request) {
         userId,
       );
       // AI-style structured error objects / friendly message
-      reply = "Sorry, I ran into an issue fetching your data. Please try again.";
+      reply =
+        "Sorry, I ran into an issue fetching your data. Please try again.";
       success = false;
     }
 
@@ -371,10 +431,10 @@ export async function POST(request: Request) {
       confidence: {
         intent: decision.intent,
         score: decision.confidence,
-        underThreshold: decision.action === "fallback" || decision.action === "clarify",
-      }
+        underThreshold:
+          decision.action === "fallback" || decision.action === "clarify",
+      },
     });
-
   } catch (error) {
     const session = await getServerSession(authOptions);
     const userId = (session?.user as any)?.id;
@@ -392,5 +452,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
-

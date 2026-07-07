@@ -2,7 +2,18 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { X, Send, Sparkles, AlertCircle, RefreshCw, Calendar, FolderPlus, ChevronUp, ChevronDown, Trophy } from "lucide-react";
+import {
+  X,
+  Send,
+  Sparkles,
+  AlertCircle,
+  RefreshCw,
+  Calendar,
+  FolderPlus,
+  ChevronUp,
+  ChevronDown,
+  Trophy,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { sendChatMessage } from "@/lib/chat/service";
 import { ChatMessage } from "@/lib/chat/types";
@@ -55,7 +66,11 @@ function FormattedMessageText({ text }: { text: string }) {
         const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
         const parsedLine = parts.map((part, partIdx) => {
           if (part.startsWith("**") && part.endsWith("**")) {
-            return <strong key={partIdx} className="font-extrabold text-foreground">{part.slice(2, -2)}</strong>;
+            return (
+              <strong key={partIdx} className="font-extrabold text-foreground">
+                {part.slice(2, -2)}
+              </strong>
+            );
           }
           return part;
         });
@@ -63,14 +78,21 @@ function FormattedMessageText({ text }: { text: string }) {
         if (isBullet) {
           return (
             <div key={lineIdx} className="flex items-start gap-1.5 my-1 pl-1">
-              <span className="text-primary-500 font-bold shrink-0 mt-0.5">•</span>
+              <span className="text-primary-500 font-bold shrink-0 mt-0.5">
+                •
+              </span>
               <span className="leading-relaxed">{parsedLine}</span>
             </div>
           );
         }
 
         return (
-          <p key={lineIdx} className={lineIdx > 0 ? "mt-1.5 leading-relaxed" : "leading-relaxed"}>
+          <p
+            key={lineIdx}
+            className={
+              lineIdx > 0 ? "mt-1.5 leading-relaxed" : "leading-relaxed"
+            }
+          >
             {parsedLine}
           </p>
         );
@@ -130,7 +152,12 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setIsLoading(true);
 
     try {
-      const response = await sendChatMessage(trimmed, undefined, undefined, chatContext);
+      const response = await sendChatMessage(
+        trimmed,
+        undefined,
+        undefined,
+        chatContext,
+      );
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
@@ -167,7 +194,12 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setError(null);
     setCustomCategoryInput("");
     try {
-      const response = await sendChatMessage(undefined, details, intentType, chatContext);
+      const response = await sendChatMessage(
+        undefined,
+        details,
+        intentType,
+        chatContext,
+      );
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
@@ -239,10 +271,16 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 <div>
                   <h3 className="font-bold text-sm leading-tight text-foreground flex items-center gap-1.5">
                     Sage
-                    <span className="text-[10px] font-black tracking-widest uppercase text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded-md">AI</span>
+                    <span className="text-[10px] font-black tracking-widest uppercase text-primary-500 bg-primary-500/10 px-1.5 py-0.5 rounded-md">
+                      AI
+                    </span>
                   </h3>
-                  <p className="text-xs text-muted">Ready to manage your budget</p>
-                  <span className="text-[10px] font-black tracking-widest uppercase text-emerald-600 bg-emerald-500/15 text-emerald-500 px-1.5 py-0.5 rounded-md">v1</span>
+                  <p className="text-xs text-muted">
+                    Ready to manage your budget
+                  </p>
+                  <span className="text-[10px] font-black tracking-widest uppercase text-emerald-600 bg-emerald-500/15 text-emerald-500 px-1.5 py-0.5 rounded-md">
+                    v1
+                  </span>
                 </div>
               </div>
               <button
@@ -297,7 +335,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                               hour: "2-digit",
                               minute: "2-digit",
                             })
-                          : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          : new Date().toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
                       </span>
                     </div>
                   </div>
@@ -334,20 +375,36 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                     <div className="flex items-start gap-2.5 text-xs font-bold text-foreground">
                       {pendingFollowUp.missing === "date" ? (
                         <>
-                          <Calendar size={15} className="text-primary-500 shrink-0 mt-0.5" />
+                          <Calendar
+                            size={15}
+                            className="text-primary-500 shrink-0 mt-0.5"
+                          />
                           <span>Select a date for this transaction:</span>
                         </>
                       ) : pendingFollowUp.missing === "sports_category" ? (
                         <>
-                          <Trophy size={15} className="text-amber-500 shrink-0 mt-0.5" />
+                          <Trophy
+                            size={15}
+                            className="text-amber-500 shrink-0 mt-0.5"
+                          />
                           <span>
-                            Create a new <span className="text-primary-500">"{pendingFollowUp.suggestedCategory || "Sports"}"</span> category?
+                            Create a new{" "}
+                            <span className="text-primary-500">
+                              "{pendingFollowUp.suggestedCategory || "Sports"}"
+                            </span>{" "}
+                            category?
                           </span>
                         </>
                       ) : (
                         <>
-                          <FolderPlus size={15} className="text-primary-500 shrink-0 mt-0.5" />
-                          <span>Create category "{pendingFollowUp.details?.category}"?</span>
+                          <FolderPlus
+                            size={15}
+                            className="text-primary-500 shrink-0 mt-0.5"
+                          />
+                          <span>
+                            Create category "{pendingFollowUp.details?.category}
+                            "?
+                          </span>
                         </>
                       )}
                     </div>
@@ -371,7 +428,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                             onClick={() =>
                               sendFollowUp({
                                 ...pendingFollowUp.details,
-                                date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+                                date: new Date(
+                                  Date.now() - 24 * 60 * 60 * 1000,
+                                ).toISOString(),
                               })
                             }
                             className="flex-1 rounded-xl py-2 text-xs font-bold bg-surface-variant border border-border-subtle text-foreground hover:bg-border-hover active:scale-95 transition-all"
@@ -394,12 +453,15 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                           />
                         </div>
                       </div>
-
                     ) : pendingFollowUp.missing === "sports_category" ? (
                       /* Sports / repetitive category suggestion */
                       <div className="space-y-3">
                         <p className="text-[11px] text-muted leading-relaxed">
-                          Based on your past expenses, we suggest creating a <strong>"{pendingFollowUp.suggestedCategory || "Sports"}"</strong> category to better track these activities.
+                          Based on your past expenses, we suggest creating a{" "}
+                          <strong>
+                            "{pendingFollowUp.suggestedCategory || "Sports"}"
+                          </strong>{" "}
+                          category to better track these activities.
                         </p>
                         <div className="flex gap-2">
                           {/* Option 1: Auto-suggested category */}
@@ -407,7 +469,8 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                             onClick={() =>
                               sendFollowUp({
                                 ...pendingFollowUp.details,
-                                category: pendingFollowUp.suggestedCategory || "Sports",
+                                category:
+                                  pendingFollowUp.suggestedCategory || "Sports",
                                 createCategory: true,
                               })
                             }
@@ -435,9 +498,14 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                             type="text"
                             placeholder="Or enter a custom category name…"
                             value={customCategoryInput}
-                            onChange={(e) => setCustomCategoryInput(e.target.value)}
+                            onChange={(e) =>
+                              setCustomCategoryInput(e.target.value)
+                            }
                             onKeyDown={(e) => {
-                              if (e.key === "Enter" && customCategoryInput.trim()) {
+                              if (
+                                e.key === "Enter" &&
+                                customCategoryInput.trim()
+                              ) {
                                 sendFollowUp({
                                   ...pendingFollowUp.details,
                                   category: customCategoryInput.trim(),
@@ -464,7 +532,6 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                           </button>
                         </div>
                       </div>
-
                     ) : (
                       /* Generic new-category confirmation */
                       <div className="space-y-3">
@@ -497,9 +564,14 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                             type="text"
                             placeholder="Or rename category…"
                             value={customCategoryInput}
-                            onChange={(e) => setCustomCategoryInput(e.target.value)}
+                            onChange={(e) =>
+                              setCustomCategoryInput(e.target.value)
+                            }
                             onKeyDown={(e) => {
-                              if (e.key === "Enter" && customCategoryInput.trim()) {
+                              if (
+                                e.key === "Enter" &&
+                                customCategoryInput.trim()
+                              ) {
                                 sendFollowUp({
                                   ...pendingFollowUp.details,
                                   category: customCategoryInput.trim(),
@@ -517,7 +589,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                                   ...pendingFollowUp.details,
                                   category: customCategoryInput.trim(),
                                   createCategory: true,
-                                  });
+                                });
                               }
                             }}
                             className="rounded-xl bg-primary-500/10 border border-primary-500/20 px-3 text-xs font-bold text-primary-600 hover:bg-primary-500/20 active:scale-95 transition-all disabled:opacity-50"
@@ -539,11 +611,19 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 <button
                   onClick={() => setShowSuggestions((prev) => !prev)}
                   className="flex items-center gap-1.5 text-[10px] font-black tracking-widest uppercase text-muted hover:text-foreground transition-all"
-                  aria-label={showSuggestions ? "Hide suggested prompts" : "Show suggested prompts"}
+                  aria-label={
+                    showSuggestions
+                      ? "Hide suggested prompts"
+                      : "Show suggested prompts"
+                  }
                 >
                   Suggested prompts
                   {/* ChevronUp = currently visible (click to collapse), ChevronDown = hidden (click to expand) */}
-                  {showSuggestions ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  {showSuggestions ? (
+                    <ChevronUp size={12} />
+                  ) : (
+                    <ChevronDown size={12} />
+                  )}
                 </button>
 
                 <AnimatePresence initial={false}>
