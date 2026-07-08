@@ -82,7 +82,16 @@ const nextConfig: NextConfig = {
       },
       {
         // Cache static marketing pages
-        source: "/:path(features|how-it-works|faq|download|contact|privacy|terms)?",
+        source: "/:path(features|how-it-works|faq|download|contact|privacy|terms|docs)?",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/docs/:path*",
         headers: [
           {
             key: "Cache-Control",

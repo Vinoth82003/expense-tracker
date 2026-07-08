@@ -1,14 +1,15 @@
 import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
-import { DocsPageClient } from "@/app/docs/[[...slug]]/DocsPageClient";
 import { Metadata } from "next";
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { DocsPageClient } from "@/app/docs/[[...slug]]/DocsPageClient";
+import { DocsListingPage } from "@/components/docs/DocsListingPage";
+import { stripMarkdown, extractExcerpt } from "@/lib/docs-utils";
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
 }
 
-async function getDocData(slugParam?: string[]) {
+async function getDocsData(slugParam?: string[]) {
   const isAdmin = await verifyAdminSession();
 
   let whereClause: any = {};
@@ -18,67 +19,47 @@ async function getDocData(slugParam?: string[]) {
 
   const allDocs = await prisma.doc.findMany({
     where: whereClause,
-    orderBy: { order: "asc" }
+    orderBy: { order: "asc" },
   });
 
   const activeSlug = slugParam && slugParam.length > 0 ? slugParam[0] : null;
 
   let selectedDoc = null;
   if (activeSlug) {
-    selectedDoc = allDocs.find(d => d.slug === activeSlug) || null;
-  } else if (allDocs.length > 0) {
-    selectedDoc = allDocs[0];
+    selectedDoc = allDocs.find((d) => d.slug === activeSlug) || null;
   }
 
-  return {
-    allDocs,
-    selectedDoc,
-    activeSlug
-  };
+  return { allDocs, selectedDoc, activeSlug };
 }
-
-function stripMarkdown(md: string): string {
-  if (!md) return "";
-  let text = md;
-  text = text.replace(/```[\s\S]*?```/g, "");
-  text = text.replace(/`([^`]+)`/g, "$1");
-  text = text.replace(/!\[([^\]]*)\]\([^)]+\)/g, "");
-  text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-  text = text.replace(/<[^>]*>/g, "");
-  // Remove entire heading lines (not just the # prefix) to prevent heading text in meta descriptions
-  text = text.replace(/^\s*#+.*$/gm, "");
-  text = text.replace(/^\s*[-*+]\s+/gm, "");
-  text = text.replace(/^\s*\d+\.\s+/gm, "");
-  text = text.replace(/^\s*>\s+/gm, "");
-  text = text.replace(/[*_~]+/g, "");
-  text = text.replace(/\s+/g, " ");
-  return text.trim();
-}
-
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const { selectedDoc } = await getDocData(slug);
+  const { selectedDoc, allDocs } = await getDocsData(slug);
 
-  if (!selectedDoc) {
+  // Listing page metadata
+  if (!slug || slug.length === 0) {
     return {
-      title: "Doc Not Found | SpendWise Docs",
-      description: "The requested documentation page could not be found."
+      title: "Documentation | SpendWise",
+      description:
+        "Master SpendWise with comprehensive documentation — get started guides, budget tracking, AI insights, expense management, and troubleshooting.",
+      openGraph: {
+        title: "Documentation | SpendWise",
+        description:
+          "Master SpendWise with comprehensive documentation — get started guides, budget tracking, AI insights, expense management, and troubleshooting.",
+        type: "website",
+      },
     };
   }
 
-  const cleanDescription = stripMarkdown(selectedDoc.content);
-  // Remove leading generic headings like "Overview"
-  const descriptionWithoutHeading = cleanDescription.replace(/^\s*Overview\s*/i, '').trim();
-  const plainText = truncateDescription(descriptionWithoutHeading, 160);
-
-  function truncateDescription(text: string, maxLength: number): string {
-    if (text.length <= maxLength) return text;
-    const truncated = text.slice(0, maxLength);
-    // Trim to last space to avoid cutting words
-    const lastSpace = truncated.lastIndexOf(' ');
-    return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + "...";
+  // Detail page metadata
+  if (!selectedDoc) {
+    return {
+      title: "Doc Not Found | SpendWise Docs",
+      description: "The requested documentation page could not be found.",
+    };
   }
+
+  const plainText = extractExcerpt(selectedDoc.content, 160);
 
   return {
     title: `${selectedDoc.title} | SpendWise Docs`,
@@ -87,66 +68,125 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: `${selectedDoc.title} | SpendWise Docs`,
       description: plainText || `Read about ${selectedDoc.title} in the SpendWise documentation.`,
       type: "article",
-    }
+      publishedTime: selectedDoc.createdAt?.toString(),
+      modifiedTime: selectedDoc.updatedAt?.toString(),
+    },
   };
 }
 
 export default async function Page({ params }: PageProps) {
   const { slug } = await params;
-  const { allDocs, selectedDoc, activeSlug } = await getDocData(slug);
-
-  // If visiting /docs directly and we have a first doc, redirect to /docs/[first-slug]
-  if (!activeSlug && selectedDoc) {
-    redirect(`/docs/${selectedDoc.slug}`);
-  }
-
-  const serializedSelectedDoc = selectedDoc ? {
-    ...selectedDoc,
-    createdAt: selectedDoc.createdAt?.toISOString() || null,
-    updatedAt: selectedDoc.updatedAt?.toISOString() || null,
-  } : null;
-
-  const serializedAllDocs = allDocs.map(d => ({
-    ...d,
-    createdAt: d.createdAt?.toISOString() || null,
-    updatedAt: d.updatedAt?.toISOString() || null,
-  }));
+  const { allDocs, selectedDoc } = await getDocsData(slug);
 
   const baseUrl = process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
-  const articleStructuredData = selectedDoc ? {
+
+  const serialize = (doc: any) => ({
+    ...doc,
+    createdAt: doc.createdAt?.toISOString() || null,
+    updatedAt: doc.updatedAt?.toISOString() || null,
+  });
+
+  const serializedAllDocs = allDocs.map(serialize);
+
+  // ── Listing Page: /docs ──
+  if (!slug || slug.length === 0) {
+    const listingStructuredData = {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: "SpendWise Documentation",
+      description:
+        "Comprehensive documentation for SpendWise expense tracker — guides, tutorials, and reference.",
+      url: `${baseUrl}/docs`,
+      numberOfItems: allDocs.length,
+      mainEntity: {
+        "@type": "ItemList",
+        itemListElement: allDocs.map((doc, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          item: {
+            "@type": "TechArticle",
+            url: `${baseUrl}/docs/${doc.slug}`,
+            name: doc.title,
+            description: stripMarkdown(doc.content).slice(0, 150),
+          },
+        })),
+      },
+    };
+
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(listingStructuredData),
+          }}
+        />
+        <DocsListingPage docs={serializedAllDocs as any} />
+      </>
+    );
+  }
+
+  // ── Detail Page: /docs/[slug] ──
+  if (!selectedDoc) {
+    return (
+      <div className="flex-1 max-w-4xl px-6 md:px-12 py-12">
+        <div className="py-20 text-center space-y-4">
+          <h3 className="text-2xl font-black">Document not found</h3>
+          <p className="text-secondary">
+            Please select another section from the sidebar.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const serializedSelectedDoc = serialize(selectedDoc);
+
+  const articleStructuredData = {
     "@context": "https://schema.org",
     "@type": "TechArticle",
-    "headline": selectedDoc.title,
-    "description": selectedDoc.content ? stripMarkdown(selectedDoc.content).slice(0, 150) : `SpendWise documentation page for ${selectedDoc.title}.`,
-    "inLanguage": "en",
-    "mainEntityOfPage": `${baseUrl}/docs/${selectedDoc.slug}`,
-    "datePublished": selectedDoc.createdAt?.toISOString() || new Date("2024-05-01").toISOString(),
-    "dateModified": selectedDoc.updatedAt?.toISOString() || new Date().toISOString(),
-    "publisher": {
+    headline: selectedDoc.title,
+    description: stripMarkdown(selectedDoc.content).slice(0, 150),
+    inLanguage: "en",
+    mainEntityOfPage: `${baseUrl}/docs/${selectedDoc.slug}`,
+    datePublished: selectedDoc.createdAt?.toISOString() || new Date("2024-05-01").toISOString(),
+    dateModified: selectedDoc.updatedAt?.toISOString() || new Date().toISOString(),
+    publisher: {
       "@type": "Organization",
-      "name": "SpendWise",
-      "logo": {
-        "@type": "ImageObject",
-        "url": `${baseUrl}/web-app-manifest-192x192.png`
-      }
+      name: "SpendWise",
+      logo: { "@type": "ImageObject", url: `${baseUrl}/web-app-manifest-192x192.png` },
     },
-    "author": {
-      "@type": "Person",
-      "name": "Vinoth S"
-    }
-  } : null;
+    author: { "@type": "Person", name: "Vinoth S" },
+  };
+
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Docs", item: `${baseUrl}/docs` },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: selectedDoc.category,
+        item: `${baseUrl}/docs?category=${encodeURIComponent(selectedDoc.category)}`,
+      },
+      { "@type": "ListItem", position: 3, name: selectedDoc.title },
+    ],
+  };
 
   return (
     <>
-      {articleStructuredData && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleStructuredData) }}
-        />
-      )}
-      <DocsPageClient 
-        selectedDoc={serializedSelectedDoc as any} 
-        allDocs={serializedAllDocs as any} 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
+      />
+      <DocsPageClient
+        selectedDoc={serializedSelectedDoc as any}
+        allDocs={serializedAllDocs as any}
       />
     </>
   );
