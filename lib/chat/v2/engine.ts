@@ -10,6 +10,12 @@ import {
   subMonths,
 } from "date-fns";
 import {
+  scoreCategories,
+  findNearDuplicate,
+  jaccardSimilarity,
+  matchCategoryFromText,
+} from "../categories";
+import {
   createExpense,
   createIncome,
   fetchBudget,
@@ -20,6 +26,7 @@ import {
   createCategory,
   updateBudget,
 } from "../v1/api-gateway";
+import { logExtraction } from "../extraction-logger";
 
 type ChatEventType = "expenseAdded" | "incomeAdded" | "budgetUpdated";
 
@@ -34,7 +41,8 @@ type SessionKind =
   | "suggest_new_category"
   | "confirm_bulk_move"
   | "pick_bulk_move"
-  | "create_category_direct";
+  | "create_category_direct"
+  | "confirm_zero_amount";
 
 type ParentType = "Needs" | "Wants";
 type IncomeCategory = "Salary" | "Gift" | "Investment" | "Freelance" | "Others";
@@ -73,6 +81,7 @@ type V2Session = {
   id: string;
   kind: SessionKind;
   createdAt: string;
+  expiresAt: string;
   originMessage: string;
   step?: string;
   draft?: DraftTransaction;
@@ -166,20 +175,6 @@ const INCOME_KEYWORDS = [
   "earned",
 ];
 
-const CATEGORY_KEYWORDS: Array<{
-  category: string;
-  type: ParentType;
-  keywords: string[];
-}> = [
-  { category: "Food", type: "Needs", keywords: ["food", "lunch", "dinner", "breakfast", "groceries", "grocery"] },
-  { category: "Utilities", type: "Needs", keywords: ["wifi", "internet", "electricity", "water", "gas", "utility", "broadband", "recharge"] },
-  { category: "Transport", type: "Needs", keywords: ["taxi", "uber", "ola", "metro", "bus", "fuel", "petrol", "diesel", "transport"] },
-  { category: "Health", type: "Needs", keywords: ["medicine", "doctor", "hospital", "pharmacy", "health"] },
-  { category: "Shopping", type: "Wants", keywords: ["shopping", "laptop", "phone", "dress", "shoes", "amazon"] },
-  { category: "Entertainment", type: "Wants", keywords: ["movie", "netflix", "game", "gaming", "concert", "entertainment"] },
-  { category: "Sports", type: "Wants", keywords: ["cricket", "football", "turf", "badminton", "sports", "gym"] },
-];
-
 function formatCurrency(amount: number) {
   return `₹${amount.toFixed(2)}`;
 }
@@ -208,6 +203,12 @@ function titleCase(value: string) {
 
 function makeSessionId() {
   return `v2-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+const SESSION_TTL_MS = 15 * 60 * 1000;
+
+function createSessionExpiry(): string {
+  return new Date(Date.now() + SESSION_TTL_MS).toISOString();
 }
 
 function withSession(context: V2Context, session: V2Session | null): V2Context {
@@ -246,12 +247,14 @@ function clearSession(context: V2Context): V2Context {
   return withSession(context, null);
 }
 
-function isExpenseMessage(message: string) {
+function isExpenseMessage(message: string, aiResult?: any) {
+  if (aiResult?.intent === "add_expense") return true;
   const lower = message.toLowerCase();
   return EXPENSE_KEYWORDS.some((keyword) => lower.includes(keyword));
 }
 
-function isIncomeMessage(message: string) {
+function isIncomeMessage(message: string, aiResult?: any) {
+  if (aiResult?.intent === "add_income") return true;
   const lower = message.toLowerCase();
   return INCOME_KEYWORDS.some((keyword) => lower.includes(keyword));
 }
@@ -269,11 +272,51 @@ function isCrossUserDataRequest(message: string) {
   return (hasDataRequest && hasFinancialScope && targetsAnotherUser) || (hasInstructionOverride && targetsAnotherUser);
 }
 
-function isSavingsQuery(message: string) {
-  return /(save|saving|budget|advice|suggestion|insight)/i.test(message);
+function isSavingsQuery(message: string, aiResult?: any) {
+  if (aiResult?.intent === "query_savings") return true;
+  const lower = message.toLowerCase();
+  if (/\b(set|update|change|make|adjust)\b.*\bbudget\b/i.test(lower)) return false;
+  return /(save|saving|budget|advice|suggestion|insight)/i.test(lower);
 }
 
-function isBudgetUpdateMessage(message: string) {
+function isNewIntentDifferentFromSession(message: string, session: V2Session): boolean {
+  const lower = message.toLowerCase().trim();
+  if (lower === "cancel" || lower === "skip") return false;
+
+  const sessionKind = session.kind;
+  const isSessionExpense = sessionKind === "expense_missing" || sessionKind === "confirm_amount_rounding"
+    || sessionKind === "confirm_ambiguous_date" || sessionKind === "confirm_old_date"
+    || sessionKind === "choose_expense_category" || sessionKind === "suggest_new_category"
+    || sessionKind === "confirm_bulk_move" || sessionKind === "pick_bulk_move"
+    || sessionKind === "confirm_zero_amount" || sessionKind === "confirm_duplicate_category"
+    || sessionKind === "create_category_direct";
+  const isSessionIncome = sessionKind === "income_missing" || sessionKind === "confirm_amount_rounding";
+
+  if (isCategoryQuery(lower) || isComparisonQuery(lower)) return true;
+  if (isExpenseSummaryQuery(lower) || isIncomeSummaryQuery(lower)) return true;
+  if (isBudgetUpdateMessage(lower)) return true;
+  if (isSavingsQuery(lower)) return true;
+  if (isSessionExpense && isIncomeMessage(lower)) return true;
+  if (isSessionIncome && isExpenseMessage(lower)) return true;
+
+  return false;
+}
+
+function isCategoryQuery(message: string, aiResult?: any) {
+  if (aiResult?.intent === "query_category") return true;
+  const lower = message.toLowerCase();
+  const isQuestion = /(?:how\s+much|what|tell\s+me|show\s+me)\s+(?:(?:did|do)\s+I\s+)?(?:spend|spent|expenses?)\s+.*\b(?:on|for|in)\b/i.test(lower);
+  const isNounPhrase = /\b(?:expenses?|spending)\s+(?:on|for|in)\b/i.test(lower) && !/\d+/.test(lower.split(/\b(?:on|for|in)\b/)[0] || "");
+  return isQuestion || isNounPhrase;
+}
+
+function isComparisonQuery(message: string, aiResult?: any) {
+  if (aiResult?.intent === "query_comparison") return true;
+  return /(compare|vs|versus|difference|than last|this vs last|this month.*last month)/i.test(message);
+}
+
+function isBudgetUpdateMessage(message: string, aiResult?: any) {
+  if (aiResult?.intent === "update_budget") return true;
   const lower = message.toLowerCase();
   if (!lower.includes("budget")) return false;
   if (!/\b(set|update|change|make|adjust)\b|\bshould\s+be\b/i.test(lower)) return false;
@@ -283,13 +326,19 @@ function isBudgetUpdateMessage(message: string) {
   return !("error" in parseAmount(message));
 }
 
-function isExpenseSummaryQuery(message: string) {
-  return /(expense|spend|spent).*(summary|total|how much|breakdown|category)/i.test(message)
-    || /(what are my top spending categories|top spending)/i.test(message);
+function isExpenseSummaryQuery(message: string, aiResult?: any) {
+  if (aiResult?.intent === "query_expense") return true;
+  const lower = message.toLowerCase();
+  return /(?:show|what|how|tell)\s+.*(?:expense|spend|spent)/i.test(lower)
+    || /(?:expense|spend|spent).*(?:summary|total|how much|breakdown|category)/i.test(lower)
+    || /(?:what are my top spending categories|top spending)/i.test(lower);
 }
 
-function isIncomeSummaryQuery(message: string) {
-  return /(income|salary|earned|received).*(summary|total|how much)/i.test(message);
+function isIncomeSummaryQuery(message: string, aiResult?: any) {
+  if (aiResult?.intent === "query_income") return true;
+  const lower = message.toLowerCase();
+  return /(?:show|what|how|tell)\s+.*(?:income|salary)/i.test(lower)
+    || /(income|salary|earned|received).*(summary|total|how much)/i.test(lower);
 }
 
 function isDirectCategoryCreation(message: string) {
@@ -458,34 +507,12 @@ function parseRelativeRange(message: string) {
   };
 }
 
-function similarity(a: string, b: string) {
-  const aTokens = new Set(normalizeName(a).split(/\s+/).filter(Boolean));
-  const bTokens = new Set(normalizeName(b).split(/\s+/).filter(Boolean));
-  const intersection = [...aTokens].filter((token) => bTokens.has(token)).length;
-  const union = new Set([...aTokens, ...bTokens]).size || 1;
-  return intersection / union;
-}
-
 function findCategoryCandidates(note: string, categories: ChatCategory[]) {
-  const normalizedNote = normalizeName(note);
-  const scored = categories
-    .map((category) => {
-      const directScore = normalizedNote.includes(normalizeName(category.name)) ? 0.9 : 0;
-      const keywordScore =
-        CATEGORY_KEYWORDS.find(
-          (entry) =>
-            normalizeName(entry.category) === normalizeName(category.name) &&
-            entry.keywords.some((keyword) => normalizedNote.includes(keyword)),
-        ) ? 0.82 : 0;
-      const fuzzyScore = similarity(note, category.name);
-      return {
-        category,
-        score: Math.max(directScore, keywordScore, fuzzyScore),
-      };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  return scored.slice(0, 3);
+  const scored = scoreCategories(note, categories);
+  return scored.slice(0, 3).map((s) => ({
+    category: categories.find((c) => c.name === s.category) || { id: "", name: s.category, type: s.type as ParentType },
+    score: s.score,
+  }));
 }
 
 async function getUserCategories(request: Request) {
@@ -502,17 +529,7 @@ function parseDirectCategoryRequest(message: string) {
   };
 }
 
-function findNearDuplicate(name: string, type: ParentType, categories: ChatCategory[]) {
-  const normalized = normalizeName(name);
-  return (
-    categories.find((category) => category.type === type && normalizeName(category.name) === normalized) ||
-    categories.find(
-      (category) =>
-        category.type === type &&
-        similarity(category.name, name) >= 0.75,
-    )
-  );
-}
+// findNearDuplicate is now imported from lib/chat/categories.ts
 
 async function maybeSuggestNewCategory(
   note: string,
@@ -524,27 +541,28 @@ async function maybeSuggestNewCategory(
     (expense: any) =>
       normalizeName(expense.subcategory || "") === "other" &&
       expense.note &&
-      similarity(expense.note, note) >= 0.34,
+      jaccardSimilarity(expense.note, note) >= 0.34,
   );
 
   if (candidates.length < 2) {
     return null;
   }
 
-  const keywordEntry = CATEGORY_KEYWORDS.find((entry) =>
-    entry.keywords.some((keyword) => normalizeName(note).includes(keyword)),
-  );
-  const suggestedName = keywordEntry?.category || titleCase(note.split(/\s+/)[0] || "Other");
+  const scored = scoreCategories(note);
+  const best = scored[0];
+  const suggestedName = best?.category || titleCase(note.split(/\s+/)[0] || "Other");
+
+  const moveCandidates = candidates.map((expense: any) => ({
+    id: expense.id,
+    note: sanitizeFreeText(expense.note || expense.subcategory || "Expense"),
+    amount: Number(expense.amount),
+    date: format(new Date(expense.date), "yyyy-MM-dd"),
+  }));
 
   return {
     suggestedName,
-    parentType: keywordEntry?.type || "Wants",
-    moveCandidates: candidates.slice(0, 5).map((expense: any) => ({
-      id: expense.id,
-      note: sanitizeFreeText(expense.note || expense.subcategory || "Expense"),
-      amount: Number(expense.amount),
-      date: format(new Date(expense.date), "yyyy-MM-dd"),
-    })),
+    parentType: (best?.type as "Needs" | "Wants") || "Wants",
+    moveCandidates,
     matchingIds: candidates.map((expense: any) => expense.id),
   };
 }
@@ -554,23 +572,66 @@ async function finalizeExpense(
   request: Request,
   draft: DraftTransaction,
 ) {
+  const note = draft.amountApproximate
+    ? `[approx] ${draft.sanitizedNote || draft.note || draft.category}`
+    : draft.sanitizedNote || draft.note || draft.category;
+
   const payload = {
     amount: draft.amount,
     category: draft.categoryType,
     subcategory: draft.category,
-    note: draft.sanitizedNote || draft.note || draft.category,
+    note,
     date: draft.date,
   };
 
-  const response = await createExpense(payload, { req: request });
-  return {
-    handled: true as const,
-    reply: `Added ${formatCurrency(Number(draft.amount))} under ${draft.categoryType} → ${draft.category} on ${draft.date}.`,
-    success: true,
-    eventType: "expenseAdded" as const,
-    data: response?.expense || response,
-    context: clearSession(context),
-  };
+  try {
+    const response = await createExpense(payload, { req: request });
+    logExtraction(
+      (context as any).userId || "",
+      "",
+      "",
+      {
+        amount: draft.amount,
+        amountRaw: draft.amountRaw,
+        amountApproximate: draft.amountApproximate,
+        note: draft.note || draft.category,
+        date: draft.date,
+        category: draft.category,
+        categoryConfidence: draft.categoryConfidence,
+      },
+      "completed",
+    ).catch(() => {});
+    return {
+      handled: true as const,
+      reply: `Added ${formatCurrency(Number(draft.amount))} under ${draft.categoryType} → ${draft.category} on ${draft.date}.`,
+      success: true,
+      eventType: "expenseAdded" as const,
+      data: response?.expense || response,
+      context: clearSession(context),
+    };
+  } catch (error) {
+    logExtraction(
+      (context as any).userId || "",
+      "",
+      "",
+      {},
+      "error",
+      String(error),
+    ).catch(() => {});
+    return {
+      handled: true as const,
+      reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+      success: false,
+      context: clearSession(context),
+    };
+  }
+}
+
+function formatMovePreview(items: Array<{ note: string; amount: number; date: string }>, maxShow = 5): string {
+  const visible = items.slice(0, maxShow);
+  const lines = visible.map((item, i) => `${i + 1}. ${item.note} — ${formatCurrency(item.amount)} — ${item.date}`);
+  const extra = items.length > maxShow ? `\n...and ${items.length - maxShow} more.` : "";
+  return lines.join("\n") + extra;
 }
 
 async function maybeConfirmBulkMove(
@@ -583,56 +644,48 @@ async function maybeConfirmBulkMove(
     return finalizeExpense(context, request, draft);
   }
 
-  const allExpenses = await fetchExpenses({}, { req: request });
-  const moveCandidates = (allExpenses?.expenses || [])
-    .filter((expense: any) => draft.matchingExpenseIds?.includes(expense.id))
-    .map((expense: any) => ({
-      id: expense.id,
-      note: sanitizeFreeText(expense.note || expense.subcategory || "Expense"),
-      amount: Number(expense.amount),
-      date: format(new Date(expense.date), "yyyy-MM-dd"),
-    }));
+  let moveCandidates: Array<{ id: string; note: string; amount: number; date: string }>;
+
+  if (sessionBase.moveCandidates?.length) {
+    moveCandidates = sessionBase.moveCandidates;
+  } else {
+    const allExpenses = await fetchExpenses({}, { req: request });
+    moveCandidates = (allExpenses?.expenses || [])
+      .filter((expense: any) => draft.matchingExpenseIds?.includes(expense.id))
+      .map((expense: any) => ({
+        id: expense.id,
+        note: sanitizeFreeText(expense.note || expense.subcategory || "Expense"),
+        amount: Number(expense.amount),
+        date: format(new Date(expense.date), "yyyy-MM-dd"),
+      }));
+  }
 
   if (!moveCandidates.length) {
     return finalizeExpense(context, request, draft);
   }
 
-  const preview = moveCandidates
-    .slice(0, 2)
-    .map((item: { note: string; amount: number }) => `'${item.note}' (${formatCurrency(item.amount)})`)
-    .join(" and ");
+  const preview = formatMovePreview(moveCandidates);
+  const total = moveCandidates.length;
 
   const session: V2Session = {
     ...sessionBase,
-    kind: moveCandidates.length >= 3 ? "pick_bulk_move" : "confirm_bulk_move",
+    kind: "pick_bulk_move",
     draft,
     moveCandidates,
   };
 
-  if (moveCandidates.length >= 3) {
-    return buildFollowUp(context, session, {
-      kind: "multiselect",
-      prompt: `Move ${moveCandidates.length} earlier expenses into '${draft.category}'?`,
-      helperText: "Pick which ones to move, or cancel to keep history unchanged.",
-      items: moveCandidates.map((item: { id: string; note: string; amount: number; date: string }) => ({
-        id: item.id,
-        label: `${item.note} • ${formatCurrency(item.amount)} • ${item.date}`,
-        checked: true,
-      })),
-      options: [
-        { id: "move-selected", label: "Move selected", action: "submit", variant: "primary" },
-        { id: "skip", label: "No", action: "submit", variant: "secondary" },
-        { id: "cancel", label: "Cancel", action: "cancel", variant: "danger" },
-      ],
-      allowTextInput: false,
-    });
-  }
-
   return buildFollowUp(context, session, {
-    kind: "confirm",
-    prompt: `Move ${moveCandidates.length} expenses — ${preview} — into '${draft.category}'?`,
+    kind: total <= 5 ? "confirm" : "multiselect",
+    prompt: `Move ${total} earlier expense${total === 1 ? "" : "s"} into '${draft.category}'?\n${preview}`,
+    helperText: "You can move all, pick specific ones, or skip.",
+    items: total > 1 ? moveCandidates.map((item) => ({
+      id: item.id,
+      label: `${item.note} • ${formatCurrency(item.amount)} • ${item.date}`,
+      checked: true,
+    })) : undefined,
     options: [
-      { id: "move-all", label: "Yes, move both", action: "submit", variant: "primary" },
+      { id: "move-all", label: total > 1 ? `Move all ${total}` : "Move it", action: "submit", variant: "primary" },
+      ...(total > 1 ? [{ id: "move-selected", label: "Let me pick which ones", action: "submit" as const, variant: "secondary" as const }] : []),
       { id: "skip", label: "No", action: "submit", variant: "secondary" },
       { id: "cancel", label: "Cancel", action: "cancel", variant: "danger" },
     ],
@@ -650,6 +703,7 @@ async function continueExpenseDraft(
     id: makeSessionId(),
     kind: "expense_missing",
     createdAt: new Date().toISOString(),
+    expiresAt: createSessionExpiry(),
     originMessage,
     draft,
   };
@@ -741,6 +795,11 @@ async function continueExpenseDraft(
     });
   }
 
+  if (draft.category && draft.categoryConfidence && draft.categoryConfidence >= 0.7) {
+    draft.sanitizedNote = sanitizeFreeText(draft.note, 120);
+    return maybeConfirmBulkMove(context, request, sessionBase, draft);
+  }
+
   const categories = await getUserCategories(request);
   const candidates = findCategoryCandidates(draft.note, categories);
   const best = candidates[0];
@@ -763,7 +822,7 @@ async function continueExpenseDraft(
             suggestedCategory: suggestion.suggestedName,
           },
           duplicateName: duplicate.name,
-          parentType: duplicate.type,
+          parentType: duplicate.type as ParentType as ParentType,
         };
         return buildFollowUp(context, session, {
           kind: "choices",
@@ -848,6 +907,7 @@ async function continueIncomeDraft(
     id: makeSessionId(),
     kind: "income_missing",
     createdAt: new Date().toISOString(),
+    expiresAt: createSessionExpiry(),
     originMessage,
     draft,
   };
@@ -943,24 +1003,55 @@ async function continueIncomeDraft(
   }
 
   const note = sanitizeFreeText(draft.note || draft.incomeCategory, 120) || draft.incomeCategory;
-  const response = await createIncome(
-    {
-      amount: draft.amount,
-      source: draft.incomeCategory,
-      note,
-      date: draft.date,
-    },
-    { req: request },
-  );
+  try {
+    const response = await createIncome(
+      {
+        amount: draft.amount,
+        source: draft.incomeCategory,
+        note,
+        date: draft.date,
+      },
+      { req: request },
+    );
 
-  return {
-    handled: true as const,
-    reply: `Added ${formatCurrency(Number(draft.amount))} as ${draft.incomeCategory} on ${draft.date}.`,
-    success: true,
-    eventType: "incomeAdded" as const,
-    data: response?.income || response,
-    context: clearSession(context),
-  };
+    logExtraction(
+      (context as any).userId || "",
+      "",
+      "",
+      {
+        amount: draft.amount,
+        amountRaw: draft.amountRaw,
+        note: draft.note,
+        date: draft.date,
+        incomeCategory: draft.incomeCategory,
+      },
+      "completed",
+    ).catch(() => {});
+
+    return {
+      handled: true as const,
+      reply: `Added ${formatCurrency(Number(draft.amount))} as ${draft.incomeCategory} on ${draft.date}.`,
+      success: true,
+      eventType: "incomeAdded" as const,
+      data: response?.income || response,
+      context: clearSession(context),
+    };
+  } catch (error) {
+    logExtraction(
+      (context as any).userId || "",
+      "",
+      "",
+      {},
+      "error",
+      String(error),
+    ).catch(() => {});
+    return {
+      handled: true as const,
+      reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+      success: false,
+      context: clearSession(context),
+    };
+  }
 }
 
 function applyDateValidationToDraft(draft: DraftTransaction, parsed: ReturnType<typeof parseDateInput>) {
@@ -1008,6 +1099,15 @@ async function resumeSessionFromMessage(
     };
   }
 
+  if (new Date(session.expiresAt) < new Date()) {
+    return {
+      handled: true as const,
+      reply: "That session has timed out. Please start a new request.",
+      success: false,
+      context: clearSession(context),
+    };
+  }
+
   const draft: DraftTransaction = { ...(session.draft as DraftTransaction) };
   if (!draft.mode) {
     return { handled: false as const };
@@ -1015,7 +1115,8 @@ async function resumeSessionFromMessage(
 
   switch (session.kind) {
     case "expense_missing":
-      if (session.step === "note") {
+    case "income_missing":
+      if (session.step === "note" && session.kind === "expense_missing") {
         draft.note = titleCase(message);
         return continueExpenseDraft(context, request, session.originMessage, draft);
       }
@@ -1061,7 +1162,7 @@ async function resumeSessionFromMessage(
       const duplicate = findNearDuplicate(draft.category, "Wants", categories) || findNearDuplicate(draft.category, "Needs", categories);
       if (duplicate) {
         draft.category = duplicate.name;
-        draft.categoryType = duplicate.type;
+        draft.categoryType = duplicate.type as ParentType;
         draft.sanitizedNote = sanitizeFreeText(draft.note, 120);
         return finalizeExpense(context, request, draft);
       }
@@ -1069,7 +1170,16 @@ async function resumeSessionFromMessage(
       draft.createCategory = true;
       draft.categoryType = "Wants";
       draft.sanitizedNote = sanitizeFreeText(draft.note, 120);
-      await createCategory({ name: draft.category, type: draft.categoryType }, { req: request });
+      try {
+        await createCategory({ name: draft.category, type: draft.categoryType }, { req: request });
+      } catch (error) {
+        return {
+          handled: true as const,
+          reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+          success: false,
+          context: clearSession(context),
+        };
+      }
       return maybeConfirmBulkMove(context, request, session, draft);
     }
     case "suggest_new_category": {
@@ -1077,7 +1187,16 @@ async function resumeSessionFromMessage(
       draft.categoryType = session.parentType || "Wants";
       draft.createCategory = true;
       draft.sanitizedNote = sanitizeFreeText(draft.note, 120);
-      await createCategory({ name: draft.category, type: draft.categoryType }, { req: request });
+      try {
+        await createCategory({ name: draft.category, type: draft.categoryType }, { req: request });
+      } catch (error) {
+        return {
+          handled: true as const,
+          reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+          success: false,
+          context: clearSession(context),
+        };
+      }
       return maybeConfirmBulkMove(context, request, session, draft);
     }
     default:
@@ -1091,6 +1210,15 @@ async function resumeSessionFromAction(
   session: V2Session,
   details: any,
 ) {
+  if (new Date(session.expiresAt) < new Date()) {
+    return {
+      handled: true as const,
+      reply: "That session has timed out. Please start a new request.",
+      success: false,
+      context: clearSession(context),
+    };
+  }
+
   const actionId = details?.actionId;
   const value = details?.value;
   const selectedIds = details?.selectedIds as string[] | undefined;
@@ -1186,6 +1314,11 @@ async function resumeSessionFromAction(
         }
       }
       break;
+    case "confirm_zero_amount":
+      if (actionId === "confirm-zero-amount") {
+        return continueExpenseDraft(context, request, session.originMessage, draft);
+      }
+      break;
     case "confirm_duplicate_category":
       if (actionId === "use-duplicate") {
         draft.category = session.duplicateName;
@@ -1199,7 +1332,16 @@ async function resumeSessionFromAction(
         draft.categoryType = session.parentType || "Wants";
         draft.createCategory = true;
         draft.sanitizedNote = sanitizeFreeText(draft.note, 120);
-        await createCategory({ name: String(draft.category), type: draft.categoryType }, { req: request });
+        try {
+          await createCategory({ name: String(draft.category), type: draft.categoryType }, { req: request });
+        } catch (error) {
+          return {
+            handled: true as const,
+            reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+            success: false,
+            context: clearSession(context),
+          };
+        }
         return maybeConfirmBulkMove(context, request, session, draft);
       }
       if (actionId === "skip") {
@@ -1216,7 +1358,16 @@ async function resumeSessionFromAction(
         draft.categoryType = session.parentType || "Wants";
         draft.createCategory = true;
         draft.sanitizedNote = sanitizeFreeText(draft.note, 120);
-        await createCategory({ name: String(draft.category), type: draft.categoryType }, { req: request });
+        try {
+          await createCategory({ name: String(draft.category), type: draft.categoryType }, { req: request });
+        } catch (error) {
+          return {
+            handled: true as const,
+            reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+            success: false,
+            context: clearSession(context),
+          };
+        }
         return maybeConfirmBulkMove(context, request, session, draft);
       }
       if (actionId === "skip") {
@@ -1229,12 +1380,21 @@ async function resumeSessionFromAction(
       break;
     case "confirm_bulk_move":
       if (actionId === "move-all") {
-        for (const item of session.moveCandidates || []) {
-          await updateExpense(
-            item.id,
-            { category: draft.categoryType, subcategory: draft.category },
-            { req: request },
-          );
+        try {
+          for (const item of session.moveCandidates || []) {
+            await updateExpense(
+              item.id,
+              { category: draft.categoryType, subcategory: draft.category },
+              { req: request },
+            );
+          }
+        } catch (error) {
+          return {
+            handled: true as const,
+            reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+            success: false,
+            context: clearSession(context),
+          };
         }
         return finalizeExpense(context, request, draft);
       }
@@ -1243,13 +1403,25 @@ async function resumeSessionFromAction(
       }
       break;
     case "pick_bulk_move":
-      if (actionId === "move-selected") {
-        for (const id of selectedIds || []) {
-          await updateExpense(
-            id,
-            { category: draft.categoryType, subcategory: draft.category },
-            { req: request },
-          );
+      if (actionId === "move-all" || actionId === "move-selected") {
+        try {
+          const ids = actionId === "move-all"
+            ? (session.moveCandidates || []).map((item) => item.id)
+            : selectedIds || [];
+          for (const id of ids) {
+            await updateExpense(
+              id,
+              { category: draft.categoryType, subcategory: draft.category },
+              { req: request },
+            );
+          }
+        } catch (error) {
+          return {
+            handled: true as const,
+            reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+            success: false,
+            context: clearSession(context),
+          };
         }
         return finalizeExpense(context, request, draft);
       }
@@ -1267,17 +1439,26 @@ async function resumeSessionFromAction(
         };
       }
       if (actionId === "create-anyway" && draft.category && draft.categoryType) {
-        const response = await createCategory(
-          { name: draft.category, type: draft.categoryType },
-          { req: request },
-        );
-        return {
-          handled: true as const,
-          reply: `Created '${draft.category}' under ${draft.categoryType}.`,
-          success: true,
-          data: response?.category || response,
-          context: clearSession(context),
-        };
+        try {
+          const response = await createCategory(
+            { name: draft.category, type: draft.categoryType },
+            { req: request },
+          );
+          return {
+            handled: true as const,
+            reply: `Created '${draft.category}' under ${draft.categoryType}.`,
+            success: true,
+            data: response?.category || response,
+            context: clearSession(context),
+          };
+        } catch (error) {
+          return {
+            handled: true as const,
+            reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+            success: false,
+            context: clearSession(context),
+          };
+        }
       }
       if (actionId === "skip") {
         return {
@@ -1310,9 +1491,10 @@ async function handleDirectCategoryCreation(
       id: makeSessionId(),
       kind: "create_category_direct",
       createdAt: new Date().toISOString(),
+      expiresAt: createSessionExpiry(),
       originMessage: message,
       duplicateName: duplicate.name,
-      parentType: duplicate.type,
+      parentType: duplicate.type as ParentType,
       draft: {
         mode: "expense",
         category: parsed.name,
@@ -1332,18 +1514,27 @@ async function handleDirectCategoryCreation(
     });
   }
 
-  const response = await createCategory(
-    { name: parsed.name, type: parsed.type },
-    { req: request },
-  );
+  try {
+    const response = await createCategory(
+      { name: parsed.name, type: parsed.type },
+      { req: request },
+    );
 
-  return {
-    handled: true as const,
-    reply: `Created '${parsed.name}' under ${parsed.type}.`,
-    success: true,
-    data: response?.category || response,
-    context: clearSession(context),
-  };
+    return {
+      handled: true as const,
+      reply: `Created '${parsed.name}' under ${parsed.type}.`,
+      success: true,
+      data: response?.category || response,
+      context: clearSession(context),
+    };
+  } catch (error) {
+    return {
+      handled: true as const,
+      reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+      success: false,
+      context: clearSession(context),
+    };
+  }
 }
 
 async function handleExpenseFlow(
@@ -1362,12 +1553,29 @@ async function handleExpenseFlow(
       };
     }
     if (parsedAmount.error === "zero") {
-      return {
-        handled: true as const,
-        reply: "That amount is zero. If you still want to log it, please add it manually instead.",
-        success: false,
-        context,
+      const note = parseExpenseNote(message);
+      const draft: DraftTransaction = {
+        mode: "expense",
+        amount: 0,
+        note,
       };
+      const session: V2Session = {
+        id: makeSessionId(),
+        kind: "confirm_zero_amount",
+        createdAt: new Date().toISOString(),
+        expiresAt: createSessionExpiry(),
+        originMessage: message,
+        draft,
+      };
+      return buildFollowUp(context, session, {
+        kind: "confirm",
+        prompt: "That amount is zero. Did you mean to log an expense of ₹0?",
+        options: [
+          { id: "confirm-zero-amount", label: "Yes, log it", action: "submit", variant: "primary" },
+          { id: "cancel", label: "Cancel", action: "cancel", variant: "danger" },
+        ],
+        allowTextInput: false,
+      });
     }
     if (parsedAmount.error === "unparseable") {
       return {
@@ -1388,6 +1596,12 @@ async function handleExpenseFlow(
     amountRaw: parsedAmount.raw,
     note,
   };
+
+  if ((context as any).aiCategory && !draft.category) {
+    draft.category = (context as any).aiCategory;
+    draft.categoryType = (context as any).aiCategoryType || "Wants";
+    draft.categoryConfidence = (context as any).aiCategoryConfidence;
+  }
 
   if (parsedAmount.rounded) {
     draft.needsRoundingConfirmation = true;
@@ -1429,7 +1643,15 @@ async function handleIncomeFlow(
     if (parsedAmount.error === "zero") {
       return {
         handled: true as const,
-        reply: "That amount is zero. Please confirm a non-zero income amount or cancel.",
+        reply: "That amount is zero. Did you mean to log income of ₹0?",
+        success: false,
+        context,
+      };
+    }
+    if (parsedAmount.error === "unparseable") {
+      return {
+        handled: true as const,
+        reply: "I couldn't understand the amount. Please restate it with numbers.",
         success: false,
         context,
       };
@@ -1479,10 +1701,15 @@ async function handleIncomeFlow(
 
 async function handleExpenseSummary(request: Request, message: string) {
   const range = parseRelativeRange(message);
-  const response = await fetchExpenses(
-    { fromDate: range.fromDate, toDate: range.toDate },
-    { req: request },
-  );
+  const now = new Date();
+  const month = format(now, "yyyy-MM");
+  const [response, budgetResponse] = await Promise.all([
+    fetchExpenses(
+      { fromDate: range.fromDate, toDate: range.toDate },
+      { req: request },
+    ),
+    fetchBudget(month, { req: request }).catch(() => ({ limit: 0 })),
+  ]);
   const expenses = response?.expenses || [];
 
   if (!expenses.length) {
@@ -1502,7 +1729,15 @@ async function handleExpenseSummary(request: Request, message: string) {
     .map(([name, amount]) => `${name} ${formatCurrency(amount)}`)
     .join(", ");
 
-  return `Your total expenses for ${range.label} are ${formatCurrency(total)}. Top categories: ${top}.`;
+  let budgetNote = "";
+  const budgetLimit = Number(budgetResponse?.limit || 0);
+  const expenseMode = budgetResponse?.expenseMode as string | undefined;
+  if (expenseMode === "limit" && budgetLimit > 0 && range.label === "this month") {
+    const usage = (total / budgetLimit) * 100;
+    budgetNote = ` Budget usage: ${Math.round(usage)}% of ${formatCurrency(budgetLimit)}.`;
+  }
+
+  return `Your total expenses for ${range.label} are ${formatCurrency(total)}. Top categories: ${top}.${budgetNote}`;
 }
 
 async function handleIncomeSummary(request: Request, message: string) {
@@ -1545,16 +1780,25 @@ async function handleBudgetUpdate(context: V2Context, request: Request, message:
 
   const month = format(new Date(), "yyyy-MM");
   const limit = parsedAmount.amount;
-  const response = await updateBudget({ month, limit }, { req: request });
+  try {
+    const response = await updateBudget({ month, limit }, { req: request });
 
-  return {
-    handled: true,
-    reply: `Updated your monthly budget for ${month} to ${formatCurrency(limit)}.`,
-    success: true,
-    eventType: "budgetUpdated",
-    data: response?.budget || { limit, month },
-    context: clearSession(context),
-  };
+    return {
+      handled: true,
+      reply: `Updated your monthly budget for ${month} to ${formatCurrency(limit)}.`,
+      success: true,
+      eventType: "budgetUpdated",
+      data: response?.budget || { limit, month },
+      context: clearSession(context),
+    };
+  } catch (error) {
+    return {
+      handled: true,
+      reply: "Something went wrong saving that — please try again. Your data hasn't been changed.",
+      success: false,
+      context: clearSession(context),
+    };
+  }
 }
 
 async function handleSavingsInsights(request: Request, message: string) {
@@ -1587,32 +1831,123 @@ async function handleSavingsInsights(request: Request, message: string) {
   const totalSpent = expenses.reduce((sum: number, expense: any) => sum + Number(expense.amount), 0);
   const totalIncome = incomes.reduce((sum: number, income: any) => sum + Number(income.amount), 0);
   const budgetLimit = Number(budgetResponse?.limit || 0);
+  const expenseMode = budgetResponse?.expenseMode as string | undefined;
 
-  if (!budgetLimit) {
+  if (expenseMode === "no-limit" || !budgetLimit) {
     if (!totalIncome) {
-      return `You've spent ${formatCurrency(totalSpent)} this month. Enable Budget Mode to get goal-based savings advice.`;
+      return `You've spent ${formatCurrency(totalSpent)} this month. Enable Budget Mode to set a monthly savings goal. For now, here's your spending overview.`;
     }
     const savings = totalIncome - totalSpent;
-    return `This month you've earned ${formatCurrency(totalIncome)} and spent ${formatCurrency(totalSpent)}, leaving ${formatCurrency(savings)}. Your biggest opportunity is to cut back in your top discretionary categories.`;
+    return `Enable Budget Mode to set a monthly savings goal. For now, this month you've earned ${formatCurrency(totalIncome)} and spent ${formatCurrency(totalSpent)}, leaving ${formatCurrency(savings)}.`;
   }
 
   const remaining = budgetLimit - totalSpent;
   const usage = budgetLimit ? (totalSpent / budgetLimit) * 100 : 0;
   const tone =
     usage >= 100
-      ? "You've crossed your monthly budget."
+      ? "You might want to slow down spending. You've crossed your monthly budget."
       : usage >= 85
-        ? "You're getting close to your monthly budget."
-        : "You're still within your budget.";
+        ? "You might want to slow down spending. You've used " + Math.round(usage) + "% of your budget."
+        : `You're on track! ${formatCurrency(remaining)} remaining this month.`;
 
   return `${tone} Budget: ${formatCurrency(budgetLimit)}. Spent: ${formatCurrency(totalSpent)}. Remaining: ${formatCurrency(remaining)}. ${remaining > 0 ? `Try keeping your daily average near ${formatCurrency(remaining / Math.max(1, endOfMonth(now).getDate() - now.getDate()))}.` : "Focus on slowing spending in your highest categories for the rest of the month."}`;
 }
 
+async function handleCategoryQuery(request: Request, message: string) {
+  const remaining = message
+    .replace(/(how much|total|spend|spent|expenses?|did I|do I|what|tell me|show me|my|give me)/gi, "")
+    .replace(/\b(on|for|in|this|last|that|the|a|an|of|to|with)\b/gi, "")
+    .replace(/[?.,!;:]/g, "")
+    .trim();
+
+  const userCategories = await getUserCategories(request);
+  if (!userCategories.length) {
+    return "I couldn't find your category list. Please set up some categories first.";
+  }
+
+  const matched = matchCategoryFromText(remaining, userCategories.map((c) => ({ name: c.name, type: c.type })));
+  if (!matched) {
+    return `I couldn't identify a category in your message. Here are your categories: ${userCategories.map((c) => c.name).join(", ")}.`;
+  }
+
+  const range = parseRelativeRange(message);
+  const response = await fetchExpenses(
+    { fromDate: range.fromDate, toDate: range.toDate },
+    { req: request },
+  );
+  const expenses = (response?.expenses || []).filter(
+    (e: any) => (e.subcategory || e.category)?.toLowerCase() === matched.name.toLowerCase(),
+  );
+
+  if (!expenses.length) {
+    return `You don't have any ${matched.name} expenses logged for ${range.label} yet.`;
+  }
+
+  const total = expenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+  const count = expenses.length;
+  return `You spent ${formatCurrency(total)} on ${matched.name} in ${range.label} across ${count} ${count === 1 ? "transaction" : "transactions"}.`;
+}
+
+async function handleComparisonQuery(request: Request, message: string) {
+  const now = new Date();
+  const currentStart = format(startOfMonth(now), "yyyy-MM-dd");
+  const currentEnd = format(endOfMonth(now), "yyyy-MM-dd");
+  const lastMonth = subMonths(now, 1);
+  const lastStart = format(startOfMonth(lastMonth), "yyyy-MM-dd");
+  const lastEnd = format(endOfMonth(lastMonth), "yyyy-MM-dd");
+
+  const [currentResponse, lastResponse] = await Promise.all([
+    fetchExpenses({ fromDate: currentStart, toDate: currentEnd }, { req: request }),
+    fetchExpenses({ fromDate: lastStart, toDate: lastEnd }, { req: request }),
+  ]);
+
+  const current = currentResponse?.expenses || [];
+  const last = lastResponse?.expenses || [];
+
+  if (!current.length && !last.length) {
+    return "No expense data available for last month or this month yet.";
+  }
+
+  const currentTotal = current.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+  const lastTotal = last.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+
+  if (lastTotal === 0) {
+    return `This month you've spent ${formatCurrency(currentTotal)}. No data available for last month yet.`;
+  }
+
+  const diff = currentTotal - lastTotal;
+  const pctChange = Math.abs((diff / lastTotal) * 100).toFixed(1);
+  const direction = diff > 0 ? "more" : "less";
+
+  const label = `Compared to ${format(lastMonth, "MMMM")}`;
+  if (Math.abs(diff) < 0.01) {
+    return `${label}, you spent the same amount this month (${formatCurrency(currentTotal)}).`;
+  }
+  return `${label}, you spent ${pctChange}% ${direction} this month (${formatCurrency(currentTotal)} vs ${formatCurrency(lastTotal)}).`;
+}
+
 export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result> {
-  const { body, request } = envelope;
+  const { body, request, userId } = envelope;
   const message = body?.message?.toString().trim() || "";
   const context = (body?.context || {}) as V2Context;
   const activeSession = context?.v2?.session || null;
+  (context as any).userId = userId;
+  const aiResult = body?.ai || null;
+  if (aiResult?.entities?.categoryCandidate && aiResult?.entities?.categoryConfidence >= 0.7) {
+    (context as any).aiCategory = aiResult.entities.categoryCandidate;
+    (context as any).aiCategoryType = aiResult.entities.categoryCandidates?.[0]?.type || "Wants";
+    (context as any).aiCategoryConfidence = aiResult.entities.categoryConfidence;
+  }
+
+  if (message) {
+    logExtraction(
+      userId,
+      activeSession?.id || "",
+      message,
+      {},
+      "completed",
+    ).catch(() => {});
+  }
 
   if (message && isCrossUserDataRequest(message)) {
     return {
@@ -1638,6 +1973,10 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
   }
 
   if (message && activeSession) {
+    if (isNewIntentDifferentFromSession(message, activeSession)) {
+      const newContext = clearSession(context);
+      return handleChatV2({ ...envelope, body: { ...body, context: newContext } });
+    }
     const resumed = await resumeSessionFromMessage(context, request, activeSession, message);
     if (resumed.handled) return resumed;
   }
@@ -1650,19 +1989,25 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
     return handleDirectCategoryCreation(clearSession(context), request, message);
   }
 
-  if (isExpenseMessage(message)) {
-    return handleExpenseFlow(clearSession(context), request, message);
+  if (isCategoryQuery(message, aiResult)) {
+    return {
+      handled: true,
+      reply: await handleCategoryQuery(request, message),
+      success: true,
+      context: clearSession(context),
+    };
   }
 
-  if (isIncomeMessage(message)) {
-    return handleIncomeFlow(clearSession(context), request, message);
+  if (isComparisonQuery(message, aiResult)) {
+    return {
+      handled: true,
+      reply: await handleComparisonQuery(request, message),
+      success: true,
+      context: clearSession(context),
+    };
   }
 
-  if (isBudgetUpdateMessage(message)) {
-    return handleBudgetUpdate(clearSession(context), request, message);
-  }
-
-  if (isExpenseSummaryQuery(message)) {
+  if (isExpenseSummaryQuery(message, aiResult)) {
     return {
       handled: true,
       reply: await handleExpenseSummary(request, message),
@@ -1671,7 +2016,7 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
     };
   }
 
-  if (isIncomeSummaryQuery(message)) {
+  if (isIncomeSummaryQuery(message, aiResult)) {
     return {
       handled: true,
       reply: await handleIncomeSummary(request, message),
@@ -1680,7 +2025,11 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
     };
   }
 
-  if (isSavingsQuery(message)) {
+  if (isBudgetUpdateMessage(message, aiResult)) {
+    return handleBudgetUpdate(clearSession(context), request, message);
+  }
+
+  if (isSavingsQuery(message, aiResult)) {
     return {
       handled: true,
       reply: await handleSavingsInsights(request, message),
@@ -1689,5 +2038,18 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
     };
   }
 
-  return { handled: false };
+  if (isExpenseMessage(message, aiResult)) {
+    return handleExpenseFlow(clearSession(context), request, message);
+  }
+
+  if (isIncomeMessage(message, aiResult)) {
+    return handleIncomeFlow(clearSession(context), request, message);
+  }
+
+  return {
+    handled: true,
+    reply: "I can help you add expenses, income, or check your spending. Could you rephrase that?",
+    success: false,
+    context: clearSession(context),
+  };
 }

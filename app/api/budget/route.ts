@@ -14,8 +14,13 @@ export async function GET(req: NextRequest) {
       where: { userId_month: { userId, month } }
     });
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { monthlyLimit: true, expenseMode: true }
+    });
+
     if (exactBudget) {
-      return NextResponse.json({ limit: exactBudget.amount });
+      return NextResponse.json({ limit: exactBudget.amount, expenseMode: user?.expenseMode || "no-limit" });
     }
 
     const pastBudgets = await prisma.budget.findMany({
@@ -25,11 +30,10 @@ export async function GET(req: NextRequest) {
     });
 
     if (pastBudgets.length > 0) {
-      return NextResponse.json({ limit: pastBudgets[0].amount });
+      return NextResponse.json({ limit: pastBudgets[0].amount, expenseMode: user?.expenseMode || "no-limit" });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { monthlyLimit: true } });
-    return NextResponse.json({ limit: user?.monthlyLimit || 0 });
+    return NextResponse.json({ limit: user?.monthlyLimit || 0, expenseMode: user?.expenseMode || "no-limit" });
   } catch (error) {
     console.error("Failed to fetch budget:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -23,12 +23,51 @@ interface ChatPanelProps {
   onClose: () => void;
 }
 
-const suggestedPrompts = [
-  "How has my spending changed compared to last month?",
-  "What are my top spending categories?",
-  "Give me financial insights or advice on my budget.",
+const ALL_PROMPTS = [
+  // Expenses
   "Add ₹250 for taxi today.",
+  "Spent ₹1200 on groceries yesterday.",
+  "Paid ₹500 for dinner last night.",
+  "Log ₹300 for petrol.",
+  // Income
+  "Got my salary of ₹45000 today.",
+  "Received ₹2000 as a gift.",
+  "Add income of ₹5000 from freelance work.",
+  // Budget
+  "Set my monthly budget to ₹25000.",
+  "Update my budget to ₹30000.",
+  // Queries — spending
+  "How much did I spend this month?",
+  "Show my expenses for this month.",
+  "What did I spend on food this month?",
+  "How much did I spend on transport?",
+  // Queries — income
+  "Show my income this month.",
+  "How much income did I receive?",
+  // Queries — insights
+  "Give me financial insights.",
+  "How can I save more money?",
+  "Give me savings advice.",
+  // Queries — comparison
+  "How has my spending changed compared to last month?",
+  "Compare this month vs last month.",
+  // Queries — categories
+  "What are my top spending categories?",
+  "Show category breakdown for this month.",
 ];
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function pickRandom<T>(arr: T[], count: number): T[] {
+  return shuffleArray(arr).slice(0, count);
+}
 
 const initialMessages: ChatMessage[] = [
   {
@@ -115,8 +154,19 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     [],
   );
 
+  const [shuffledPrompts, setShuffledPrompts] = useState<string[]>(() =>
+    pickRandom(ALL_PROMPTS, 5),
+  );
+
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Reshuffle suggested prompts when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      setShuffledPrompts(pickRandom(ALL_PROMPTS, 5));
+    }
+  }, [isOpen]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -570,8 +620,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                         <div className="relative">
                           <input
                             type="date"
+                            max={new Date().toISOString().split("T")[0]}
                             onChange={(e) => {
-                              if (e.target.value) {
+                              if (e.target.value && new Date(e.target.value) <= new Date()) {
                                 sendFollowUp({
                                   ...pendingFollowUp.details,
                                   date: e.target.value,
@@ -766,7 +817,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                       className="overflow-hidden"
                     >
                       <div className="flex flex-col gap-2 mt-2">
-                        {suggestedPrompts.map((prompt) => (
+                        {shuffledPrompts.map((prompt) => (
                           <button
                             key={prompt}
                             onClick={() => handlePromptClick(prompt)}
@@ -817,7 +868,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 </button>
               </div>
               <span className="text-[10px] text-muted text-center block mt-2 font-bold tracking-tight">
-                Sage v2 — production financial assistant
+                Sage v3 — production financial assistant
               </span>
               <div className="mt-1.5 flex items-center justify-center gap-3">
                 <a

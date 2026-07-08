@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { BudgetDetails, ExpenseDetails, DateRange } from "./intent";
 import { validateBudgetDetails, validateExpenseDetails, validateIncomeDetails } from "./validators";
 import { endOfDay, endOfMonth, format, startOfDay, startOfMonth } from "date-fns";
-import { KEYWORD_ALIASES, SPORTS_KEYWORDS } from "@/types/keywords";
+import { scoreCategories as categoryScoreCategories, SPORTS_KEYWORDS } from "./categories";
 
 // ─── Category helpers ────────────────────────────────────────────────────────
 
@@ -28,19 +28,20 @@ function matchCategoryFromText(text: string, categories: CategoryRecord[]): Cate
   const direct = categories.find((c) => lower.includes(c.name.toLowerCase()));
   if (direct) return direct;
 
-  // 2. Alias keyword match — find the first keyword present in text
-  for (const [keyword, aliases] of Object.entries(KEYWORD_ALIASES)) {
-    // Use word-boundary-like check
-    const wordRe = new RegExp(`\\b${keyword}\\b`, "i");
-    if (wordRe.test(text)) {
-      // Walk the alias priority list and find the first one that exists in DB
-      for (const alias of aliases) {
-        const found = categories.find((c) => c.name.toLowerCase() === alias.toLowerCase());
-        if (found) return found;
-      }
-    }
-  }
+  // 2. Consolidated keyword alias match (from categories.ts)
+  const aliasMatch = importAliasMatch(text, categories);
+  if (aliasMatch) return aliasMatch;
 
+  return null;
+}
+
+// Alias match using the consolidated categories.ts
+function importAliasMatch(text: string, categories: CategoryRecord[]): CategoryRecord | null {
+  const scored = categoryScoreCategories(text, categories);
+  for (const candidate of scored) {
+    const found = categories.find((c) => c.name.toLowerCase() === candidate.category.toLowerCase());
+    if (found) return found;
+  }
   return null;
 }
 
@@ -50,7 +51,8 @@ function matchCategoryFromText(text: string, categories: CategoryRecord[]): Cate
 function extractSportsKeyword(text: string): string | null {
   const lower = text.toLowerCase();
   for (const kw of SPORTS_KEYWORDS) {
-    if (new RegExp(`\\b${kw}\\b`, "i").test(lower)) return kw;
+    const safe = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`\\b${safe}\\b`, "i").test(lower)) return kw;
   }
   return null;
 }
@@ -217,25 +219,18 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
   }
 
   // ── Step 3.5: Alias suggestions & confirmation flow ──
-  // If no category matched, check if any keyword in KEYWORD_ALIASES matches our search text
+  // If no category matched, use consolidated categories.ts for suggestion
   // Only suggest if the user hasn't already confirmed or declined category creation in a follow-up
   if (!categoryRecord && expense.createCategory === undefined) {
-    let matchedAliases: string[] | undefined;
-    for (const [keyword, aliases] of Object.entries(KEYWORD_ALIASES)) {
-      const wordRe = new RegExp(`\\b${keyword}\\b`, "i");
-      if (wordRe.test(searchText)) {
-        matchedAliases = aliases;
-        break;
-      }
-    }
+    const scored = categoryScoreCategories(searchText, allCategories);
+    const bestSuggestion = scored[0];
 
-    if (matchedAliases && matchedAliases.length > 0) {
-      const suggestedName = matchedAliases[0];
+    if (bestSuggestion) {
+      const suggestedName = bestSuggestion.category;
       const suggestedRecord = allCategories.find((c) => c.name.toLowerCase() === suggestedName.toLowerCase());
       if (suggestedRecord) {
         categoryRecord = suggestedRecord;
       } else if (providedCategory) {
-        // Only prompt user to create category if they explicitly provided a category name
         return {
           success: false,
           message: `I couldn't find a category named '${providedCategory}'. Would you like me to create a new category named '${suggestedName}' and add this expense there?`,
