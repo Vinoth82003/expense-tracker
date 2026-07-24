@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { sendWelcomeEmail } from "@/lib/mail";
+import { sendWelcomeEmail, sendAdminNewUserNotification } from "@/lib/mail";
 
 const failedLogins = new Map<string, { count: number; first: number }>();
 
@@ -60,6 +60,10 @@ export const authOptions: AuthOptions = {
           } catch (e) {
             console.error("Welcome email failed:", e);
           }
+
+          sendAdminNewUserNotification(newUser.email, "", "credentials").catch((e) =>
+            console.error("Admin new-user notification failed:", e)
+          );
 
           failedLogins.delete(email);
           return newUser;
@@ -127,6 +131,10 @@ export const authOptions: AuthOptions = {
           } catch (emailError) {
             console.error("Warning: Failed to send welcome email:", emailError);
           }
+
+          sendAdminNewUserNotification(newUser.email, newUser.name || "", account?.provider || "google").catch((e) =>
+            console.error("Admin new-user notification failed:", e)
+          );
         }
 
         // Log successful login

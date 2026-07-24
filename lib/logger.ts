@@ -12,6 +12,32 @@ interface LogOptions {
   userId?: string;
 }
 
+// Debounce admin error emails to avoid flooding
+const loggerErrorDebounce = new Map<string, number>();
+const LOGGER_DEBOUNCE_MS = 5 * 60 * 1000;
+
+async function notifyAdminOfError(
+  level: LogLevel,
+  service: LogService,
+  message: string,
+  details?: any,
+  ip?: string,
+  userId?: string
+) {
+  const debounceKey = `${service}:${message}`;
+  const lastSent = loggerErrorDebounce.get(debounceKey) || 0;
+  if (Date.now() - lastSent < LOGGER_DEBOUNCE_MS) return;
+  loggerErrorDebounce.set(debounceKey, Date.now());
+
+  try {
+    const { sendAdminApiErrorNotification } = await import("./mail");
+    const fakeError = details instanceof Error ? details : new Error(message);
+    await sendAdminApiErrorNotification(`[${service}] ${message}`, "SYSTEM", fakeError, ip, userId);
+  } catch {
+    // Never let email failures crash the logger
+  }
+}
+
 class Logger {
   private async createLog(options: LogOptions) {
     const { level, service, message, details, ip, userId } = options;
@@ -26,6 +52,11 @@ class Logger {
       console.warn(consoleMsg, details || "");
     } else {
       console.log(consoleMsg, details || "");
+    }
+
+    // Notify admin via email on ERROR/CRITICAL (non-blocking, debounced)
+    if (level === "ERROR" || level === "CRITICAL") {
+      notifyAdminOfError(level, service, message, details, ip, userId);
     }
 
     // Log to database asynchronously (don't await to avoid blocking)

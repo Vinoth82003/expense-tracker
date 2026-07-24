@@ -232,6 +232,86 @@ export const sendAutomatedEmail = async (email: string, templateKey: string, var
   }
 };
 
+const ADMIN_EMAIL = process.env.EMAIL || process.env.ADMIN_USER || "";
+
+/**
+ * Sends admin notification when a new user registers
+ */
+export const sendAdminNewUserNotification = async (newUserEmail: string, userName: string, method: string) => {
+  if (!ADMIN_EMAIL) {
+    await logger.warn("Admin email not configured – skipping new-user notification", { newUserEmail }, "MAIL");
+    return { success: false, error: "Admin email not configured" };
+  }
+
+  const subject = `New User Registered on SpendWise`;
+  const content = `
+    <h2>New User Registration</h2>
+    <p>A new user has just signed up on SpendWise.</p>
+    <div class="security-box">
+      <p style="margin: 0 0 10px 0; font-weight: bold; color: #111827;">Registration Details:</p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b5563;">
+        <li><strong>Email:</strong> ${newUserEmail}</li>
+        <li><strong>Name:</strong> ${userName || "Not provided"}</li>
+        <li><strong>Method:</strong> ${method}</li>
+        <li><strong>Time:</strong> ${new Date().toUTCString()}</li>
+      </ul>
+    </div>
+    <p style="margin-top: 30px;">Best,<br/> <strong>SpendWise System</strong></p>
+  `;
+
+  return sendEmail(ADMIN_EMAIL, subject, wrapLayout(content, ADMIN_EMAIL));
+};
+
+// Debounce map to prevent email spam for rapid-fire errors
+const errorEmailDebounce = new Map<string, number>();
+const ERROR_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Sends admin notification when an API endpoint fails with a 500 error.
+ * Debounced per endpoint to avoid flooding the admin inbox.
+ */
+export const sendAdminApiErrorNotification = async (
+  endpoint: string,
+  method: string,
+  error: any,
+  ip?: string,
+  userId?: string
+) => {
+  if (!ADMIN_EMAIL) {
+    return { success: false, error: "Admin email not configured" };
+  }
+
+  const debounceKey = `${method}:${endpoint}`;
+  const lastSent = errorEmailDebounce.get(debounceKey) || 0;
+  if (Date.now() - lastSent < ERROR_DEBOUNCE_MS) {
+    return { success: false, error: "Debounced – skipping duplicate error email" };
+  }
+  errorEmailDebounce.set(debounceKey, Date.now());
+
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorStack = error instanceof Error ? error.stack : "";
+
+  const subject = `API Error: ${method} ${endpoint} returned 500`;
+  const content = `
+    <h2>API Endpoint Failure</h2>
+    <p>An API endpoint encountered an unhandled error and returned a <strong>500</strong> status code.</p>
+    <div class="security-box">
+      <p style="margin: 0 0 10px 0; font-weight: bold; color: #111827;">Error Details:</p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b5563;">
+        <li><strong>Endpoint:</strong> ${method} ${endpoint}</li>
+        <li><strong>Time:</strong> ${new Date().toUTCString()}</li>
+        <li><strong>IP:</strong> ${ip || "Unknown"}</li>
+        <li><strong>User ID:</strong> ${userId || "Unauthenticated"}</li>
+        <li><strong>Error:</strong> ${errorMessage}</li>
+      </ul>
+    </div>
+    ${errorStack ? `<div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 16px; border-radius: 12px; margin-top: 16px; font-family: monospace; font-size: 12px; color: #6b7280; white-space: pre-wrap; overflow-x: auto;">${errorStack.substring(0, 2000)}</div>` : ""}
+    <p style="margin-top: 30px;">Best,<br/> <strong>SpendWise System</strong></p>
+  `;
+
+  return sendEmail(ADMIN_EMAIL, subject, wrapLayout(content, ADMIN_EMAIL));
+};
+
 export const sendEmail = async (to: string, subject: string, html: string) => {
   // Fresh transporter per send — avoids Gmail idle-pool connection timeouts
   const transporter = createTransporter();
