@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, HelpCircle } from "lucide-react";
 import { fadeUp } from "./animations";
 
 const faqs = [
@@ -54,10 +54,20 @@ export function FAQSection() {
           viewport={{ once: true, margin: "-80px" }}
           className="text-center mb-12"
         >
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary mb-6">
+            <HelpCircle size={12} className="text-primary-500" />
+            FAQ
+          </div>
           <h2 className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground">
             Questions?{" "}
             <span className="text-primary-600">Answers.</span>
           </h2>
+          <p className="mx-auto mt-5 max-w-[500px] text-[15px] leading-relaxed text-secondary">
+            Everything you need to know about SpendWise. Can&apos;t find what you&apos;re looking for?{" "}
+            <a href="mailto:support@spendwise.app" className="text-primary-600 hover:text-primary-700 font-medium underline underline-offset-2">
+              Email us
+            </a>
+          </p>
         </motion.div>
 
         {/* ── Accordion card ── */}

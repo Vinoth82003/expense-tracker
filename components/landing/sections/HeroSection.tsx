@@ -40,16 +40,20 @@ export function HeroSection() {
             SpendWise 2.0 is live
           </motion.div>
 
-          {/* Headline — 3 lines, last word muted */}
+          {/* Headline — 3 lines, gradient highlights, last word muted */}
           <motion.h1
             variants={item}
             className="text-3xl md:text-5xl font-bold leading-[1.05] tracking-[-0.03em] text-foreground"
           >
-            Expenses tracked,
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 via-purple-500 to-violet-600">
+              Expenses tracked,
+            </span>
             <br />
-            budgets enforced,
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-purple-500 to-primary-600">
+              budgets enforced,
+            </span>
             <br />
-            <span className="text-muted">effortlessly.</span>
+            effortlessly.
           </motion.h1>
 
           {/* Subheadline */}

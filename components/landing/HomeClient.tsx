@@ -31,7 +31,7 @@ export function HomeClient() {
         <ProblemSection />
 
         {/* 2 — tinted bg */}
-        <div className="bg-surface-variant/50">
+        <div className="bg-surface-variant/70">
           <AISection />
         </div>
 
@@ -39,7 +39,7 @@ export function HomeClient() {
         <FeaturesGrid />
 
         {/* 4 — tinted bg */}
-        <div className="bg-surface-variant/50">
+        <div className="bg-surface-variant/70">
           <ComparisonTable />
         </div>
 
@@ -47,7 +47,7 @@ export function HomeClient() {
         <FreeToolsCTA />
 
         {/* 6 — tinted bg */}
-        <div className="bg-surface-variant/50">
+        <div className="bg-surface-variant/70">
           <Suspense
             fallback={
               <div className="flex justify-center py-10">
@@ -63,7 +63,7 @@ export function HomeClient() {
         <FAQSection />
 
         {/* 8 — tinted bg */}
-        <div className="bg-surface-variant/50">
+        <div className="bg-surface-variant/70">
           <FinalCTA />
         </div>
       </main>

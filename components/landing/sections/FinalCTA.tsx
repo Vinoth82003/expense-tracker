@@ -21,7 +21,7 @@ export function FinalCTA() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="text-[32px] md:text-[40px] lg:text-[48px] font-bold leading-[1.1] tracking-tight text-foreground mb-6"
+          className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground mb-6"
         >
           Your finances won&apos;t{" "}
           <span className="text-primary-600">fix themselves.</span>
@@ -35,8 +35,8 @@ export function FinalCTA() {
           viewport={{ once: true, margin: "-60px" }}
           className="text-[15px] md:text-[16px] text-secondary leading-relaxed max-w-[460px] mx-auto mb-10"
         >
-          Join 10,000+ people who upgraded from financial chaos to clarity. Start
-          free today — your future self will thank you.
+          Join 10,000+ people who upgraded from financial chaos to clarity.
+          Start free today — your future self will thank you.
         </motion.p>
 
         {/* ── CTA row ── */}
@@ -72,10 +72,10 @@ export function FinalCTA() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-40px" }}
-          className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2"
+          className="flex flex-wrap items-center justify-center gap-4"
         >
           {trustSignals.map((signal, i) => (
-            <div key={i} className="flex items-center gap-1.5">
+            <div key={i} className="flex items-center gap-3">
               <Check size={14} className="text-success" strokeWidth={2.5} />
               <span className="text-[12px] md:text-[13px] font-medium text-muted">
                 {signal}

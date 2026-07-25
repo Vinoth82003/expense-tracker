@@ -11,6 +11,7 @@ import {
   FileText,
   RefreshCw,
   Globe,
+  Sparkles,
 } from "lucide-react";
 
 const features = [
@@ -79,16 +80,15 @@ export function FeaturesGrid() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{
-            once: true,
-            amount: 0.2,
-          }}
-          transition={{
-            duration: 0.5,
-            ease: "easeOut",
-          }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
           className="mb-16 text-center"
         >
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary mb-6">
+            <Sparkles size={12} className="text-primary-500" />
+            Features
+          </div>
+
           <h2 className="mx-auto mb-5 max-w-[700px] text-[28px] font-bold leading-[1.15] tracking-tight text-foreground md:text-[36px] lg:text-[44px]">
             Everything you need.{" "}
             <span className="text-primary-600">Nothing you don&apos;t.</span>

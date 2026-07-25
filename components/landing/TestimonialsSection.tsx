@@ -151,6 +151,9 @@ export function TestimonialsSection({ limit = 3 }: { limit?: number }) {
             Loved by thousands.{" "}
             <span className="text-primary-600">Here&apos;s proof.</span>
           </h2>
+          <p className="mx-auto mt-5 max-w-[500px] text-[15px] leading-relaxed text-secondary">
+            Real feedback from people who use SpendWise daily to stay on top of their money.
+          </p>
         </motion.div>
 
         {/* ── Cards grid ── */}

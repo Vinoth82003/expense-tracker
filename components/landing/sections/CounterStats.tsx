@@ -45,10 +45,10 @@ function useCountUp(end: number, duration = 1800, decimals = 0) {
 }
 
 const counterItems = [
-  { icon: Users, value: 10000, suffix: "+", label: "Active Users", decimals: 0 },
-  { icon: IndianRupee, value: 50, suffix: "M+", label: "Expenses Tracked", decimals: 0 },
+  { icon: Users, value: 100, suffix: "+", label: "Active Users", decimals: 0 },
+  { icon: IndianRupee, value: 50, suffix: "L+", label: "Expenses Tracked", decimals: 0 },
   { icon: ShieldCheck, value: 99.9, suffix: "%", label: "Uptime", decimals: 1 },
-  { icon: Star, value: 4.9, suffix: "/5", label: "User Rating", decimals: 1 },
+  { icon: Star, value: 4.8, suffix: "/5", label: "User Rating", decimals: 1 },
 ];
 
 const CounterStat = ({
