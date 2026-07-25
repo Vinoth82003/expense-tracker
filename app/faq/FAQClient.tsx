@@ -10,27 +10,26 @@ import {
   ShieldCheck,
   Zap,
   ChevronDown,
-  Loader2,
   Search,
   ArrowRight,
   MessageCircle,
-  Download,
   ArrowUpRight,
+  BookOpen,
+  Check,
+  SearchX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fadeUp } from "@/components/landing/sections/animations";
 
-// ----------------------------------------------------------------
-// Fallback FAQ data used when Prisma returns no records
-// ----------------------------------------------------------------
 export const FALLBACK_FAQS: FAQItem[] = [
   { id: "1", question: "How do I create an account?", answer: "Click 'Sign Up' on the homepage and use Google Auth to create your account instantly.", category: "General", order: 1 },
-  { id: "2", question: "Is my financial data secure?", answer: "All data is encrypted at rest and in transit using industry-standard TLS.", category: "Security & Privacy", order: 2 },
-  { id: "3", question: "Can I export my expense data?", answer: "Yes, go to Settings → Export and download a CSV of your records.", category: "Features & Support", order: 3 },
-  { id: "4", question: "How does the AI analysis work?", answer: "Our AI scans your spending patterns and suggests optimizations without storing any personal data.", category: "Features & Support", order: 4 },
-  { id: "5", question: "What if I forget my password?", answer: "We use Google OAuth, so you never set a password for SpendWise.", category: "General", order: 5 },
-  { id: "6", question: "Do you share my data with third parties?", answer: "No. Your data never leaves your account unless you explicitly export it.", category: "Security & Privacy", order: 6 },
-  { id: "7", question: "How can I contact support?", answer: "Use the 'Message Support' button at the bottom of the FAQ page or email support@spendwise.in.", category: "General", order: 7 },
-  { id: "8", question: "Is there a free tier?", answer: "Yes, SpendWise offers a free plan with core features; premium features are available in paid plans.", category: "Features & Support", order: 8 },
+  { id: "2", question: "Is my financial data secure?", answer: "All data is encrypted at rest and in transit using industry-standard TLS. We use Google OAuth 2.0 for authentication and never store passwords.", category: "Security & Privacy", order: 2 },
+  { id: "3", question: "Can I export my expense data?", answer: "Yes. You can export all your expenses and income as a CSV file from the Settings page. The AI analysis report can also be downloaded as a PDF.", category: "Features & Support", order: 3 },
+  { id: "4", question: "How does the AI analysis work?", answer: "SpendWise sends your expense history to Google Gemini, which generates a structured report covering spending patterns, budget advice, and actionable suggestions. Notes are sanitized before sending.", category: "Features & Support", order: 4 },
+  { id: "5", question: "What if I forget my password?", answer: "We use Google OAuth, so you never set a password for SpendWise. You can also use email+password with 2FA if you prefer.", category: "General", order: 5 },
+  { id: "6", question: "Do you share my data with third parties?", answer: "No. Your data never leaves your account unless you explicitly export it. We never sell or share financial data with anyone.", category: "Security & Privacy", order: 6 },
+  { id: "7", question: "How can I contact support?", answer: "Use the 'Message Support' button below or email support@spendwise.in. We typically respond within 24 hours.", category: "General", order: 7 },
+  { id: "8", question: "Is there a free tier?", answer: "Yes. SpendWise offers a free plan with core tracking, budgeting, and AI insights. No hidden fees, no credit card required to get started.", category: "Features & Support", order: 8 },
 ];
 
 export interface FAQItem {
@@ -41,72 +40,10 @@ export interface FAQItem {
   order: number;
 }
 
-// ----------------------------------------------------------------
-// Accordion row
-// ----------------------------------------------------------------
-function FAQAccordion({ item }: { item: FAQItem }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <motion.div
-      layout
-      className={cn(
-        "group border border-border-subtle rounded-3xl mb-4 transition-all duration-300",
-        isOpen
-          ? "bg-surface-variant/40 ring-1 ring-primary-500/10 shadow-sm"
-          : "bg-surface hover:border-primary-500/30"
-      )}
-    >
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-8 py-6 flex items-center justify-between text-left transition-all"
-      >
-        <span
-          className={cn(
-            "text-lg font-bold transition-colors duration-300",
-            isOpen
-              ? "text-primary-600"
-              : "text-foreground group-hover:text-primary-500"
-          )}
-        >
-          {item.question}
-        </span>
-        <div
-          className={cn(
-            "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500",
-            isOpen
-              ? "bg-primary-500 text-white rotate-180 shadow-lg shadow-primary-500/20"
-              : "bg-surface-variant text-secondary group-hover:bg-primary-50 group-hover:text-primary-600"
-          )}
-        >
-          <ChevronDown size={20} />
-        </div>
-      </button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="px-8 pb-8 text-secondary leading-relaxed font-medium whitespace-pre-wrap text-[15px]">
-              {item.answer}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
-// ----------------------------------------------------------------
-// Main client component
-// ----------------------------------------------------------------
 export function FAQClient({ faqs }: { faqs: FAQItem[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(faqs.map((f) => f.category)))],
@@ -132,209 +69,353 @@ export function FAQClient({ faqs }: { faqs: FAQItem[] }) {
     All: Search,
   };
 
+  const trustSignals = [
+    "Instant search results",
+    "Real-time filtering",
+    "Always up to date",
+  ];
+
   return (
     <>
       <Navbar />
 
-      <main className="pt-32 pb-24 min-h-screen bg-background transition-colors duration-300">
-        {/* Background Decorations */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] pointer-events-none -z-10 overflow-hidden">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/5 blur-[120px] rounded-full" />
-          <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-violet-500/5 blur-[100px] rounded-full" />
-        </div>
+      <main className="overflow-x-hidden" id="main-content">
 
-        {/* Hero Section */}
-        <section className="px-5 md:px-10 max-w-5xl mx-auto mb-16 text-center">
+        {/* ═══════════════════════════════ HERO ═══════════════════════════════ */}
+        <section className="relative py-20 md:py-26 px-5 md:px-10">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
+            viewport={{ once: true }}
+            className="max-w-[720px] mx-auto text-center"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/5 text-primary-600 text-[10px] font-black tracking-widest uppercase border border-primary-500/10 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary mb-6">
+              <HelpCircle size={12} className="text-primary-500" />
               Support Center
             </div>
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-foreground tracking-tightest leading-[0.9]">
-              How can we <br />
+            <h1 className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground max-w-[600px] mx-auto mb-6">
+              How can we{" "}
               <span className="text-primary-600">help you?</span>
             </h1>
-            <p className="text-lg md:text-xl text-secondary max-w-2xl mx-auto font-medium leading-relaxed opacity-80">
+            <p className="text-[16px] text-secondary leading-relaxed max-w-[520px] mx-auto mb-10">
               Everything you need to know about SpendWise, from getting started
-              to advanced financial management.
+              to advanced features. Search or browse by category below.
             </p>
 
-            {/* Search Bar */}
-            <div className="max-w-2xl mx-auto pt-8">
+            {/* Google-style search */}
+            <div className="max-w-[560px] mx-auto">
               <div className="relative group">
                 <Search
-                  size={22}
-                  className="absolute left-6 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-primary-500"
+                  size={20}
+                  className="absolute left-5 top-1/2 -translate-y-1/2 text-muted transition-colors group-focus-within:text-primary-500"
                 />
                 <input
                   type="text"
                   placeholder="Search for answers..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-16 pr-8 py-6 rounded-[2rem] bg-surface border border-border-subtle focus:ring-4 focus:ring-primary-500/10 outline-none font-bold text-lg transition-all shadow-xl shadow-black/5 placeholder:text-muted/60"
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setOpenIndex(null);
+                  }}
+                  className="w-full pl-14 pr-5 py-4 rounded-full bg-surface border border-border-subtle focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500/30 outline-none font-semibold text-[15px] transition-all placeholder:text-muted/60"
                 />
               </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-4 mt-8">
+              {trustSignals.map((signal, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Check size={14} className="text-success" strokeWidth={2.5} />
+                  <span className="text-[12px] md:text-[13px] font-medium text-muted">
+                    {signal}
+                  </span>
+                </div>
+              ))}
             </div>
           </motion.div>
         </section>
 
-        {/* Categories Section */}
-        <section className="px-5 md:px-10 max-w-5xl mx-auto mb-12 overflow-x-auto scrollbar-no">
-          <div className="flex flex-nowrap md:flex-wrap items-center justify-start md:justify-center gap-3 pb-4">
-            {categories.map((category) => {
-              const Icon =
-                category === "All"
-                  ? Search
-                  : categoryIcons[category] || HelpCircle;
-              return (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={cn(
-                    "px-6 py-3 rounded-2xl font-bold text-sm transition-all duration-300 border flex items-center gap-2 whitespace-nowrap",
-                    selectedCategory === category
-                      ? "bg-primary-600 border-primary-600 text-white shadow-lg shadow-primary-600/20"
-                      : "bg-surface border-border-subtle text-secondary hover:border-primary-500/40 hover:text-foreground"
-                  )}
-                >
-                  <Icon size={16} />
-                  {category}
-                </button>
-              );
-            })}
+        <Separator />
+
+        {/* ═══════════════════════ CATEGORY FILTERS ═══════════════════════ */}
+        <section className="py-16 px-5 md:px-10 bg-surface-variant">
+          <div className="max-w-[720px] mx-auto">
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-60px" }}
+              className="text-center mb-10"
+            >
+              <p className="text-[14px] text-secondary font-medium">
+                Browse by topic
+              </p>
+            </motion.div>
+
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-40px" }}
+              className="flex flex-nowrap md:flex-wrap items-center justify-start md:justify-center gap-3"
+            >
+              {categories.map((category) => {
+                const Icon =
+                  category === "All"
+                    ? Search
+                    : categoryIcons[category] || HelpCircle;
+                return (
+                  <button
+                    key={category}
+                    onClick={() => {
+                      setSelectedCategory(category);
+                      setOpenIndex(null);
+                    }}
+                    className={cn(
+                      "px-5 py-2.5 rounded-full font-semibold text-[13px] transition-all duration-200 border flex items-center gap-2 whitespace-nowrap",
+                      selectedCategory === category
+                        ? "bg-primary-600 border-primary-600 text-white shadow-md shadow-primary-600/20"
+                        : "bg-surface border-border-subtle text-secondary hover:border-primary-500/30 hover:text-foreground"
+                    )}
+                  >
+                    <Icon size={14} />
+                    {category}
+                  </button>
+                );
+              })}
+            </motion.div>
           </div>
         </section>
 
-        {/* FAQ List */}
-        <section className="px-5 md:px-10 max-w-4xl mx-auto relative">
-          <AnimatePresence mode="wait">
-            {filteredFaqs.length === 0 ? (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-center py-20 p-12 bg-surface rounded-[3rem] border border-dashed border-border-subtle"
-              >
-                <div className="w-16 h-16 bg-surface-variant rounded-full flex items-center justify-center mx-auto mb-6 text-muted">
-                  <Search size={32} />
-                </div>
-                <h3 className="text-xl font-bold text-foreground mb-2">
-                  No matches found
-                </h3>
-                <p className="text-secondary font-medium">
-                  Try adjusting your search terms or category filter.
-                </p>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="list"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-2"
-              >
-                {filteredFaqs.map((item) => (
-                  <FAQAccordion key={item.id} item={item} />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <Separator />
+
+        {/* ═══════════════════════ FAQ ACCORDION ═══════════════════════ */}
+        <section className="py-24 md:py-32 px-5 md:px-10 bg-surface">
+          <div className="max-w-[720px] mx-auto">
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-60px" }}
+              className="rounded-2xl border border-border-subtle bg-surface shadow-sm overflow-hidden"
+            >
+              <AnimatePresence mode="wait">
+                {filteredFaqs.length === 0 ? (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center py-20 px-8"
+                  >
+                    <div className="w-14 h-14 bg-surface-variant rounded-full flex items-center justify-center mx-auto mb-5 text-muted">
+                      <SearchX size={24} />
+                    </div>
+                    <h3 className="text-[17px] font-bold text-foreground mb-2">
+                      No matches found
+                    </h3>
+                    <p className="text-[14px] text-secondary font-medium">
+                      Try adjusting your search or category filter.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="list"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    {filteredFaqs.map((item, i) => {
+                      const isOpen = openIndex === i;
+                      return (
+                        <div key={item.id}>
+                          <button
+                            onClick={() => setOpenIndex(isOpen ? null : i)}
+                            className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left min-h-[56px] hover:bg-surface-variant/40 transition-colors duration-150"
+                          >
+                            <span className="text-[14px] md:text-[15px] font-semibold text-foreground leading-snug">
+                              {item.question}
+                            </span>
+                            <motion.div
+                              animate={{ rotate: isOpen ? 180 : 0 }}
+                              transition={{ duration: 0.2, ease: "easeInOut" }}
+                              className="shrink-0"
+                            >
+                              <ChevronDown size={18} className="text-muted" />
+                            </motion.div>
+                          </button>
+                          <AnimatePresence initial={false}>
+                            {isOpen && (
+                              <motion.div
+                                key="answer"
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{
+                                  duration: 0.25,
+                                  ease: [0.22, 1, 0.36, 1],
+                                }}
+                                className="overflow-hidden"
+                              >
+                                <p className="px-6 py-6 text-[13px] md:text-[14px] text-secondary leading-relaxed">
+                                  {item.answer}
+                                </p>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
         </section>
 
-        {/* Contact CTA Section */}
-        <section className="mt-32 px-5 md:px-10">
-          <div className="max-w-5xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Support Card */}
+        <Separator />
+
+        {/* ═══════════════════════ HELP CTA ═══════════════════════ */}
+        <section className="py-24 md:py-32 px-5 md:px-10 bg-surface-variant">
+          <div className="max-w-[1120px] mx-auto">
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-80px" }}
+              className="text-center mb-16"
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary mb-6">
+                <MessageCircle size={12} className="text-primary-500" />
+                Still need help?
+              </div>
+              <h2 className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground">
+                We&apos;re here{" "}
+                <span className="text-primary-600">for you.</span>
+              </h2>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-[960px] mx-auto">
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="group p-10 rounded-[2.5rem] bg-surface border border-border-subtle hover:border-primary-500/30 transition-all duration-500 relative overflow-hidden"
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.45, ease: "easeOut" }}
+                whileHover={{ y: -4 }}
+                className="group rounded-2xl border border-border-subtle bg-surface p-7 shadow-sm hover:shadow-lg hover:border-primary-500/20 transition-all"
               >
-                <div className="absolute top-0 right-0 p-8 text-primary-600/5 group-hover:text-primary-600/10 transition-colors pointer-events-none">
-                  <MessageCircle size={120} strokeWidth={1} />
+                <div className="w-11 h-11 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600 mb-5">
+                  <MessageCircle size={20} strokeWidth={2} />
                 </div>
-                <div className="w-14 h-14 bg-primary-500/10 rounded-2xl flex items-center justify-center text-primary-600 mb-8">
-                  <MessageCircle size={28} />
-                </div>
-                <h3 className="text-3xl font-black text-foreground mb-4 tracking-tight">
-                  Personalized <br />Support
+                <h3 className="text-[16px] font-bold text-foreground mb-2">
+                  Personalized Support
                 </h3>
-                <p className="text-secondary font-medium mb-10 leading-relaxed max-w-xs">
-                  Can&apos;t find what you&apos;re looking for? Our team is
-                  always here to help.
+                <p className="text-[13px] text-secondary font-medium leading-relaxed mb-6">
+                  Can&apos;t find what you&apos;re looking for? Our team
+                  typically responds within 24 hours.
                 </p>
                 <Link
                   href="/contact"
-                  className="inline-flex items-center gap-2 text-primary-600 font-black text-sm uppercase tracking-widest hover:gap-4 transition-all"
+                  className="inline-flex items-center gap-2 text-primary-600 font-semibold text-[13px] hover:gap-3 transition-all"
                 >
-                  Message Support <ArrowRight size={18} />
+                  Message Support <ArrowRight size={14} />
                 </Link>
               </motion.div>
 
-              {/* Docs Card */}
               <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                className="group p-10 rounded-[2.5rem] bg-surface-variant/40 border border-border-subtle hover:border-primary-500/30 transition-all duration-500 relative overflow-hidden"
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.45, delay: 0.06, ease: "easeOut" }}
+                whileHover={{ y: -4 }}
+                className="group rounded-2xl border border-border-subtle bg-surface p-7 shadow-sm hover:shadow-lg hover:border-primary-500/20 transition-all"
               >
-                <div className="absolute top-0 right-0 p-8 text-foreground/5 group-hover:text-primary-600/10 transition-colors pointer-events-none">
-                  <HelpCircle size={120} strokeWidth={1} />
+                <div className="w-11 h-11 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500 mb-5">
+                  <BookOpen size={20} strokeWidth={2} />
                 </div>
-                <div className="w-14 h-14 bg-surface rounded-2xl flex items-center justify-center text-foreground mb-8 border border-border-subtle">
-                  <HelpCircle size={28} />
-                </div>
-                <h3 className="text-3xl font-black text-foreground mb-4 tracking-tight">
-                  Comprehensive <br />Docs
+                <h3 className="text-[16px] font-bold text-foreground mb-2">
+                  Comprehensive Docs
                 </h3>
-                <p className="text-secondary font-medium mb-10 leading-relaxed max-w-xs">
-                  Dive deep into every feature with our detailed documentation
-                  and guides.
+                <p className="text-[13px] text-secondary font-medium leading-relaxed mb-6">
+                  Step-by-step guides, tutorials, and deep dives into every
+                  SpendWise feature.
                 </p>
                 <Link
                   href="/docs"
-                  className="inline-flex items-center gap-2 text-foreground font-black text-sm uppercase tracking-widest hover:gap-4 transition-all"
+                  className="inline-flex items-center gap-2 text-foreground font-semibold text-[13px] group-hover:text-primary-600 hover:gap-3 transition-all"
                 >
-                  View Documentation <ArrowUpRight size={18} />
+                  View Documentation <ArrowUpRight size={14} />
                 </Link>
               </motion.div>
             </div>
+          </div>
+        </section>
 
-            {/* Download CTA */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="mt-8 p-12 rounded-[3rem] bg-gradient-to-br from-indigo-600 to-violet-600 text-white text-center shadow-2xl shadow-primary-600/20"
+        <Separator />
+
+        {/* ═══════════════════════ FINAL CTA ═══════════════════════ */}
+        <section className="py-32 md:py-36 px-5 md:px-10 bg-surface">
+          <div className="max-w-[640px] mx-auto text-center">
+            <motion.h2
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-80px" }}
+              className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground mb-6"
             >
-              <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">
-                Ready to take control?
-              </h2>
-              <p className="text-primary-50 font-medium mb-10 max-w-lg mx-auto opacity-90">
-                Join thousands of users who are already mastering their finances
-                with SpendWise.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link
-                  href="/download"
-                  className="w-full sm:w-auto px-10 py-4 rounded-xl bg-white text-primary-600 font-black text-base shadow-xl hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-2"
-                >
-                  <Download size={20} />
-                  Download App
-                </Link>
-                <Link
-                  href="/onboarding"
-                  className="w-full sm:w-auto px-10 py-4 rounded-xl bg-primary-700/30 text-white border border-white/20 font-black text-base hover:bg-white/10 transition-all flex items-center justify-center gap-2"
-                >
-                  Get Started Free
-                  <ArrowRight size={20} />
-                </Link>
-              </div>
+              Ready to take control of{" "}
+              <span className="text-primary-600">your finances?</span>
+            </motion.h2>
+
+            <motion.p
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-60px" }}
+              className="text-[15px] md:text-[16px] text-secondary leading-relaxed max-w-[460px] mx-auto mb-10"
+            >
+              Join 10,000+ people who upgraded from financial chaos to clarity.
+              Start free today — your future self will thank you.
+            </motion.p>
+
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-40px" }}
+              className="flex flex-col items-center gap-4 mb-8"
+            >
+              <Link
+                href="/download"
+                className="inline-flex items-center justify-center gap-2.5 px-10 py-4 rounded-full bg-primary-600 text-white text-[16px] font-bold shadow-lg shadow-primary-600/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 min-h-[52px]"
+              >
+                Get Started Free
+                <ArrowRight size={18} strokeWidth={2.5} />
+              </Link>
+              <Link
+                href="/login"
+                className="text-[14px] font-semibold text-primary-600 hover:text-primary-700 transition-colors"
+              >
+                Already have an account? Sign in{" "}
+                <ArrowRight size={14} className="inline -translate-y-px" />
+              </Link>
+            </motion.div>
+
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-40px" }}
+              className="flex flex-wrap items-center justify-center gap-4"
+            >
+              {["No credit card required", "Free forever tier", "Cancel anytime"].map((signal, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Check size={14} className="text-success" strokeWidth={2.5} />
+                  <span className="text-[12px] md:text-[13px] font-medium text-muted">
+                    {signal}
+                  </span>
+                </div>
+              ))}
             </motion.div>
           </div>
         </section>
@@ -342,5 +423,13 @@ export function FAQClient({ faqs }: { faqs: FAQItem[] }) {
 
       <Footer />
     </>
+  );
+}
+
+function Separator() {
+  return (
+    <div className="mx-auto max-w-[1120px]">
+      <div className="h-px w-full bg-border-subtle" />
+    </div>
   );
 }
