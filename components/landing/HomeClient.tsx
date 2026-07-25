@@ -9,9 +9,14 @@ import { ProblemSection } from "./sections/ProblemSection";
 import { FeaturesGrid } from "./sections/FeaturesGrid";
 import { BentoHighlights } from "./sections/BentoHighlights";
 import { AISection } from "./sections/AISection";
+import { ComparisonTable } from "./sections/ComparisonTable";
+import { FreeToolsCTA } from "./sections/FreeToolsCTA";
 import { FinalCTA } from "./sections/FinalCTA";
+import { FAQSection } from "./sections/FAQSection";
 
-const TestimonialsSection = lazy(() => import("./TestimonialsSection"));
+const TestimonialsSection = lazy(() =>
+  import("./TestimonialsSection").then((m) => ({ default: m.TestimonialsSection }))
+);
 
 export function HomeClient() {
   return (
@@ -24,6 +29,21 @@ export function HomeClient() {
         <ProblemSection />
         <AISection />
         <FeaturesGrid />
+        <ComparisonTable />
+        <FreeToolsCTA />
+
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-10">
+              <div className="w-8 h-8 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+            </div>
+          }
+        >
+          <TestimonialsSection />
+        </Suspense>
+
+        <FAQSection />
+        <FinalCTA />
       </main>
 
       <Footer />

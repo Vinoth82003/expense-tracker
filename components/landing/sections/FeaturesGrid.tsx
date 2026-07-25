@@ -73,7 +73,7 @@ const features = [
 
 export function FeaturesGrid() {
   return (
-    <section className="px-5 py-24 md:px-10 md:py-32">
+    <section className="py-24 md:py-32 px-5 md:px-10">
       <div className="mx-auto max-w-[1120px]">
         {/* Header */}
         <motion.div
@@ -106,7 +106,7 @@ export function FeaturesGrid() {
 
         <div className="hidden lg:block">
           {/* Row 1 */}
-          <div className="grid grid-cols-[2fr_1fr_1fr] gap-5">
+          <div className="grid grid-cols-1 gap-5">
             {features.slice(0, 1).map((feat, index) => (
               <FeatureCard
                 key={feat.title}

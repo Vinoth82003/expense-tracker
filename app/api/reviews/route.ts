@@ -16,7 +16,7 @@ export async function GET() {
           },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
     });
 
     return NextResponse.json(reviews);

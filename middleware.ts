@@ -93,7 +93,6 @@ export async function middleware(request: NextRequest) {
     "/api/invitations",
     "/api/onboarding",
     "/api/profile",
-    "/api/reviews",
     "/api/user",
   ];
   if (protectedApiPaths.some((p) => pathname.startsWith(p))) {
@@ -156,7 +155,6 @@ export const config = {
     "/api/invitations/:path*",
     "/api/onboarding/:path*",
     "/api/profile/:path*",
-    "/api/reviews/:path*",
     "/api/user/:path*",
   ],
 };

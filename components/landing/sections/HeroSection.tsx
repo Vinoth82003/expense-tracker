@@ -123,8 +123,8 @@ export function HeroSection() {
                 </p>
                 {[
                   { icon: BarChart3, label: "Dashboard", active: true },
-                  { icon: IndianRupee, label: "Expenses", badge: "3 New" },
-                  { icon: IndianRupee, label: "Income", badge: "1 New" },
+                  { icon: IndianRupee, label: "Expenses", badge: "3" },
+                  { icon: IndianRupee, label: "Income", badge: "1" },
                   { icon: Target, label: "Budgets" },
                   { icon: PieChart, label: "Reports" },
                 ].map((navItem, i) => (

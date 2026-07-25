@@ -44,7 +44,7 @@ export function Footer() {
 
   return (
     <footer className="w-full bg-surface border-t border-border-subtle">
-      <div className="mx-auto max-w-7xl px-5 py-5 md:px-10 pt-20 pb-6">
+      <div className="mx-auto max-w-7xl px-5 md:px-10 pt-20 pb-6">
         {/* ── 4-Column Grid ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-10 mb-16">
           {/* Column 1: Brand */}

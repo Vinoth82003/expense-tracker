@@ -2,78 +2,86 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Download, Lock, Zap } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { fadeUp } from "./animations";
+
+const trustSignals = [
+  "No credit card required",
+  "Free forever tier",
+  "Cancel anytime",
+];
 
 export function FinalCTA() {
   return (
-    <section className="py-28 px-5 md:px-10">
-      <div className="max-w-4xl mx-auto">
-        <motion.div
+    <section className="py-32 md:py-36 px-5 md:px-10">
+      <div className="max-w-[640px] mx-auto text-center">
+        {/* ── Headline ── */}
+        <motion.h2
           variants={fadeUp}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="relative rounded-3xl overflow-hidden border border-border-subtle text-center p-12 md:p-20"
-          style={{
-            background:
-              "linear-gradient(145deg, var(--bg-surface) 0%, var(--bg-surface-variant) 100%)",
-          }}
+          className="text-[32px] md:text-[40px] lg:text-[48px] font-bold leading-[1.1] tracking-tight text-foreground mb-6"
         >
-          {/* Glow */}
-          <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/2 blur-[100px] pointer-events-none -z-10"
-            style={{ background: "rgba(99,102,241,0.1)" }}
-          />
+          Your finances won&apos;t{" "}
+          <span className="text-primary-600">fix themselves.</span>
+        </motion.h2>
 
-          <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-black tracking-widest uppercase mb-8"
-            style={{
-              borderColor: "rgba(99,102,241,0.3)",
-              background: "rgba(99,102,241,0.07)",
-              color: "#6366f1",
-            }}
+        {/* ── Subheadline ── */}
+        <motion.p
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-60px" }}
+          className="text-[15px] md:text-[16px] text-secondary leading-relaxed max-w-[460px] mx-auto mb-10"
+        >
+          Join 10,000+ people who upgraded from financial chaos to clarity. Start
+          free today — your future self will thank you.
+        </motion.p>
+
+        {/* ── CTA row ── */}
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-40px" }}
+          className="flex flex-col items-center gap-4 mb-8"
+        >
+          <Link
+            href="/download"
+            id="cta-final"
+            aria-label="Get started free with SpendWise"
+            className="inline-flex items-center justify-center gap-2.5 px-10 py-4 rounded-full bg-primary-600 text-white text-[16px] font-bold shadow-lg shadow-primary-600/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 min-h-[52px]"
           >
-            <Zap size={12} /> Zero Cost, Maximum Clarity
-          </div>
+            Get Started Free
+            <ArrowRight size={18} strokeWidth={2.5} />
+          </Link>
 
-          <h2 className="text-4xl md:text-6xl font-black tracking-tight text-foreground mb-6 leading-[0.95]">
-            Your Wallet,{" "}
-            <span className="italic text-indigo-600 dark:text-indigo-400">
-              Redefined.
-            </span>
-          </h2>
+          <Link
+            href="/login"
+            className="text-[14px] font-semibold text-primary-600 hover:text-primary-700 transition-colors"
+          >
+            Already have an account? Sign in{" "}
+            <ArrowRight size={14} className="inline -translate-y-px" />
+          </Link>
+        </motion.div>
 
-          <p className="text-lg text-secondary font-medium max-w-xl mx-auto mb-10">
-            Join 10,000+ Indians taking full control of their financial destiny.
-            Free forever. No credit card. No surprises.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/login"
-              id="cta-start-free"
-              aria-label="Start free today with SpendWise"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base transition-all hover:-translate-y-1 active:scale-95 shadow-xl text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-            >
-              Start Free Today
-              <ArrowRight size={18} />
-            </Link>
-            <Link
-              href="/download"
-              id="cta-install-app"
-              aria-label="Install SpendWise progressive web app"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-indigo-600/40 dark:hover:border-indigo-400/40 transition-all"
-            >
-              <Download size={18} />
-              Install App
-            </Link>
-          </div>
-
-          <div className="mt-8 flex items-center justify-center gap-2 text-muted text-[11px] font-black uppercase tracking-widest">
-            <Lock size={12} />
-            Bank-grade security · No credit card required
-          </div>
+        {/* ── Trust row ── */}
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-40px" }}
+          className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2"
+        >
+          {trustSignals.map((signal, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <Check size={14} className="text-success" strokeWidth={2.5} />
+              <span className="text-[12px] md:text-[13px] font-medium text-muted">
+                {signal}
+              </span>
+            </div>
+          ))}
         </motion.div>
       </div>
     </section>
