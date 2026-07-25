@@ -41,12 +41,12 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "SpendWise | UPI Expense Tracker & Budget Manager for India",
+  title: "SpendWise | Expense Tracker & Budget Manager for India",
   description:
     "Master your personal finance with SpendWise, the smart AI-powered UPI expense tracker and budget manager built for India. Track daily spending, set monthly budgets, and gain deep financial insights — aligned to the Indian financial year (April–March).",
   applicationName: "SpendWise",
   keywords: [
-    "UPI expense tracker",
+    "expense tracker",
     "expense tracker India",
     "budget manager India",
     "personal finance India",

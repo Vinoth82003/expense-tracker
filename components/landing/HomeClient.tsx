@@ -18,36 +18,43 @@ const TestimonialsSection = lazy(() =>
   import("./TestimonialsSection").then((m) => ({ default: m.TestimonialsSection }))
 );
 
+function Separator() {
+  return (
+    <div className="mx-auto max-w-[1120px]">
+      <div className="h-px w-full bg-border-subtle" />
+    </div>
+  );
+}
+
 export function HomeClient() {
   return (
     <>
       <Navbar />
 
-      <main className="overflow-x-hidden pt-20" id="main-content">
+      <main className="overflow-x-hidden" id="main-content">
         <HeroSection />
         <CounterStats />
 
-        {/* 1 — default bg */}
         <ProblemSection />
 
-        {/* 2 — tinted bg */}
-        <div className="bg-surface-variant/70">
+        <Separator />
+        <div className="bg-surface-variant">
           <AISection />
         </div>
 
-        {/* 3 — default bg */}
+        <Separator />
         <FeaturesGrid />
 
-        {/* 4 — tinted bg */}
-        <div className="bg-surface-variant/70">
+        <Separator />
+        <div className="bg-surface-variant">
           <ComparisonTable />
         </div>
 
-        {/* 5 — default bg */}
+        <Separator />
         <FreeToolsCTA />
 
-        {/* 6 — tinted bg */}
-        <div className="bg-surface-variant/70">
+        <Separator />
+        <div className="bg-surface-variant">
           <Suspense
             fallback={
               <div className="flex justify-center py-10">
@@ -59,11 +66,11 @@ export function HomeClient() {
           </Suspense>
         </div>
 
-        {/* 7 — default bg */}
+        <Separator />
         <FAQSection />
 
-        {/* 8 — tinted bg */}
-        <div className="bg-surface-variant/70">
+        <Separator />
+        <div className="bg-surface-variant">
           <FinalCTA />
         </div>
       </main>

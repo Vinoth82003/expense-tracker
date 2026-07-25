@@ -40,16 +40,34 @@ export function HeroSection() {
             SpendWise 2.0 is live
           </motion.div>
 
-          {/* Headline — 3 lines, gradient highlights, last word muted */}
+          {/* Headline — 3 lines, gradient highlights, last word plain */}
           <motion.h1
             variants={item}
             className="text-3xl md:text-5xl font-bold leading-[1.05] tracking-[-0.03em] text-foreground"
           >
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 via-purple-500 to-violet-600">
+            <span
+              style={{
+                backgroundImage:
+                  "linear-gradient(to right, #7c3aed, #8b5cf6, #6366f1)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                color: "transparent",
+              }}
+            >
               Expenses tracked,
             </span>
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-600 via-purple-500 to-primary-600">
+            <span
+              style={{
+                backgroundImage:
+                  "linear-gradient(to right, #6366f1, #7c3aed, #8b5cf6)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                color: "transparent",
+              }}
+            >
               budgets enforced,
             </span>
             <br />
@@ -101,17 +119,17 @@ export function HeroSection() {
           {/* Outer card */}
           <div className="relative rounded-xl md:rounded-2xl border border-border-subtle bg-surface shadow-[0_8px_40px_rgba(0,0,0,0.06)] overflow-hidden">
             {/* ── Browser chrome ── */}
-            <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border-subtle bg-surface-variant/40">
-              {/* <div className="flex items-center gap-1.5">
+            <div className="w-full flex justify-between gap-3 px-4 py-2.5 border-b border-border-subtle bg-surface-variant/40">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
-              </div> */}
+              </div>
               <div className="w-full">
                 <div className="flex justify-between gap-2 px-3 py-1 rounded-md bg-surface border border-border-subtle text-[11px] text-muted">
                   <span>Search transactions...</span>
                   <kbd className="hidden sm:inline px-1.5 py-0.5 rounded bg-surface-variant border border-border-subtle text-[10px] font-medium">
-                    ⌘K
+                    ⌘ K
                   </kbd>
                 </div>
               </div>
