@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import { FeaturesClient } from "./FeaturesClient";
 
 export const metadata: Metadata = {
-  title: "Features | SpendWise — UPI Expense Tracker for India",
+  title: "Features | SpendWise — AI-Powered Expense Tracker for India",
   description:
-    "Explore SpendWise features — UPI expense tracking, Indian financial year (April–March) reporting, Lakhs/Crores formatting, AI forensic analysis, dynamic budgeting, and PWA offline support.",
+    "Explore SpendWise features — manual expense & income tracking, AI forensic analysis via Gemini, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
   alternates: {
     canonical: "/features",
   },
   openGraph: {
-    title: "Features | SpendWise — UPI Expense Tracker for India",
+    title: "Features | SpendWise — AI-Powered Expense Tracker for India",
     description:
-      "Explore SpendWise features — UPI expense tracking, Indian financial year (April–March) reporting, Lakhs/Crores formatting, AI forensic analysis, dynamic budgeting, and PWA offline support.",
+      "Explore SpendWise features — manual expense & income tracking, AI forensic analysis via Gemini, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
     url: "https://money-spend-tracker.vercel.app/features",
     images: [
       {
@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Features | SpendWise — UPI Expense Tracker for India",
+    title: "Features | SpendWise — AI-Powered Expense Tracker for India",
     description:
-      "Explore SpendWise features — UPI expense tracking, Indian financial year (April–March) reporting, Lakhs/Crores formatting, AI forensic analysis, dynamic budgeting, and PWA offline support.",
+      "Explore SpendWise features — manual expense & income tracking, AI forensic analysis via Gemini, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
     images: ["/og-images/og-features-dark.png"],
   },
 };
@@ -34,55 +34,120 @@ export const metadata: Metadata = {
 const featureListStructuredData = {
   "@context": "https://schema.org",
   "@type": "ItemList",
-  "name": "SpendWise Features",
-  "description": "Key features of SpendWise, the AI-powered UPI expense tracker for India.",
-  "itemListElement": [
+  name: "SpendWise Features",
+  description:
+    "Key features of SpendWise, the AI-powered expense tracker for India.",
+  itemListElement: [
     {
       "@type": "ListItem",
-      "position": 1,
-      "item": {
+      position: 1,
+      item: {
         "@type": "HowToStep",
-        "name": "UPI Expense Tracking",
-        "text": "Track expenses directly from UPI transactions with automatic categorization."
-      }
+        name: "Expense & Income Tracking",
+        text: "Log expenses and income manually with Needs/Wants categorization, custom subcategories, search, date filtering, and CSV export.",
+      },
     },
     {
       "@type": "ListItem",
-      "position": 2,
-      "item": {
+      position: 2,
+      item: {
         "@type": "HowToStep",
-        "name": "Indian Financial Year Reports",
-        "text": "Reports aligned to the April–March Indian financial year for accurate tax planning."
-      }
+        name: "AI Forensic Analysis",
+        text: "Google Gemini 2.5 Flash generates structured financial reports covering spending patterns, budget burn-rate, income trends, and actionable savings suggestions.",
+      },
     },
     {
       "@type": "ListItem",
-      "position": 3,
-      "item": {
+      position: 3,
+      item: {
         "@type": "HowToStep",
-        "name": "Lakhs & Crores Formatting",
-        "text": "Native Indian number formatting with Lakhs and Crores for intuitive financial tracking."
-      }
+        name: "Natural Language Chat",
+        text: "Add expenses and query summaries by typing naturally. The intent-based system handles multi-turn conversations with auto-categorization.",
+      },
     },
     {
       "@type": "ListItem",
-      "position": 4,
-      "item": {
+      position: 4,
+      item: {
         "@type": "HowToStep",
-        "name": "AI Forensic Analysis",
-        "text": "Behavioral AI insights that go beyond simple categorization to reveal spending patterns."
-      }
+        name: "Smart Budgeting",
+        text: "Set a monthly budget limit with real-time tracking, email alerts at 80% threshold, and 50/30/20 rule analysis with radar charts.",
+      },
     },
     {
       "@type": "ListItem",
-      "position": 5,
-      "item": {
+      position: 5,
+      item: {
         "@type": "HowToStep",
-        "name": "PWA Offline Support",
-        "text": "Works offline as a Progressive Web App — add expenses without internet, sync when online."
-      }
-    }
-  ]
+        name: "Interactive Reports",
+        text: "Recharts-powered visualizations with area, bar, radar, and donut charts. View by day, week, month, or custom range with period comparison.",
+      },
+    },
+    {
+      "@type": "ListItem",
+      position: 6,
+      item: {
+        "@type": "HowToStep",
+        name: "Group Expense Splitting",
+        text: "Create groups, log shared expenses with equal/count/custom splits, track balances, and manage payment status across members.",
+      },
+    },
+  ],
+};
+
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Does SpendWise auto-detect UPI transactions?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "No. SpendWise is a manual expense tracker — you log transactions yourself. This keeps your bank credentials fully private. You can add expenses quickly via the chat interface by typing naturally.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How does the AI forensic analysis work?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "SpendWise sends your complete expense and income history to Google Gemini 2.5 Flash, which generates a structured report covering spending patterns, budget advice, income trends, and actionable savings suggestions.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Is my financial data secure?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes. SpendWise uses Google OAuth 2.0 or email+password authentication with bcrypt hashing. Optional email-based 2FA adds an extra layer. All data is encrypted in transit with strict CSP and XSS protections.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can I export my data?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes. You can export all your expenses and income as a CSV file. The AI analysis report can also be downloaded as a PDF.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How does the chat input work?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "The chat uses intent classification to understand commands like 'add expense 500 for groceries' or 'how much did I spend this month'. It handles multi-turn conversations with auto-categorization.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can I use SpendWise as a PWA?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes. SpendWise is a Progressive Web App that you can install on your home screen for a native app experience. It uses a service worker for caching static assets.",
+      },
+    },
+  ],
 };
 
 export default function FeaturesPage() {
@@ -90,7 +155,15 @@ export default function FeaturesPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(featureListStructuredData) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(featureListStructuredData),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqStructuredData),
+        }}
       />
       <FeaturesClient />
     </>
