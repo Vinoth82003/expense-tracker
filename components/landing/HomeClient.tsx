@@ -21,10 +21,16 @@ import {
   CheckCircle,
   Star,
   Quote,
-  User as UserIcon
+  User as UserIcon,
+  Wallet,
+  BarChart3,
+  Sparkles,
+  ShoppingCart,
+  Users,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
-import { DashboardMockup } from "./DashboardMockup";
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 
 const TestimonialsSection = lazy(() => import("./TestimonialsSection"));
 
@@ -110,7 +116,82 @@ const fadeUp: Variants = {
   visible: { y: 0, opacity: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
 };
 
+function useCountUp(end: number, duration = 1800, decimals = 0) {
+  const [value, setValue] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const counted = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !counted.current) {
+          counted.current = true;
+          const start = performance.now();
+          const animate = (now: number) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setValue(eased * end);
+            if (progress < 1) requestAnimationFrame(animate);
+          };
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.3 },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [end, duration]);
+
+  return { ref, value: decimals > 0 ? value.toFixed(decimals) : Math.round(value) };
+}
+
 // TestimonialsSection is now lazy-loaded from its own file
+
+/* ──────────────────────────────────────────────
+   COUNTER STATS
+ ────────────────────────────────────────────── */
+
+const counterItems = [
+  { icon: Users, value: 10, suffix: "+", label: "Active Users", decimals: 0 },
+  { icon: IndianRupee, value: 50, suffix: "M+", label: "Expenses Tracked", decimals: 0 },
+  { icon: ShieldCheck, value: 99.9, suffix: "%", label: "Uptime", decimals: 1 },
+  { icon: Star, value: 4.9, suffix: "/5", label: "User Rating", decimals: 1 },
+];
+
+const CounterStat = ({ icon: Icon, value, suffix, label, decimals }: {
+  icon: any;
+  value: number;
+  suffix: string;
+  label: string;
+  decimals: number;
+}) => {
+  const { ref, value: count } = useCountUp(value, 1800, decimals);
+  return (
+    <div ref={ref} className="flex flex-col items-center text-center gap-2 min-w-0">
+      <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600 shrink-0">
+        <Icon size={18} />
+      </div>
+      <div className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+        {count}{suffix}
+      </div>
+      <div className="text-xs text-muted font-medium">{label}</div>
+    </div>
+  );
+};
+
+const CounterStats = () => (
+  <section className="border-y border-border-subtle bg-surface py-12 md:py-16 px-5 md:px-10">
+    <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+      {counterItems.map((item) => (
+        <CounterStat key={item.label} {...item} />
+      ))}
+    </div>
+  </section>
+);
 
 /* ──────────────────────────────────────────────
    COMPONENT
@@ -124,123 +205,236 @@ export function HomeClient() {
       <main className="overflow-x-hidden pt-20" id="main-content">
 
         {/* ━━━━ HERO SECTION ━━━━ */}
-        <section className="relative min-h-[92dvh] flex items-center py-24 px-5 md:px-10 overflow-hidden">
-          {/* Background mesh */}
-          <div className="absolute inset-0 -z-10"
-            style={{
-              background: "radial-gradient(ellipse 80% 60% at 70% 40%, rgba(99,102,241,0.06) 0%, transparent 70%), radial-gradient(ellipse 60% 50% at 10% 80%, rgba(99,102,241,0.05) 0%, transparent 70%)"
-            }}
-          />
-          {/* Subtle grid */}
-          <div
-            className="absolute inset-0 -z-10 opacity-[0.03] dark:opacity-[0.04]"
-            style={{
-              backgroundImage: "linear-gradient(var(--border-color) 1px, transparent 1px), linear-gradient(90deg, var(--border-color) 1px, transparent 1px)",
-              backgroundSize: "60px 60px",
-            }}
-          />
-
-          <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-14 lg:gap-20 items-center">
-
-            {/* Left: copy */}
+        <section className="relative bg-surface-variant/40 py-5 md:py-10  px-5 md:px-10 overflow-hidden">
+          <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[45%_1fr] gap-12 lg:gap-20 items-center">
+            {/* ── Left: Copy ── */}
             <motion.div
               variants={container}
               initial="hidden"
               animate="visible"
-              className="space-y-8 relative z-10 text-center lg:text-left"
+              className="space-y-6 relative z-10"
             >
-              {/* Version badge */}
+              {/* Eyebrow badge */}
               <motion.div
                 variants={item}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-black tracking-widest uppercase mx-auto lg:mx-0"
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-semibold tracking-wider uppercase"
                 style={{
-                  borderColor: "rgba(99,102,241,0.3)",
-                  background: "rgba(99,102,241,0.08)",
-                  color: "#6366f1",
+                  borderColor: "rgba(99,102,241,0.25)",
+                  background: "rgba(99,102,241,0.06)",
+                  color: "var(--color-primary-600)",
                 }}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[#6366f1] animate-pulse" />
-                v2.0 — Forensic AI is Live
+                <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
+                SpendWise 2.0 is live
               </motion.div>
 
-              {/* Headline */}
+              {/* Headline — 3 lines, last word muted */}
               <motion.h1
                 variants={item}
-                className="text-5xl md:text-6xl lg:text-7xl font-black leading-[0.9] tracking-tight text-foreground"
+                className="text-3xl md:text-5xl font-bold leading-[1.05] tracking-[-0.03em] text-foreground"
               >
-                Your Money,{" "}
+                Expenses tracked,
                 <br />
-                <span
-                  className="italic text-indigo-600 dark:text-indigo-400"
-                >
-                  Forensically
-                </span>
+                budgets enforced,
                 <br />
-                Analyzed.
+                <span className="text-muted">effortlessly.</span>
               </motion.h1>
 
-              {/* Sub-headline */}
+              {/* Subheadline */}
               <motion.p
                 variants={item}
-                className="text-lg md:text-xl text-secondary max-w-lg mx-auto lg:mx-0 font-medium leading-relaxed"
+                className="text-[15px] md:text-base text-secondary leading-relaxed max-w-[420px]"
               >
-                AI-powered expense tracking with deep behavioral insights.
-                Uncover the <em>&quot;why&quot;</em> behind your spending — with
-                clinical precision.
+                The AI-powered finance tracker built for India. See every rupee,
+                understand the why, and stay on budget — automatically.
               </motion.p>
 
-              {/* CTA row */}
-              <motion.div
-                variants={item}
-                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
-              >
+              {/* CTA — text link with arrow */}
+              <motion.div variants={item}>
                 <Link
-                  href="/login"
-                  id="hero-get-started"
-                  aria-label="Get started free with SpendWise"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-black text-base text-white shadow-xl transition-all hover:-translate-y-1 active:scale-95 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                  href="/download"
+                  id="hero-cta"
+                  className="inline-flex items-center gap-2 text-base font-semibold text-primary-600 hover:text-primary-700 transition-colors"
                 >
-                  Get Started Free
-                  <ArrowRight size={18} />
-                </Link>
-                <Link
-                  href="/how-it-works"
-                  id="hero-see-how"
-                  aria-label="See how SpendWise works"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-indigo-600/40 dark:hover:border-indigo-400/40 transition-all"
-                >
-                  See how it works →
+                  Get started free
+                  <ArrowRight size={16} strokeWidth={2.5} />
                 </Link>
               </motion.div>
 
-              {/* Social proof micro stats */}
-              <motion.div
+              {/* Trust line */}
+              <motion.p
                 variants={item}
-                className="flex items-center justify-center lg:justify-start gap-8 pt-4"
+                className="text-[13px] text-muted flex items-center gap-1.5"
               >
-                <div className="flex flex-col">
-                  <span className="text-2xl font-black text-foreground">10K+</span>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted">Users Tracking</span>
-                </div>
-                <div className="w-px h-8 bg-border-subtle" />
-                <div className="flex flex-col">
-                  <span className="text-2xl font-black text-foreground">₹2Cr+</span>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted">Tracked Monthly</span>
-                </div>
-                <div className="w-px h-8 bg-border-subtle" />
-                <div className="flex flex-col">
-                  <span className="text-2xl font-black text-foreground">100%</span>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted">Free Forever</span>
-                </div>
-              </motion.div>
+                <Zap size={13} className="text-primary-500" />
+                4,218 transactions categorized today
+              </motion.p>
             </motion.div>
 
-            {/* Right: Forensic Dashboard Mockup */}
-            <div className="relative w-full flex justify-center lg:justify-end">
-              <DashboardMockup />
-            </div>
+            {/* ── Right: Product Mockup ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 32 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="relative w-full"
+            >
+              {/* Outer card */}
+              <div className="relative rounded-xl md:rounded-2xl border border-border-subtle bg-surface shadow-[0_8px_40px_rgba(0,0,0,0.06)] overflow-hidden">
+                {/* ── Browser chrome ── */}
+                <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border-subtle bg-surface-variant/40">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+                  </div>
+                  <div className="flex-1 flex justify-center">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-surface border border-border-subtle text-[11px] text-muted">
+                      <span>Search transactions...</span>
+                      <kbd className="hidden sm:inline px-1.5 py-0.5 rounded bg-surface-variant border border-border-subtle text-[10px] font-medium">
+                        ⌘K
+                      </kbd>
+                    </div>
+                  </div>
+                  <div className="w-[52px]" />
+                </div>
+
+                {/* ── Two-panel app ── */}
+                <div className="flex min-h-[320px] md:min-h-[400px]">
+                  {/* Left sidebar — hidden on mobile */}
+                  <div className="hidden md:flex flex-col w-[200px] shrink-0 border-r border-border-subtle p-3">
+                    <p className="text-[9px] font-semibold uppercase tracking-widest text-muted px-3 mb-2">
+                      Overview
+                    </p>
+                    {[
+                      { icon: BarChart3, label: "Dashboard", active: true },
+                      { icon: IndianRupee, label: "Expenses", badge: "3 New" },
+                      { icon: IndianRupee, label: "Income", badge: "1 New" },
+                      { icon: Target, label: "Budgets" },
+                      { icon: PieChart, label: "Reports" },
+                    ].map((item, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                          item.active
+                            ? "bg-primary-600 text-white"
+                            : "text-secondary hover:bg-surface-variant hover:text-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <item.icon size={15} />
+                          <span>{item.label}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-primary-500/10 text-primary-600 text-[9px] font-bold">
+                            {item.badge}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Main panel */}
+                  <div className="flex-1 p-4 md:p-5 flex flex-col gap-4 min-w-0">
+                    {/* Header row */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-foreground">
+                        Dashboard
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-subtle text-[11px] text-muted">
+                          <Activity size={12} />
+                          May 2026
+                        </div>
+                        <div className="px-3 py-1.5 rounded-lg bg-foreground text-background text-[11px] font-semibold">
+                          + New
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3 stat cards with deltas */}
+                    <div className="grid grid-cols-3 gap-2 md:gap-3">
+                      {[
+                        { label: "Spent", value: "₹42,500", delta: "+12.4%", up: true },
+                        { label: "Income", value: "₹1,20,000", delta: "+8.2%", up: true },
+                        { label: "Balance", value: "₹77,500", delta: "-3.1%", up: false },
+                      ].map((s, i) => (
+                        <div
+                          key={i}
+                          className="p-2.5 md:p-3 rounded-xl bg-surface-variant/60 border border-border-subtle/50"
+                        >
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-muted mb-1">
+                            {s.label}
+                          </p>
+                          <p className="text-sm md:text-[15px] font-bold text-foreground mb-0.5">
+                            {s.value}
+                          </p>
+                          <p
+                            className={`text-[10px] font-semibold ${
+                              s.up ? "text-success" : "text-error"
+                            }`}
+                          >
+                            {s.delta}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* AI insight card */}
+                    <div className="p-3 md:p-4 rounded-xl bg-primary-500/[0.06] border border-primary-500/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center">
+                            <Sparkles size={11} className="text-white" />
+                          </div>
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-600">
+                            Sage AI
+                          </span>
+                        </div>
+                        <span className="text-muted text-xs">···</span>
+                      </div>
+                      <p className="text-xs font-medium text-secondary leading-relaxed">
+                        Food spending up 18% this week. Swiggy accounts for 62%
+                        — consider meal prepping Tuesdays.
+                      </p>
+                    </div>
+
+                    {/* Transaction list */}
+                    <div className="flex flex-col">
+                      {[
+                        { name: "Swiggy", amount: "−₹420", cat: "Food & Dining", color: "text-foreground" },
+                        { name: "Metro Pass", amount: "−₹1,200", cat: "Transport", color: "text-foreground" },
+                        { name: "Salary Credit", amount: "+₹1,20,000", cat: "Income", color: "text-success" },
+                      ].map((tx, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between py-2.5 border-b border-border-subtle/40 last:border-0"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-surface-variant flex items-center justify-center shrink-0">
+                              <ShoppingCart size={13} className="text-muted" />
+                            </div>
+                            <div>
+                              <p className="text-[13px] font-semibold text-foreground">
+                                {tx.name}
+                              </p>
+                              <p className="text-[10px] text-muted">{tx.cat}</p>
+                            </div>
+                          </div>
+                          <span className={`text-[13px] font-bold ${tx.color}`}>
+                            {tx.amount}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </section>
+
+        {/* ━━━━ COUNTER STATS STRIP ━━━━ */}
+        <CounterStats />
 
         {/* ━━━━ TRUSTED BY STRIP ━━━━ */}
         {/* <section className="py-10 border-y border-border-subtle/50">
@@ -260,6 +454,107 @@ export function HomeClient() {
             </div>
           </div>
         </section> */}
+
+        {/* ━━━━ PROBLEM SECTION ━━━━ */}
+        <section className="py-24 md:py-32 px-5 md:px-10">
+          <div className="max-w-[1080px] mx-auto">
+            {/* Headline block */}
+            <div className="text-center mb-16">
+              <motion.div
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary mb-6"
+              >
+                <Zap size={12} className="text-primary-500" />
+                The Problem
+              </motion.div>
+
+              <motion.h2
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                className="text-2xl md:text-5xl font-bold leading-[1.15] tracking-tight text-foreground max-w-[700px] mx-auto mb-5"
+              >
+                Managing money{" "}
+                <span className="text-primary-600">shouldn&apos;t feel like a second job.</span>
+              </motion.h2>
+
+              <motion.p
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                className="text-[15px] text-secondary leading-relaxed max-w-[550px] mx-auto"
+              >
+                Most Indians know they should track spending — but existing tools
+                are too manual, too generic, or give insights only after the damage
+                is done.
+              </motion.p>
+            </div>
+
+            {/* 3-card grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {[
+                {
+                  icon: Clock,
+                  stat: "4+ hrs/week",
+                  title: "Manual tracking burns hours",
+                  description:
+                    "Sorting through UPI SMS alerts, entering transactions by hand, and reconciling across PhonePe, GPay, and bank apps eats into time you could spend actually living.",
+                  iconBg: "bg-amber-500/10",
+                  iconColor: "text-amber-600",
+                },
+                {
+                  icon: AlertTriangle,
+                  stat: "67%",
+                  title: "Overspend without realizing",
+                  description:
+                    "Without real-time alerts, most people discover they blew their budget when the credit card bill arrives — by then it is already too late to course-correct.",
+                  iconBg: "bg-red-500/10",
+                  iconColor: "text-red-500",
+                },
+                {
+                  icon: Brain,
+                  stat: "78%",
+                  title: "Financial anxiety is constant",
+                  description:
+                    "Not knowing where your money went creates a low-grade stress that follows you everywhere — from small daily guilt to dread at the end of every month.",
+                  iconBg: "bg-violet-500/10",
+                  iconColor: "text-violet-600",
+                },
+              ].map((card, i) => (
+                <motion.div
+                  key={i}
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ delay: i * 0.1 }}
+                  whileHover={{ y: -4 }}
+                  className="group p-3 md:p-6 rounded-2xl border border-border-subtle bg-surface hover:shadow-lg hover:border-primary-500/20 transition-all"
+                >
+                  <div
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center mb-5 ${card.iconBg}`}
+                  >
+                    <card.icon size={20} className={card.iconColor} />
+                  </div>
+                  <p className="text-[22px] md:text-[24px] font-bold text-foreground mb-1 tracking-tight">
+                    {card.stat}
+                  </p>
+                  <h3 className="text-[15px] font-bold text-foreground mb-2">
+                    {card.title}
+                  </h3>
+                  <p className="text-[13px] text-secondary leading-relaxed">
+                    {card.description}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* ━━━━ FEATURES GRID ━━━━ */}
         <section className="py-28 px-5 md:px-10">
