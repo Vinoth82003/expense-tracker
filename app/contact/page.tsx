@@ -2,17 +2,26 @@ import type { Metadata } from "next";
 import { ContactClient } from "./ContactClient";
 
 export const metadata: Metadata = {
-  title: "Contact Us | SpendWise — UPI Expense Tracker for India",
+  title: "Contact Us | SpendWise — AI-Powered Expense Tracker for India",
   description:
-    "Get in touch with SpendWise support team. Send us a message, email us at support@spendwise.app, or call our Indian helpline.",
+    "Get in touch with the SpendWise support team. Send us a message, email support@spendwise.app, or call our Indian helpline. We respond within 24 hours.",
+  keywords: [
+    "SpendWise contact",
+    "expense tracker support",
+    "SpendWise help",
+    "contact SpendWise India",
+    "budget tracker support",
+  ],
   alternates: {
     canonical: "/contact",
   },
   openGraph: {
-    title: "Contact Us | SpendWise — UPI Expense Tracker for India",
+    title: "Contact Us | SpendWise — AI-Powered Expense Tracker",
     description:
-      "Get in touch with SpendWise support team. Send us a message, email us at support@spendwise.app, or call our Indian helpline.",
+      "Get in touch with the SpendWise support team. Send us a message, email support@spendwise.app, or call our Indian helpline.",
     url: "https://money-spend-tracker.vercel.app/contact",
+    type: "website",
+    siteName: "SpendWise",
     images: [
       {
         url: "/og-images/og-contact-dark.png",
@@ -24,9 +33,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Contact Us | SpendWise — UPI Expense Tracker for India",
+    title: "Contact Us | SpendWise — AI-Powered Expense Tracker",
     description:
-      "Get in touch with SpendWise support team. Send us a message, email us at support@spendwise.app, or call our Indian helpline.",
+      "Get in touch with the SpendWise support team. Send us a message, email support@spendwise.app, or call our Indian helpline.",
     images: ["/og-images/og-contact-dark.png"],
   },
 };
@@ -41,8 +50,27 @@ const contactStructuredData = {
     "@type": "Organization",
     "name": "SpendWise",
     "email": "support@spendwise.app",
-    "url": "https://money-spend-tracker.vercel.app"
-  }
+    "url": "https://money-spend-tracker.vercel.app",
+  },
+};
+
+const breadcrumbStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://money-spend-tracker.vercel.app",
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Contact",
+      "item": "https://money-spend-tracker.vercel.app/contact",
+    },
+  ],
 };
 
 export default function ContactPage() {
@@ -51,6 +79,12 @@ export default function ContactPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(contactStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbStructuredData),
+        }}
       />
       <ContactClient />
     </>
