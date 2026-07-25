@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { TermsClient } from "./TermsClient";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — SpendWise",
+  title: "Terms of Service | SpendWise — UPI Expense Tracker for India",
   description:
     "Review the Terms of Service for SpendWise. Learn about personal use rules, data ownership, third-party integrations, and governing laws.",
   alternates: {
     canonical: "/terms",
   },
   openGraph: {
-    title: "Terms of Service — SpendWise",
+    title: "Terms of Service | SpendWise — UPI Expense Tracker for India",
     description:
       "Review the Terms of Service for SpendWise. Learn about personal use rules, data ownership, third-party integrations, and governing laws.",
     url: "https://money-spend-tracker.vercel.app/terms",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Terms of Service — SpendWise",
+    title: "Terms of Service | SpendWise — UPI Expense Tracker for India",
     description:
       "Review the Terms of Service for SpendWise. Learn about personal use rules, data ownership, third-party integrations, and governing laws.",
     images: ["/og-images/og-terms-dark.png"],

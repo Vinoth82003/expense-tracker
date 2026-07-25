@@ -20,7 +20,9 @@ export default function robots(): MetadataRoute.Robots {
           "/status",
           "/download",
           "/sitemap",
-          "/llms.txt"
+          "/llms.txt",
+          "/compare/",
+          "/tools/"
         ],
         disallow: [
           "/admin/",
@@ -64,7 +66,9 @@ export default function robots(): MetadataRoute.Robots {
           "/status",
           "/download",
           "/sitemap",
-          "/llms.txt"
+          "/llms.txt",
+          "/compare/",
+          "/tools/"
         ],
         disallow: [
           "/admin/",

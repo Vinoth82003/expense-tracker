@@ -36,17 +36,38 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const { selectedDoc, allDocs } = await getDocsData(slug);
 
+  const baseUrl = process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
+
   // Listing page metadata
   if (!slug || slug.length === 0) {
     return {
-      title: "Documentation | SpendWise",
+      title: "Documentation | SpendWise — UPI Expense Tracker for India",
       description:
-        "Master SpendWise with comprehensive documentation — get started guides, budget tracking, AI insights, expense management, and troubleshooting.",
+        "Master SpendWise with comprehensive documentation — get started guides, UPI budget tracking, AI insights, Indian financial year reporting, and troubleshooting.",
+      alternates: {
+        canonical: "/docs",
+      },
       openGraph: {
-        title: "Documentation | SpendWise",
+        title: "Documentation | SpendWise — UPI Expense Tracker for India",
         description:
-          "Master SpendWise with comprehensive documentation — get started guides, budget tracking, AI insights, expense management, and troubleshooting.",
+          "Master SpendWise with comprehensive documentation — get started guides, UPI budget tracking, AI insights, Indian financial year reporting, and troubleshooting.",
+        url: `${baseUrl}/docs`,
         type: "website",
+        images: [
+          {
+            url: "/og-images/og-docs-dark.png",
+            width: 1200,
+            height: 630,
+            alt: "SpendWise Documentation",
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Documentation | SpendWise — UPI Expense Tracker for India",
+        description:
+          "Master SpendWise with comprehensive documentation — get started guides, UPI budget tracking, AI insights, Indian financial year reporting, and troubleshooting.",
+        images: ["/og-images/og-docs-dark.png"],
       },
     };
   }
@@ -56,6 +77,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: "Doc Not Found | SpendWise Docs",
       description: "The requested documentation page could not be found.",
+      alternates: {
+        canonical: `/docs/${slug?.[0] || ""}`,
+      },
     };
   }
 
@@ -64,12 +88,30 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${selectedDoc.title} | SpendWise Docs`,
     description: plainText || `Read about ${selectedDoc.title} in the SpendWise documentation.`,
+    alternates: {
+      canonical: `/docs/${selectedDoc.slug}`,
+    },
     openGraph: {
       title: `${selectedDoc.title} | SpendWise Docs`,
       description: plainText || `Read about ${selectedDoc.title} in the SpendWise documentation.`,
+      url: `${baseUrl}/docs/${selectedDoc.slug}`,
       type: "article",
       publishedTime: selectedDoc.createdAt?.toString(),
       modifiedTime: selectedDoc.updatedAt?.toString(),
+      images: [
+        {
+          url: "/og-images/og-docs-dark.png",
+          width: 1200,
+          height: 630,
+          alt: selectedDoc.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${selectedDoc.title} | SpendWise Docs`,
+      description: plainText || `Read about ${selectedDoc.title} in the SpendWise documentation.`,
+      images: ["/og-images/og-docs-dark.png"],
     },
   };
 }

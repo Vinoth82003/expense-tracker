@@ -36,9 +36,12 @@ const footerLinks: Record<string, FooterLink[]> = {
     { label: "Share Feedback", href: "/contact" },
     { label: "System Status", href: "/status" },
   ],
-  Learn: [
-    { label: "What is Sage AI?", href: "/docs/sage-ai-the-spendwise-chatbot" },
-    { label: "How to use Sage AI?", href: "/docs/sage-ai-query-guide" },
+  Tools: [
+    { label: "50/30/20 Calculator", href: "/tools/50-30-20-budget-calculator" },
+  ],
+  Compare: [
+    { label: "vs Walnut (axio)", href: "/compare/spendwise-vs-walnut" },
+    { label: "vs ET Money", href: "/compare/spendwise-vs-et-money" },
   ],
   Legal: [
     { label: "Privacy Policy", href: "/privacy" },

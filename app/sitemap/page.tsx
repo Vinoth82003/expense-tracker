@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Sitemap | SpendWise",
+  title: "Sitemap | SpendWise — UPI Expense Tracker for India",
   description: "Navigate through the full page directory, help guides, documentation articles, and user dashboard paths of SpendWise.",
   robots: "index, follow",
 };
@@ -60,6 +60,13 @@ export default async function SitemapPage() {
     { label: "Download App", href: "/download", desc: "Install the SpendWise PWA on your Android, iOS, or desktop device.", icon: Download },
     { label: "Contact Us", href: "/contact", desc: "Get in touch with support or submit user feedback.", icon: Mail },
     { label: "System Status", href: "/status", desc: "Real-time health indicator of database, API, and app servers.", icon: Activity },
+  ];
+
+  // Define comparison and tools routes
+  const compareRoutes = [
+    { label: "SpendWise vs Walnut", href: "/compare/spendwise-vs-walnut", desc: "Compare SpendWise with Walnut (axio) for UPI expense tracking.", icon: TrendingUp },
+    { label: "SpendWise vs ET Money", href: "/compare/spendwise-vs-et-money", desc: "Compare SpendWise with ET Money for personal finance management.", icon: TrendingUp },
+    { label: "50/30/20 Budget Calculator", href: "/tools/50-30-20-budget-calculator", desc: "Free calculator to split your income into Needs, Wants, and Savings.", icon: Coins },
   ];
 
   // Define legal and compliance routes
@@ -181,7 +188,41 @@ export default async function SitemapPage() {
               </div>
             </div>
 
-            {/* 3. Documentation & Guides */}
+            {/* 3. Comparisons & Tools */}
+            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 md:p-10 space-y-6 shadow-sm md:col-span-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+                  <TrendingUp size={20} />
+                </div>
+                <h2 className="text-2xl font-black text-foreground tracking-tight">Comparisons & Free Tools</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {compareRoutes.map((route) => (
+                  <Link
+                    key={route.href}
+                    href={route.href}
+                    className="group p-5 rounded-2xl bg-surface-variant/20 border border-border-subtle hover:border-amber-500/30 hover:bg-surface-variant/40 transition-all duration-300 flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <span className="inline-block px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 text-[9px] font-black uppercase tracking-widest">
+                        {route.href.includes("/tools/") ? "Free Tool" : "Comparison"}
+                      </span>
+                      <h3 className="font-bold text-foreground group-hover:text-amber-600 transition-colors text-sm pt-1">
+                        {route.label}
+                      </h3>
+                      <p className="text-xs text-secondary font-medium leading-normal">
+                        {route.desc}
+                      </p>
+                    </div>
+                    <div className="text-xs font-black text-secondary group-hover:text-amber-600 flex items-center gap-1 mt-4 transition-colors">
+                      View <span className="transition-transform group-hover:translate-x-1">→</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Documentation & Guides */}
             <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 md:p-10 space-y-6 shadow-sm md:col-span-2">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
@@ -219,7 +260,7 @@ export default async function SitemapPage() {
               )}
             </div>
 
-            {/* 4. Legal Compliance */}
+            {/* 5. Legal Compliance */}
             <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 md:p-10 space-y-6 shadow-sm md:col-span-2">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-slate-500/10 flex items-center justify-center text-slate-600">

@@ -10,6 +10,21 @@ const withPWA = withPWAInit({
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.0.103'],
 
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**.cloudinary.com",
+      },
+    ],
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
+  },
+
   async headers() {
     return [
       {
@@ -82,7 +97,7 @@ const nextConfig: NextConfig = {
       },
       {
         // Cache static marketing pages
-        source: "/:path(features|how-it-works|faq|download|contact|privacy|terms|docs)?",
+        source: "/:path(features|how-it-works|faq|download|contact|privacy|terms|docs|compare/*|tools/*)?",
         headers: [
           {
             key: "Cache-Control",

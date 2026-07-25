@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import { FAQClient, FALLBACK_FAQS, type FAQItem } from "./FAQClient";
 
 export const metadata: Metadata = {
-  title: "FAQ — SpendWise",
+  title: "FAQ | SpendWise — UPI Expense Tracker for India",
   description:
-    "Find answers to common questions about SpendWise — account setup, security, AI analysis, pricing, and more.",
+    "Find answers to common questions about SpendWise — UPI tracking, Indian financial year reporting, security, AI analysis, and more.",
   alternates: {
     canonical: "/faq",
   },
   openGraph: {
-    title: "FAQ — SpendWise",
+    title: "FAQ | SpendWise — UPI Expense Tracker for India",
     description:
-      "Find answers to common questions about SpendWise — account setup, security, AI analysis, pricing, and more.",
+      "Find answers to common questions about SpendWise — UPI tracking, Indian financial year reporting, security, AI analysis, and more.",
     url: "https://money-spend-tracker.vercel.app/faq",
     images: [
       {
@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "FAQ — SpendWise",
+    title: "FAQ | SpendWise — UPI Expense Tracker for India",
     description:
-      "Find answers to common questions about SpendWise — account setup, security, AI analysis, pricing, and more.",
+      "Find answers to common questions about SpendWise — UPI tracking, Indian financial year reporting, security, AI analysis, and more.",
     images: ["/og-images/og-faq-dark.png"],
   },
 };

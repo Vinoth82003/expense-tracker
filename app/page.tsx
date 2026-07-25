@@ -38,12 +38,14 @@ export default async function Home() {
   const dbFaqs = await prisma.fAQ.findMany({ orderBy: { order: 'asc' } });
   const faqs = dbFaqs.length > 0 ? dbFaqs : defaultFaqs;
 
+  const baseUrl = process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "SpendWise",
-    "description": "India's best personal expense tracker for tracking daily expenses, setting monthly budgets, and gaining financial insights.",
-    "url": "https://spendwise.app",
+    "description": "India's best UPI expense tracker for tracking daily expenses, setting monthly budgets, and gaining AI-powered financial insights. Built for the Indian financial year (April–March) with Lakhs and Crores formatting.",
+    "url": baseUrl,
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Web, Mobile PWA",
     "offers": {
@@ -61,11 +63,14 @@ export default async function Home() {
       "ratingCount": "1000"
     },
     "featureList": [
-      "Expense tracking",
-      "Budget management",
-      "Financial analytics",
-      "PWA support",
-      "Secure OAuth login"
+      "UPI expense tracking",
+      "Indian financial year (April–March) reporting",
+      "Lakhs and Crores formatting",
+      "AI-powered forensic spending analysis",
+      "Dynamic budget management",
+      "PWA offline support",
+      "Secure OAuth login",
+      "Tax-season PDF export"
     ]
   };
     
@@ -82,6 +87,20 @@ export default async function Home() {
     }))
   };
 
+  const organizationStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "SpendWise",
+    "url": baseUrl,
+    "logo": `${baseUrl}/web-app-manifest-192x192.png`,
+    "description": "Smart AI-powered expense tracker built for India.",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "email": "support@spendwise.app",
+      "contactType": "customer service"
+    }
+  };
+
   return (
     <>
       <script
@@ -91,6 +110,10 @@ export default async function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
       />
       <HomeClient />
     </>

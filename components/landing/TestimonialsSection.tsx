@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
 import { Quote, Star, User as UserIcon } from "lucide-react";
+import Image from "next/image";
 
 const fadeUp: Variants = {
   hidden: { y: 32, opacity: 0 },
@@ -78,7 +79,7 @@ export default function TestimonialsSection() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-variant flex items-center justify-center shrink-0 border border-border-subtle">
               {review.user?.avatar ? (
-                <img src={review.user.avatar} alt={`${review.user.name}'s avatar`} width={40} height={40} className="w-full h-full object-cover" />
+                <Image src={review.user.avatar} alt={`${review.user.name}'s avatar`} width={40} height={40} className="w-full h-full object-cover" unoptimized />
               ) : (
                 <UserIcon size={18} className="text-muted" />
               )}

@@ -3,75 +3,99 @@ import type { MetadataRoute } from "next";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
-  const staticDate = new Date("2024-05-01T00:00:00Z");
+  const now = new Date();
 
   // Base static public pages of the application
   const staticRoutes = [
     {
       url: `${baseUrl}`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "daily" as const,
       priority: 1.0,
     },
     {
       url: `${baseUrl}/features`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     },
     {
       url: `${baseUrl}/how-it-works`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     },
     {
       url: `${baseUrl}/faq`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.7,
     },
     {
       url: `${baseUrl}/docs`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "daily" as const,
       priority: 0.8,
     },
     {
       url: `${baseUrl}/contact`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.6,
     },
     {
       url: `${baseUrl}/privacy`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.5,
     },
     {
       url: `${baseUrl}/terms`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.5,
     },
     {
       url: `${baseUrl}/status`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "hourly" as const,
       priority: 0.5,
     },
     {
       url: `${baseUrl}/download`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     },
     {
+      url: `${baseUrl}/login`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    },
+    {
       url: `${baseUrl}/sitemap`,
-      lastModified: staticDate,
+      lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.4,
+    },
+    {
+      url: `${baseUrl}/compare/spendwise-vs-walnut`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/compare/spendwise-vs-et-money`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/tools/50-30-20-budget-calculator`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.9,
     },
   ];
 
