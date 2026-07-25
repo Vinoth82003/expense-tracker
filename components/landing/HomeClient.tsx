@@ -24,27 +24,6 @@ export function HomeClient() {
         <ProblemSection />
         <AISection />
         <FeaturesGrid />
-        <BentoHighlights />
-
-        {/* ━━━━ TESTIMONIALS ━━━━ */}
-        <section className="py-20 px-5 md:px-10 bg-surface-variant/30 relative">
-          <div className="max-w-7xl mx-auto text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-foreground mb-4">
-              What Our Users Say
-            </h2>
-          </div>
-          <Suspense
-            fallback={
-              <div className="flex justify-center py-10">
-                <div className="w-8 h-8 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-              </div>
-            }
-          >
-            <TestimonialsSection />
-          </Suspense>
-        </section>
-
-        <FinalCTA />
       </main>
 
       <Footer />

@@ -18,7 +18,7 @@ import { container, item } from "./animations";
 export function HeroSection() {
   return (
     <section className="relative bg-surface-variant/40 py-5 md:py-10 px-5 md:px-10 overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[45%_1fr] gap-12 lg:gap-20 items-center">
+      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
         {/* ── Left: Copy ── */}
         <motion.div
           variants={container}
@@ -98,13 +98,13 @@ export function HeroSection() {
           <div className="relative rounded-xl md:rounded-2xl border border-border-subtle bg-surface shadow-[0_8px_40px_rgba(0,0,0,0.06)] overflow-hidden">
             {/* ── Browser chrome ── */}
             <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border-subtle bg-surface-variant/40">
-              <div className="flex items-center gap-1.5">
+              {/* <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
                 <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
-              </div>
-              <div className="flex-1 flex justify-center">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-surface border border-border-subtle text-[11px] text-muted">
+              </div> */}
+              <div className="w-full">
+                <div className="flex justify-between gap-2 px-3 py-1 rounded-md bg-surface border border-border-subtle text-[11px] text-muted">
                   <span>Search transactions...</span>
                   <kbd className="hidden sm:inline px-1.5 py-0.5 rounded bg-surface-variant border border-border-subtle text-[10px] font-medium">
                     ⌘K
@@ -117,7 +117,7 @@ export function HeroSection() {
             {/* ── Two-panel app ── */}
             <div className="flex min-h-[320px] md:min-h-[400px]">
               {/* Left sidebar — hidden on mobile */}
-              <div className="hidden md:flex flex-col w-[200px] shrink-0 border-r border-border-subtle p-3">
+              <div className="hidden md:flex flex-col w-[150px] shrink-0 border-r border-border-subtle p-3">
                 <p className="text-[9px] font-semibold uppercase tracking-widest text-muted px-3 mb-2">
                   Overview
                 </p>
@@ -157,7 +157,10 @@ export function HeroSection() {
                   <div className="flex items-center gap-2">
                     <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-subtle text-[11px] text-muted">
                       <Activity size={12} />
-                      May 2026
+                      {new Date(Date.now()).toLocaleDateString("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      })}
                     </div>
                     <div className="px-3 py-1.5 rounded-lg bg-foreground text-background text-[11px] font-semibold">
                       + New
@@ -166,11 +169,26 @@ export function HeroSection() {
                 </div>
 
                 {/* 3 stat cards with deltas */}
-                <div className="grid grid-cols-3 gap-2 md:gap-3">
+                <div className="grid grid-cols-3 gap-1 md:gap-3">
                   {[
-                    { label: "Spent", value: "₹42,500", delta: "+12.4%", up: true },
-                    { label: "Income", value: "₹1,20,000", delta: "+8.2%", up: true },
-                    { label: "Balance", value: "₹77,500", delta: "-3.1%", up: false },
+                    {
+                      label: "Spent",
+                      value: "₹17,700",
+                      delta: "+12.4%",
+                      up: true,
+                    },
+                    {
+                      label: "Income",
+                      value: "₹50,000",
+                      delta: "+8.2%",
+                      up: true,
+                    },
+                    {
+                      label: "Balance",
+                      value: "₹32,300",
+                      delta: "-3.1%",
+                      up: false,
+                    },
                   ].map((s, i) => (
                     <div
                       key={i}
@@ -207,17 +225,32 @@ export function HeroSection() {
                     <span className="text-muted text-xs">···</span>
                   </div>
                   <p className="text-xs font-medium text-secondary leading-relaxed">
-                    Food spending up 18% this week. Swiggy accounts for 62%
-                    — consider meal prepping Tuesdays.
+                    Food spending up 18% this week. Swiggy accounts for 62% —
+                    consider meal prepping Tuesdays.
                   </p>
                 </div>
 
                 {/* Transaction list */}
                 <div className="flex flex-col">
                   {[
-                    { name: "Swiggy", amount: "−₹420", cat: "Food & Dining", color: "text-foreground" },
-                    { name: "Metro Pass", amount: "−₹1,200", cat: "Transport", color: "text-foreground" },
-                    { name: "Salary Credit", amount: "+₹1,20,000", cat: "Income", color: "text-success" },
+                    {
+                      name: "Swiggy",
+                      amount: "−₹420",
+                      cat: "Food & Dining",
+                      color: "text-foreground",
+                    },
+                    {
+                      name: "Metro Pass",
+                      amount: "−₹1,200",
+                      cat: "Transport",
+                      color: "text-foreground",
+                    },
+                    {
+                      name: "Salary Credit",
+                      amount: "+₹1,20,000",
+                      cat: "Income",
+                      color: "text-success",
+                    },
                   ].map((tx, i) => (
                     <div
                       key={i}
