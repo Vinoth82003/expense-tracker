@@ -84,7 +84,7 @@ export function DocsTableOfContents({ content }: DocsTableOfContentsProps) {
           <div className="w-6 h-6 rounded-lg bg-primary-500/10 flex items-center justify-center text-primary-600 shrink-0">
             <List size={13} />
           </div>
-          <h4 className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">
+          <h4 className="text-[10px] font-semibold text-muted uppercase tracking-wider">
             On this page
           </h4>
         </div>
@@ -109,8 +109,8 @@ export function DocsTableOfContents({ content }: DocsTableOfContentsProps) {
                   : item.level === 2
                     ? "pl-8"
                     : item.level === 3
-                      ? "pl-11 text-muted font-semibold"
-                      : "pl-14 text-muted font-semibold",
+                      ? "pl-11 text-muted font-medium"
+                      : "pl-14 text-muted font-medium",
                 activeId === item.id
                   ? "text-primary-600 border-primary-500"
                   : "text-secondary hover:text-foreground border-transparent hover:border-border-hover",

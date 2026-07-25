@@ -13,6 +13,8 @@ import {
   ThumbsDown,
   BookOpen,
   Home,
+  Tag,
+  MessageCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { DocsTableOfContents } from "@/components/docs/DocsTableOfContents";
@@ -56,13 +58,13 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
           <div className="w-16 h-16 rounded-2xl bg-surface-variant flex items-center justify-center mx-auto text-muted">
             <BookOpen size={28} />
           </div>
-          <h3 className="text-2xl font-black">Document not found</h3>
+          <h3 className="text-2xl font-bold">Document not found</h3>
           <p className="text-secondary font-medium">
             Please select another section from the sidebar.
           </p>
           <Link
             href="/docs"
-            className="inline-flex items-center gap-2 mt-4 px-6 py-3 rounded-xl bg-primary-500/10 text-primary-600 font-bold text-sm hover:bg-primary-500/20 transition-colors"
+            className="inline-flex items-center gap-2 mt-4 px-6 py-3 rounded-2xl bg-primary-500/10 text-primary-600 font-bold text-sm hover:bg-primary-500/20 transition-colors"
           >
             <Home size={15} />
             Browse all docs
@@ -86,7 +88,7 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
             className="space-y-10"
           >
             {/* ─── Breadcrumbs ─── */}
-            <nav className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-muted">
+            <nav className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
               <Link
                 href="/docs"
                 className="hover:text-primary-600 transition-colors"
@@ -104,14 +106,15 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
             {/* ─── Page Header ─── */}
             <header className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="px-3.5 py-1.5 rounded-full bg-primary-500/10 text-primary-600 text-[11px] font-black uppercase tracking-[0.15em]">
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-border-subtle bg-surface text-[11px] font-semibold uppercase tracking-wider text-secondary">
+                  <Tag size={11} />
                   {selectedDoc.category}
                 </span>
               </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-foreground tracking-tightest leading-[0.95] break-words">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground tracking-tight leading-tight break-words">
                 {selectedDoc.title}
               </h1>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-bold text-muted">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-medium text-muted">
                 <span className="flex items-center gap-2">
                   <Clock size={14} />
                   {readingTime} min read
@@ -127,7 +130,7 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
             </header>
 
             {/* ─── Divider ─── */}
-            <hr className="border-border-subtle" />
+            <hr className="h-px bg-border-subtle" />
 
             {/* ─── Main Content ─── */}
             <div className="min-h-[400px]">
@@ -135,14 +138,14 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
                 <ThemedMarkdown content={selectedDoc.content} />
               ) : (
                 <div
-                  className="prose prose-indigo dark:prose-invert max-w-none prose-headings:font-black prose-headings:scroll-mt-24 prose-p:text-secondary prose-p:font-medium prose-p:leading-relaxed prose-strong:text-foreground prose-code:bg-surface-variant prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-lg prose-code:font-bold prose-code:text-primary-600 dark:prose-code:text-primary-400 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-surface-variant prose-pre:border prose-pre:border-border-subtle prose-pre:rounded-2xl prose-pre:p-6 prose-pre:shadow-sm prose-a:text-primary-600 prose-a:no-underline hover:prose-a:underline prose-a:font-bold prose-img:rounded-2xl prose-img:shadow-xl prose-li:font-medium prose-li:text-secondary animate-in fade-in duration-700"
+                  className="prose prose-indigo dark:prose-invert max-w-none prose-headings:font-bold prose-headings:scroll-mt-24 prose-p:text-secondary prose-p:font-medium prose-p:leading-relaxed prose-strong:text-foreground prose-strong:font-bold prose-code:bg-surface-variant prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-lg prose-code:font-bold prose-code:text-primary-600 dark:prose-code:text-primary-400 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-surface-variant prose-pre:border prose-pre:border-border-subtle prose-pre:rounded-2xl prose-pre:p-6 prose-pre:shadow-sm prose-a:text-primary-600 prose-a:no-underline hover:prose-a:underline prose-a:font-bold prose-img:rounded-2xl prose-img:shadow-xl prose-li:font-medium prose-li:text-secondary animate-in fade-in duration-700"
                   dangerouslySetInnerHTML={{ __html: selectedDoc.content }}
                 />
               )}
             </div>
 
             {/* ─── Divider ─── */}
-            <hr className="border-border-subtle" />
+            <hr className="h-px bg-border-subtle" />
 
             {/* ─── Next / Previous Navigation ─── */}
             <div className="flex flex-col sm:flex-row items-stretch justify-between gap-4">
@@ -151,10 +154,10 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
                   href={`/docs/${prevDoc.slug}`}
                   className="group flex-1 p-6 rounded-2xl border border-border-subtle bg-surface hover:border-primary-500/20 hover:shadow-md transition-all"
                 >
-                  <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest mb-2">
+                  <div className="flex items-center gap-2 text-[10px] font-semibold text-muted uppercase tracking-widest mb-2">
                     <ArrowLeft size={12} /> Previous
                   </div>
-                  <div className="font-black text-base text-foreground group-hover:text-primary-600 transition-colors line-clamp-1">
+                  <div className="font-bold text-base text-foreground group-hover:text-primary-600 transition-colors line-clamp-1">
                     {prevDoc.title}
                   </div>
                 </Link>
@@ -167,10 +170,10 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
                   href={`/docs/${nextDoc.slug}`}
                   className="group flex-1 p-6 rounded-2xl border border-border-subtle bg-surface hover:border-primary-500/20 hover:shadow-md transition-all text-right"
                 >
-                  <div className="flex items-center justify-end gap-2 text-[10px] font-black text-muted uppercase tracking-widest mb-2">
+                  <div className="flex items-center justify-end gap-2 text-[10px] font-semibold text-muted uppercase tracking-widest mb-2">
                     Next <ArrowRight size={12} />
                   </div>
-                  <div className="font-black text-base text-foreground group-hover:text-primary-600 transition-colors line-clamp-1">
+                  <div className="font-bold text-base text-foreground group-hover:text-primary-600 transition-colors line-clamp-1">
                     {nextDoc.title}
                   </div>
                 </Link>
@@ -180,7 +183,10 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
             </div>
 
             {/* ─── Feedback Section ─── */}
-            <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-br from-surface-variant/80 to-surface border border-border-subtle text-center space-y-6">
+            <div className="p-8 sm:p-10 rounded-2xl bg-surface-variant border border-border-subtle text-center space-y-6">
+              <div className="w-12 h-12 rounded-full bg-primary-500/10 text-primary-600 flex items-center justify-center mx-auto">
+                <MessageCircle size={22} />
+              </div>
               <AnimatePresence mode="wait">
                 {!feedbackDone[selectedDoc.id] ? (
                   <motion.div
@@ -190,8 +196,8 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
                     exit={{ opacity: 0 }}
                     className="space-y-6"
                   >
-                    <h4 className="text-xl font-black text-foreground">
-                    Was this page helpful?
+                    <h4 className="text-xl font-bold text-foreground">
+                      Was this page helpful?
                     </h4>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                       <button
@@ -215,7 +221,7 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
                             setFeedbackSubmitting(null);
                           }
                         }}
-                        className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-surface border border-border-subtle font-bold text-sm hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-600 transition-all shadow-sm flex items-center justify-center gap-2.5 disabled:opacity-50"
+                        className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-surface border border-border-subtle font-bold text-sm hover:border-emerald-500/30 hover:bg-emerald-500/5 hover:text-emerald-600 transition-all shadow-sm flex items-center justify-center gap-2.5 disabled:opacity-50"
                       >
                         {feedbackSubmitting === "yes" ? (
                           <Loader2 size={16} className="animate-spin" />
@@ -245,7 +251,7 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
                             setFeedbackSubmitting(null);
                           }
                         }}
-                        className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-surface border border-border-subtle font-bold text-sm hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-600 transition-all shadow-sm flex items-center justify-center gap-2.5 disabled:opacity-50"
+                        className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-surface border border-border-subtle font-bold text-sm hover:border-red-500/30 hover:bg-red-500/5 hover:text-red-600 transition-all shadow-sm flex items-center justify-center gap-2.5 disabled:opacity-50"
                       >
                         {feedbackSubmitting === "no" ? (
                           <Loader2 size={16} className="animate-spin" />
@@ -272,10 +278,10 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
                         <ThumbsUp size={24} />
                       </motion.div>
                     </div>
-                    <h4 className="text-xl font-black text-foreground mb-2">
+                    <h4 className="text-xl font-bold text-foreground mb-2">
                       Feedback Received!
                     </h4>
-                    <p className="text-sm text-muted font-medium italic">
+                    <p className="text-sm text-muted font-medium">
                       We appreciate your help in making our docs better.
                     </p>
                   </motion.div>

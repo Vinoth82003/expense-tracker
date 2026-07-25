@@ -41,9 +41,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   // Listing page metadata
   if (!slug || slug.length === 0) {
     return {
-      title: "Documentation | SpendWise — UPI Expense Tracker for India",
+      title: "Documentation | SpendWise — AI-Powered Expense Tracker",
       description:
-        "Master SpendWise with comprehensive documentation — get started guides, UPI budget tracking, AI insights, Indian financial year reporting, and troubleshooting.",
+        "Master SpendWise with comprehensive documentation — get started guides, expense tracking, AI forensic analysis, budgeting, and troubleshooting.",
       alternates: {
         canonical: "/docs",
       },

@@ -14,13 +14,13 @@ export function ThemedMarkdown({ content, className }: Props) {
   return (
     <div className={cn(
       "prose prose-indigo dark:prose-invert max-w-none",
-      "prose-headings:font-black prose-headings:tracking-tight prose-headings:scroll-mt-24",
+      "prose-headings:font-bold prose-headings:tracking-tight prose-headings:scroll-mt-24",
       "prose-p:text-secondary prose-p:font-medium prose-p:leading-relaxed",
-      "prose-strong:text-foreground prose-strong:font-black",
+      "prose-strong:text-foreground prose-strong:font-bold",
       "prose-code:bg-surface-variant prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-lg prose-code:font-bold prose-code:text-primary-600 dark:prose-code:text-primary-400 prose-code:before:content-none prose-code:after:content-none",
-      "prose-pre:bg-surface-variant prose-pre:border prose-pre:border-border-subtle prose-pre:rounded-[2rem] prose-pre:p-8 prose-pre:shadow-sm",
+      "prose-pre:bg-surface-variant prose-pre:border prose-pre:border-border-subtle prose-pre:rounded-2xl prose-pre:p-6 prose-pre:shadow-sm",
       "prose-a:text-primary-600 prose-a:no-underline hover:prose-a:underline prose-a:font-bold",
-      "prose-img:rounded-[2rem] prose-img:shadow-xl",
+      "prose-img:rounded-2xl prose-img:shadow-xl",
       "prose-li:font-medium prose-li:text-secondary",
       className
     )}>
