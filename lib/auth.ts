@@ -97,6 +97,15 @@ export const authOptions: AuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      // After sign-in, always check onboarded status client-side.
+      // Default: send to /onboarding — the onboarding page guards
+      // and redirects to /dashboard if already onboarded.
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return `${baseUrl}/onboarding`;
+    },
+
     async signIn({ user, account }: { user: any; account: any }) {
       if (!user.email) {
         console.error("Sign-in failed: No email provided by auth provider.");

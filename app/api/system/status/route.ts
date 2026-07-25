@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     };
 
     const session = await getServerSession(authOptions);
-    if (session && session.user) {
+    if (session?.user && (session.user as any).id) {
       const userId = (session.user as any).id;
       const user = await prisma.user.findUnique({
         where: { id: userId },

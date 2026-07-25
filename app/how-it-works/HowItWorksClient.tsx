@@ -1,404 +1,573 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import {
-  MousePointerClick,
   Sparkles,
-  PieChart,
-  ShieldCheck,
   ArrowRight,
   ChevronRight,
-  Brain,
-  Plus,
+  BarChart3,
+  Target,
   IndianRupee,
-  Smartphone,
+  PieChart,
+  Activity,
+  ShoppingCart,
   CheckCircle2,
-  TrendingUp,
   Download,
+  Mail,
+  Lock,
+  Plus,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
+function Separator() {
+  return (
+    <div className="flex justify-center bg-surface">
+      <div className="h-px w-full max-w-[1120px] bg-border-subtle" />
+    </div>
+  );
+}
+
+const fadeUp: Variants = {
+  hidden: { y: 32, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+  },
+};
 
 const steps = [
   {
     number: "01",
-    title: "One-Tap Identity",
-    description: "Start your journey in seconds with Google Auth. No passwords to remember, just pure security and simplicity.",
-    icon: MousePointerClick,
-    color: "from-blue-500 to-indigo-600",
-    mockup: "auth",
+    chip: "Getting Started",
+    title: "Create your free account",
+    description:
+      "Sign up with Google or email in seconds. No credit card required, no passwords to remember — just instant access to your personal finance dashboard.",
     bullets: [
-      "Secure Google OAuth login",
-      "Zero password management",
-      "Instant account creation"
-    ]
+      "Secure Google OAuth — one tap sign-in",
+      "Email + password option available",
+      "Bank-grade encryption on all data",
+    ],
   },
   {
     number: "02",
-    title: "Effortless Logging",
-    description: "Record your spending as it happens. Categorize by Needs, Wants, or Investments with localized Rupee (₹) support.",
-    icon: Plus,
-    color: "from-emerald-500 to-teal-600",
-    mockup: "log",
+    chip: "Daily Use",
+    title: "Log expenses as you spend",
+    description:
+      "Record every transaction the moment it happens. Categorize into Needs and Wants with a single tap — your data stays organized automatically.",
     bullets: [
-      "Quick expense entry",
-      "Real-time categorization",
-      "₹ currency support"
-    ]
+      "Quick expense entry with ₹ support",
+      "Auto-categorize Needs vs Wants",
+      "Track income alongside expenses",
+    ],
   },
   {
     number: "03",
-    title: "AI Forensic Analysis",
-    description: "Our proprietary AI performs a deep-tissue scan of your habits, identifying hidden leaks and suggesting smart reallocations.",
-    icon: Brain,
-    color: "from-violet-500 to-purple-600",
-    mockup: "ai",
+    chip: "AI Intelligence",
+    title: "Get insights, not just numbers",
+    description:
+      "Sage AI analyzes your spending patterns and surfaces the why behind your money — identifying leaks, overlaps, and opportunities you'd miss on your own.",
     bullets: [
-      "Pattern detection",
-      "Spending optimization",
-      "Personalized recommendations"
-    ]
+      "Behavioral spending pattern detection",
+      "Subscription overlap identification",
+      "Personalized savings recommendations",
+    ],
   },
   {
     number: "04",
-    title: "Financial Mastery",
-    description: "Watch your savings grow. Export reports, set smart limits, and achieve your goals with real-time data visualizers.",
-    icon: PieChart,
-    color: "from-amber-500 to-orange-600",
-    mockup: "stats",
+    chip: "Growth",
+    title: "Watch your wealth grow",
+    description:
+      "Visualize progress with real-time dashboards, export Indian financial year reports, and set smart budget limits that alert you before you overspend.",
     bullets: [
-      "Comprehensive analytics",
-      "Exportable reports",
-      "Goal tracking"
-    ]
+      "April–March FY reports with ₹ Lakhs/Crores",
+      "Budget alerts at 80% spend threshold",
+      "Downloadable CSV & PDF exports",
+    ],
   },
 ];
 
+/* ─────────── Mockup: Auth Screen ─────────── */
 function AuthMockup() {
   return (
-    <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-10 shadow-2xl max-w-sm mx-auto relative overflow-hidden group">
-      <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-600 to-violet-600" />
-      <div className="text-center space-y-8">
-        <div className="w-20 h-20 bg-primary-50 rounded-[2rem] flex items-center justify-center mx-auto mb-4 group-hover:rotate-12 transition-transform duration-500">
-          <TrendingUp className="text-primary-600" size={36} strokeWidth={2.5} />
+    <div className="rounded-2xl border border-border-subtle bg-surface shadow-xl overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border-subtle bg-surface-variant/50">
+        <div className="flex gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
         </div>
-        <div className="space-y-2">
-          <h3 className="text-2xl font-black tracking-tight">Secure Entry</h3>
-          <p className="text-xs text-secondary font-bold uppercase tracking-widest">Premium Finance Portal</p>
+        <div className="flex-1 mx-4">
+          <div className="h-4 bg-surface-variant rounded-md max-w-[140px]" />
         </div>
-        <div className="space-y-4 pt-4">
-          <div className="flex items-center justify-center gap-4 w-full py-5 rounded-2xl bg-foreground text-background font-black text-sm hover:scale-[1.02] transition-all cursor-default shadow-lg">
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              />
+      </div>
+      <div className="p-8 space-y-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
+            <IndianRupee size={18} color="white" strokeWidth={2.5} />
+          </div>
+          <span className="text-[15px] font-bold text-foreground tracking-tight">
+            SpendWise
+          </span>
+        </div>
+        <div>
+          <h3 className="text-[20px] font-bold text-foreground mb-1">
+            Welcome back.
+          </h3>
+          <p className="text-[13px] text-secondary">
+            Sign in to your dashboard.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <div className="w-full flex items-center justify-center gap-3 py-3.5 px-6 bg-foreground text-background rounded-full font-bold text-[13px]">
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
             </svg>
             Continue with Google
           </div>
-          <div className="text-[10px] font-black text-muted uppercase tracking-[0.2em] opacity-40">Biometric & OAuth Ready</div>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border-subtle" />
+            </div>
+            <div className="relative flex justify-center text-[10px]">
+              <span className="bg-surface px-3 text-muted font-medium">or</span>
+            </div>
+          </div>
+          <div className="w-full flex items-center justify-center gap-2 py-3.5 px-6 bg-surface-variant border border-border-subtle rounded-full font-bold text-[13px] text-foreground">
+            <Mail size={14} />
+            Continue with email
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-center justify-center">
+          <div className="w-4 h-4 rounded-md border-2 border-primary-600 bg-primary-600 flex items-center justify-center">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <span className="text-[11px] text-muted">
+            I agree to the Terms & Privacy
+          </span>
         </div>
       </div>
     </div>
   );
 }
 
+/* ─────────── Mockup: Add Expense ─────────── */
 function LogMockup() {
   return (
-    <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-2xl space-y-8 relative overflow-hidden">
-      <div className="flex justify-between items-center">
-        <div className="flex flex-col">
-          <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-primary-500">Instant Log</h4>
-          <span className="text-xl font-black">Add Expense</span>
+    <div className="rounded-2xl border border-border-subtle bg-surface shadow-xl overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border-subtle bg-surface-variant/50">
+        <div className="flex gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
         </div>
-        <div className="px-4 py-1.5 bg-success/10 text-success text-[10px] font-black rounded-full border border-success/20">LIVE</div>
+        <div className="flex-1 mx-4">
+          <div className="h-4 bg-surface-variant rounded-md max-w-[140px]" />
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-6">
-        <div className="space-y-3">
-          <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Amount (₹)</label>
-          <div className="p-5 bg-surface-variant/30 rounded-2xl border border-border-subtle text-3xl font-black text-foreground tabular-nums">
-            ₹ 2,450.00
+      <div className="p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-primary-500 mb-0.5">
+              New Transaction
+            </p>
+            <p className="text-[17px] font-bold text-foreground">Add Expense</p>
+          </div>
+          <div className="px-2.5 py-1 rounded-full bg-success/10 text-success text-[10px] font-bold border border-success/20">
+            LIVE
           </div>
         </div>
-        <div className="space-y-3">
-          <label className="text-[10px] font-black text-muted uppercase tracking-widest ml-1">Core Category</label>
-          <div className="flex gap-3">
-            {['Needs', 'Wants'].map((cat, i) => (
-              <div key={cat} className={`flex-1 py-3 rounded-xl text-xs font-black border text-center transition-all ${i === 1 ? 'bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-600/20' : 'bg-surface border-border-subtle text-secondary'}`}>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-semibold text-muted uppercase tracking-wider">
+            Amount
+          </label>
+          <div className="p-4 bg-surface-variant/60 rounded-xl border border-border-subtle text-[28px] font-bold text-foreground tabular-nums">
+            ₹ 2,450
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-semibold text-muted uppercase tracking-wider">
+            Category
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {["Needs", "Wants"].map((cat, i) => (
+              <div
+                key={cat}
+                className={`py-3 rounded-xl text-[13px] font-bold border text-center transition-all ${
+                  i === 1
+                    ? "bg-primary-600 text-white border-primary-600 shadow-lg shadow-primary-600/20"
+                    : "bg-surface-variant/60 border-border-subtle text-secondary"
+                }`}
+              >
                 {cat}
               </div>
             ))}
           </div>
         </div>
-      </div>
-      <div className="w-full py-5 bg-foreground text-background rounded-2xl font-black text-center shadow-xl hover:scale-[1.02] transition-transform cursor-default">
-        Confirm Transaction
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-semibold text-muted uppercase tracking-wider">
+            Note
+          </label>
+          <div className="p-3 bg-surface-variant/60 rounded-xl border border-border-subtle text-[13px] text-secondary">
+            Lunch with team
+          </div>
+        </div>
+
+        <div className="w-full py-3.5 bg-primary-600 text-white rounded-full font-bold text-[14px] text-center shadow-lg shadow-primary-600/25">
+          Confirm Transaction
+        </div>
       </div>
     </div>
   );
 }
 
+/* ─────────── Mockup: AI Insight ─────────── */
 function AIMockup() {
   return (
-    <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
-      <div className="absolute -top-12 -right-12 p-4 opacity-[0.03] group-hover:rotate-12 transition-transform duration-700">
-        <Brain size={200} className="text-foreground" />
+    <div className="rounded-2xl border border-border-subtle bg-surface shadow-xl overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border-subtle bg-surface-variant/50">
+        <div className="flex gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+        </div>
+        <div className="flex-1 mx-4">
+          <div className="h-4 bg-surface-variant rounded-md max-w-[140px]" />
+        </div>
       </div>
-      <div className="relative z-10 space-y-8">
+      <div className="p-6 space-y-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-[1.2rem] bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
-            <Sparkles size={24} />
+          <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center">
+            <Sparkles size={18} className="text-white" />
           </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Forensic AI</span>
-            <span className="text-xl font-black">Smart Insights</span>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-primary-600">
+              Sage AI
+            </p>
+            <p className="text-[15px] font-bold text-foreground">
+              Weekly Analysis
+            </p>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="p-5 bg-indigo-500/5 rounded-[1.5rem] border border-indigo-500/10 space-y-2">
-            <h5 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Subscription Audit</h5>
-            <p className="text-xs font-bold text-secondary leading-relaxed">
-              Detected 3 overlapping streaming services. Canceling 2 would save <b>₹1,499/mo</b>.
-            </p>
-          </div>
-          <div className="p-5 bg-emerald-500/5 rounded-[1.5rem] border border-emerald-500/10 space-y-2">
-            <h5 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Wealth Reallocation</h5>
-            <p className="text-xs font-bold text-secondary leading-relaxed">
-              Your "Needs" are 12% below budget. Invest the surplus <b>₹5,000</b> for 12% CAGR.
-            </p>
-          </div>
+        <div className="p-4 rounded-xl bg-primary-500/[0.06] border border-primary-500/20 space-y-1.5">
+          <p className="text-[11px] font-semibold text-primary-600 uppercase tracking-wider">
+            Spending Alert
+          </p>
+          <p className="text-[13px] font-medium text-secondary leading-relaxed">
+            Food spending up 18% this week. Swiggy accounts for 62% of total
+            food spend — consider meal prepping on Tuesdays to save{" "}
+            <span className="font-bold text-foreground">~₹1,200/mo</span>.
+          </p>
         </div>
-        <div className="flex justify-between items-center pt-4 border-t border-border-subtle">
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black text-muted uppercase tracking-widest">
-              Pattern Accuracy
-            </span>
-            <motion.span
-              className="text-sm font-black text-indigo-600"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ duration: 2, ease: "easeOut" }}
-            >
-              98.4%
-            </motion.span>
-          </div>
+
+        <div className="p-4 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/20 space-y-1.5">
+          <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
+            Savings Opportunity
+          </p>
+          <p className="text-[13px] font-medium text-secondary leading-relaxed">
+            Your &quot;Needs&quot; are 12% under budget this month. Move the{" "}
+            <span className="font-bold text-foreground">₹5,000 surplus</span>{" "}
+            to your emergency fund.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t border-border-subtle/50">
+          <p className="text-[10px] font-semibold text-muted uppercase tracking-wider">
+            Pattern Accuracy
+          </p>
+          <p className="text-[13px] font-bold text-primary-600">98.4%</p>
         </div>
       </div>
     </div>
   );
 }
 
+/* ─────────── Mockup: Dashboard Stats ─────────── */
 function StatsMockup() {
   return (
-    <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 shadow-2xl space-y-8 h-full relative">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black text-primary-500 uppercase tracking-widest">Visual Trends</span>
-          <span className="text-xl font-black">Net Worth Growth</span>
+    <div className="rounded-2xl border border-border-subtle bg-surface shadow-xl overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border-subtle bg-surface-variant/50">
+        <div className="flex gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
+          <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
         </div>
-        <div className="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center">
-          <ArrowRight size={20} className="text-muted" />
+        <div className="flex-1 mx-4">
+          <div className="h-4 bg-surface-variant rounded-md max-w-[140px]" />
         </div>
       </div>
-
-      <div className="space-y-6">
-        {[
-          { label: 'JAN', value: '₹45k', percent: '65%', color: 'bg-indigo-500' },
-          { label: 'FEB', value: '₹52k', percent: '75%', color: 'bg-indigo-500' },
-          { label: 'MAR', value: '₹68k', percent: '95%', color: 'bg-primary-600' }
-        ].map((item, i) => (
-          <div key={item.label} className="space-y-2">
-            <div className="flex justify-between text-[10px] font-black tracking-widest uppercase">
-              <span className="text-muted">{item.label}</span>
-              <span className="text-foreground">{item.value}</span>
-            </div>
-            <div className="h-3 bg-surface-variant rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                whileInView={{ width: item.percent }}
-                transition={{ duration: 1.2, delay: i * 0.2, ease: "easeOut" }}
-                className={`h-full ${item.color} rounded-full`}
-              />
-            </div>
+      <div className="p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <p className="text-[15px] font-bold text-foreground">Dashboard</p>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-subtle text-[11px] text-muted">
+            <Activity size={11} />
+            July 2026
           </div>
-        ))}
-      </div>
-
-      <div className="mt-8 pt-8 border-t border-border-subtle grid grid-cols-2 gap-6">
-        <div className="space-y-1">
-          <p className="text-[10px] font-black text-muted uppercase tracking-widest">Total Saved</p>
-          <p className="text-2xl font-black text-success tabular-nums">₹1.2L</p>
         </div>
-        <div className="space-y-1">
-          <p className="text-[10px] font-black text-muted uppercase tracking-widest">Efficiency</p>
-          <p className="text-2xl font-black text-primary-600">92%</p>
+
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Spent", value: "₹17,700", color: "text-foreground" },
+            { label: "Income", value: "₹50,000", color: "text-foreground" },
+            { label: "Saved", value: "₹32,300", color: "text-success" },
+          ].map((s, i) => (
+            <div
+              key={i}
+              className="p-2.5 rounded-xl bg-surface-variant/60 border border-border-subtle/50"
+            >
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-muted mb-1">
+                {s.label}
+              </p>
+              <p className={`text-[14px] font-bold ${s.color}`}>{s.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-2.5">
+          <p className="text-[11px] font-semibold text-secondary">
+            Spending Trend
+          </p>
+          <div className="flex items-end gap-1.5 h-16">
+            {[40, 65, 45, 80, 55, 70, 48].map((h, i) => (
+              <div
+                key={i}
+                className="flex-1 rounded-t-sm bg-primary-500/20"
+                style={{ height: `${h}%` }}
+              />
+            ))}
+          </div>
+          <div className="flex justify-between text-[9px] text-muted font-medium">
+            <span>Jan</span>
+            <span>Mar</span>
+            <span>May</span>
+            <span>Jul</span>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {[
+            { name: "Food & Dining", amount: "₹8,200", pct: 34 },
+            { name: "Transport", amount: "₹4,100", pct: 17 },
+            { name: "Shopping", amount: "₹3,600", pct: 15 },
+          ].map((cat, i) => (
+            <div key={i} className="flex items-center gap-3 py-1.5">
+              <div className="w-7 h-7 rounded-lg bg-primary-500/10 flex items-center justify-center shrink-0">
+                <div className="w-2 h-2 rounded-full bg-primary-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-[12px] font-semibold text-foreground truncate">
+                    {cat.name}
+                  </p>
+                  <p className="text-[12px] font-bold text-foreground ml-2">
+                    {cat.amount}
+                  </p>
+                </div>
+                <div className="mt-1 h-1 bg-surface-variant rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary-500/40 rounded-full"
+                    style={{ width: `${cat.pct}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
+
+const mockups = [AuthMockup, LogMockup, AIMockup, StatsMockup];
 
 export function HowItWorksClient() {
   return (
     <>
       <Navbar />
 
-      <main className="pt-32 pb-24 overflow-x-hidden">
-        {/* HERO SECTION */}
-        <section className="px-5 md:px-10 max-w-7xl mx-auto text-center mb-32">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-50 text-primary-600 text-sm font-black mb-8 tracking-widest uppercase shadow-sm border border-primary-100"
-          >
-            <Sparkles size={16} strokeWidth={3} className="animate-pulse" />
-            Designed for Perfection
-          </motion.div>
+      <main className="pt-28 pb-0 overflow-x-hidden">
+        {/* ═══════════ HERO ═══════════ */}
+        <section className="relative bg-surface-variant/40 py-5 md:py-10 px-5 md:px-10">
+          <div className="max-w-7xl mx-auto text-center space-y-5">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-semibold tracking-wider uppercase"
+              style={{
+                borderColor: "rgba(99,102,241,0.25)",
+                background: "rgba(99,102,241,0.06)",
+                color: "var(--color-primary-600)",
+              }}
+            >
+              <Sparkles size={12} className="animate-pulse" />
+              How SpendWise works
+            </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black text-foreground mb-8 tracking-tighter leading-[0.9]"
-          >
-            Simplicity Meet<br />
-            <span className="italic bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">Forensic Power.</span>
-          </motion.h1>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-[36px] md:text-[48px] lg:text-[56px] font-bold leading-[1.1] tracking-tight text-foreground max-w-3xl mx-auto"
+            >
+              From sign-up to savings
+              <br className="hidden md:block" />{" "}
+              <span className="text-primary-600">in four steps.</span>
+            </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-xl md:text-2xl text-secondary max-w-3xl mx-auto font-medium"
-          >
-            Take a deep dive into how SpendWise transforms your financial chaos into a stream of actionable intelligence and growth.
-          </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-[15px] md:text-[17px] text-secondary max-w-xl mx-auto leading-relaxed"
+            >
+              No complex setup. No learning curve. Start tracking your money in
+              under a minute with the finance tool built for India.
+            </motion.p>
+          </div>
         </section>
 
-        {/* STEPS SECTION */}
-        <section className="px-5 md:px-10 max-w-6xl mx-auto space-y-40">
-          {steps.map((step, i) => (
-            <div key={i} className={`flex flex-col lg:flex-row items-center gap-16 lg:gap-24 ${i % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}>
-              {/* Content Area */}
-              <motion.div
-                initial={{ opacity: 0, x: i % 2 === 0 ? -50 : 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                className="flex-1 space-y-8"
+        <Separator />
+
+        {/* ═══════════ STEPS ═══════════ */}
+        {steps.map((step, i) => {
+          const MockupComponent = mockups[i];
+          const isEven = i % 2 === 0;
+
+          return (
+            <section key={i}>
+              <div
+                className={`px-5 md:px-10 py-5 md:py-10 ${
+                  isEven ? "bg-surface" : "bg-surface-variant/40"
+                }`}
               >
-                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center text-white shadow-xl shadow-indigo-500/10`}>
-                  <step.icon size={32} strokeWidth={2.5} />
+                <div
+                  className={`max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center ${
+                    !isEven ? "lg:direction-rtl" : ""
+                  }`}
+                >
+                  {/* Text */}
+                  <motion.div
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: "-80px" }}
+                    className="space-y-6"
+                  >
+                    <div
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-semibold tracking-wider uppercase"
+                      style={{
+                        borderColor: "rgba(99,102,241,0.2)",
+                        background: "rgba(99,102,241,0.05)",
+                        color: "var(--color-primary-600)",
+                      }}
+                    >
+                      Step {step.number}
+                    </div>
+
+                    <h2 className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground">
+                      {step.title}
+                    </h2>
+
+                    <p className="text-[15px] md:text-base text-secondary leading-relaxed max-w-[480px]">
+                      {step.description}
+                    </p>
+
+                    <ul className="space-y-3">
+                      {step.bullets.map((bullet, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-center gap-3 text-[14px] font-medium text-secondary"
+                        >
+                          <CheckCircle2
+                            size={17}
+                            className="text-success shrink-0"
+                          />
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+
+                  {/* Mockup */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 24 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-80px" }}
+                    transition={{
+                      duration: 0.7,
+                      delay: 0.15,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    className="relative"
+                  >
+                    <MockupComponent />
+                  </motion.div>
                 </div>
-                <div className="space-y-4">
-                  <span className="text-sm font-black text-primary-600 uppercase tracking-[0.3em]">Step {step.number}</span>
-                  <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tight leading-none">{step.title}</h2>
-                  <p className="text-lg md:text-xl text-secondary leading-relaxed font-medium">{step.description}</p>
-                </div>
+              </div>
+              {i < steps.length - 1 && <Separator />}
+            </section>
+          );
+        })}
 
-                <ul className="space-y-4">
-                  {step.bullets.map((bullet, idx) => (
-                    <li key={idx} className="flex items-center gap-3 text-sm font-bold text-secondary">
-                      <CheckCircle2 size={18} className="text-success" />
-                      {bullet}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-
-              {/* Visual Demo Area */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, rotateY: i % 2 === 0 ? 15 : -15 }}
-                whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                className="flex-1 w-full max-w-lg lg:max-w-none perspective-1000"
-              >
-                <div className="relative group">
-                  {/* Decorative backgrounds */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${step.color} blur-[100px] opacity-10 group-hover:opacity-20 transition-opacity`} />
-
-                  {/* Component Mockups */}
-                  <div className="relative z-10 transition-transform group-hover:translate-y-[-10px] duration-500">
-                    {step.mockup === 'auth' && <AuthMockup />}
-                    {step.mockup === 'log' && <LogMockup />}
-                    {step.mockup === 'ai' && <AIMockup />}
-                    {step.mockup === 'stats' && <StatsMockup />}
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          ))}
-        </section>
-
-        {/* DOWNLOAD CTA BOTTOM */}
-        <section className="py-28 px-5 md:px-10">
+        {/* ═══════════ CTA ═══════════ */}
+        <Separator />
+        <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
           <div className="max-w-4xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 32 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
               viewport={{ once: true, margin: "-80px" }}
-              className="relative rounded-3xl overflow-hidden border border-border-subtle text-center p-12 md:p-20"
-              style={{
-                background: "linear-gradient(145deg, var(--bg-surface) 0%, var(--bg-surface-variant) 100%)",
-              }}
+              className="text-center space-y-6"
             >
-              {/* Glow */}
               <div
-                className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/2 blur-[100px] pointer-events-none -z-10"
-                style={{ background: "rgba(99,102,241,0.1)" }}
-              />
-
-              <div
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-black tracking-widest uppercase mb-8"
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-semibold tracking-wider uppercase"
                 style={{
-                  borderColor: "rgba(99,102,241,0.3)",
-                  background: "rgba(99,102,241,0.07)",
-                  color: "#6366f1",
+                  borderColor: "rgba(99,102,241,0.25)",
+                  background: "rgba(99,102,241,0.06)",
+                  color: "var(--color-primary-600)",
                 }}
               >
-                <Sparkles size={12} /> Ready for the next level?
+                <Sparkles size={12} />
+                Ready to start?
               </div>
 
-              <h2 className="text-4xl md:text-6xl font-black tracking-tight text-foreground mb-6 leading-[0.95]">
-                Experience Finance <br />
-                <span className="italic" style={{ color: "#6366f1" }}>
-                  Without Boundaries.
-                </span>
+              <h2 className="text-[36px] md:text-[48px] font-bold leading-[1.1] tracking-tight text-foreground">
+                Take control of your
+                <br />
+                <span className="text-primary-600">money today.</span>
               </h2>
 
-              <p className="text-lg text-secondary font-medium max-w-xl mx-auto mb-10">
-                Install SpendWise on your device today and join thousands of Indians mastering their money with forensic precision.
+              <p className="text-[15px] md:text-[17px] text-secondary max-w-xl mx-auto leading-relaxed">
+                Join thousands of Indians who stopped guessing and started
+                growing. Free forever — no credit card needed.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
                 <Link
                   href="/download"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base transition-all hover:-translate-y-1 active:scale-95 shadow-xl text-white flex-shrink-0"
-                  style={{ background: "#6366f1" }}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-full bg-primary-600 text-white font-bold text-[15px] shadow-lg shadow-primary-600/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/30 active:scale-[0.98] transition-all"
                 >
-                  <Download size={18} />
+                  <Download size={16} />
                   Download App
                 </Link>
                 <Link
                   href="/contact"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-10 py-4 rounded-xl font-black text-base border border-border-subtle text-secondary hover:text-foreground hover:border-primary-500/40 transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-2xl bg-surface border border-border-subtle font-bold text-[15px] text-secondary hover:text-foreground hover:border-primary-500/20 hover:shadow-lg transition-all"
                 >
                   Help Center
-                  <ChevronRight size={18} />
+                  <ChevronRight size={16} />
                 </Link>
               </div>
             </motion.div>
@@ -407,12 +576,6 @@ export function HowItWorksClient() {
       </main>
 
       <Footer />
-
-      <style jsx global>{`
-        .perspective-1000 {
-          perspective: 1000px;
-        }
-      `}</style>
     </>
   );
 }
