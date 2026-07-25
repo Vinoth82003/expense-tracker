@@ -133,7 +133,7 @@ export function TestimonialsSection({ limit = 3 }: { limit?: number }) {
   if (error) return null;
 
   return (
-    <section className="py-24 md:py-32 px-5 md:px-10 bg-surface-variant/30">
+    <section className="py-24 md:py-32 px-5 md:px-10">
       <div className="max-w-[1120px] mx-auto">
         {/* ── Headline block ── */}
         <motion.div

@@ -26,24 +26,46 @@ export function HomeClient() {
       <main className="overflow-x-hidden pt-20" id="main-content">
         <HeroSection />
         <CounterStats />
+
+        {/* 1 — default bg */}
         <ProblemSection />
-        <AISection />
+
+        {/* 2 — tinted bg */}
+        <div className="bg-surface-variant/30">
+          <AISection />
+        </div>
+
+        {/* 3 — default bg */}
         <FeaturesGrid />
-        <ComparisonTable />
+
+        {/* 4 — tinted bg */}
+        <div className="bg-surface-variant/30">
+          <ComparisonTable />
+        </div>
+
+        {/* 5 — default bg */}
         <FreeToolsCTA />
 
-        <Suspense
-          fallback={
-            <div className="flex justify-center py-10">
-              <div className="w-8 h-8 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-            </div>
-          }
-        >
-          <TestimonialsSection />
-        </Suspense>
+        {/* 6 — tinted bg */}
+        <div className="bg-surface-variant/30">
+          <Suspense
+            fallback={
+              <div className="flex justify-center py-10">
+                <div className="w-8 h-8 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+              </div>
+            }
+          >
+            <TestimonialsSection />
+          </Suspense>
+        </div>
 
+        {/* 7 — default bg */}
         <FAQSection />
-        <FinalCTA />
+
+        {/* 8 — tinted bg */}
+        <div className="bg-surface-variant/30">
+          <FinalCTA />
+        </div>
       </main>
 
       <Footer />
