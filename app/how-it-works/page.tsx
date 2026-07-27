@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import { HowItWorksClient } from "./HowItWorksClient";
 
 export const metadata: Metadata = {
-  title: "How It Works | SpendWise — UPI Expense Tracker for India",
+  title: "How It Works | SpendWise — Expense Tracker for India",
   description:
-    "Learn how SpendWise works in 4 simple steps: Secure entry, effortless UPI tracking, AI forensic analysis, and Indian financial year reporting.",
+    "Learn how SpendWise works in 4 simple steps: Secure sign-up, effortless expense tracking, AI forensic analysis, and Indian financial year reporting.",
   alternates: {
     canonical: "/how-it-works",
   },
   openGraph: {
-    title: "How It Works | SpendWise — UPI Expense Tracker for India",
+    title: "How It Works | SpendWise — Expense Tracker for India",
     description:
-      "Learn how SpendWise works in 4 simple steps: Secure entry, effortless UPI tracking, AI forensic analysis, and Indian financial year reporting.",
-    url: "https://money-spend-tracker.vercel.app/how-it-works",
+      "Learn how SpendWise works in 4 simple steps: Secure sign-up, effortless expense tracking, AI forensic analysis, and Indian financial year reporting.",
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/how-it-works`,
     images: [
       {
         url: "/og-images/og-how-it-works-dark.png",
@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "How It Works | SpendWise — UPI Expense Tracker for India",
+    title: "How It Works | SpendWise — Expense Tracker for India",
     description:
-      "Learn how SpendWise works in 4 simple steps: Secure entry, effortless UPI tracking, AI forensic analysis, and Indian financial year reporting.",
+      "Learn how SpendWise works in 4 simple steps: Secure sign-up, effortless expense tracking, AI forensic analysis, and Indian financial year reporting.",
     images: ["/og-images/og-how-it-works-dark.png"],
   },
 };
@@ -35,19 +35,19 @@ const howToStructuredData = {
   "@context": "https://schema.org",
   "@type": "HowTo",
   "name": "How to Track Expenses with SpendWise",
-  "description": "A step-by-step guide to tracking your expenses using SpendWise, the UPI expense tracker built for India.",
+  "description": "A step-by-step guide to tracking your expenses using SpendWise, the expense tracker built for India.",
   "totalTime": "PT5M",
   "step": [
     {
       "@type": "HowToStep",
       "name": "Create Your Free Account",
-      "text": "Sign up with Google OAuth or email — no credit card required. Your account is secured with bank-grade encryption.",
+      "text": "Sign up with Google OAuth or email — no credit card required. Your account is secured with industry-standard encryption.",
       "position": 1
     },
     {
       "@type": "HowToStep",
       "name": "Log Your Expenses",
-      "text": "Add expenses manually or import from UPI transactions. SpendWise auto-categorizes into Needs and Wants.",
+      "text": "Add expenses manually with a clean, fast interface. SpendWise auto-categorizes into Needs and Wants.",
       "position": 2
     },
     {

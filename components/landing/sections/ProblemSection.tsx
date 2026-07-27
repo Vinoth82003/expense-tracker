@@ -20,6 +20,7 @@ const problems = [
     title: "Overspend without realizing",
     description:
       "Without real-time alerts, most people discover they blew their budget when the credit card bill arrives — by then it is already too late to course-correct.",
+    source: "Illustrative estimate",
     iconBg: "bg-red-500/10",
     iconColor: "text-red-500",
   },
@@ -29,6 +30,7 @@ const problems = [
     title: "Financial anxiety is constant",
     description:
       "Not knowing where your money went creates a low-grade stress that follows you everywhere — from small daily guilt to dread at the end of every month.",
+    source: "Illustrative estimate",
     iconBg: "bg-violet-500/10",
     iconColor: "text-violet-600",
   },

@@ -9,7 +9,7 @@ const defaultFaqs = [
   },
   {
     question: "How secure is my data?",
-    answer: "Your data is encrypted and stored securely. We use OAuth authentication and never store passwords.",
+    answer: "Your data is stored securely. We use OAuth authentication or encrypted password hashing, and all data is encrypted in transit.",
     category: "Security"
   },
   {
@@ -38,13 +38,13 @@ export default async function Home() {
   const dbFaqs = await prisma.fAQ.findMany({ orderBy: { order: 'asc' } });
   const faqs = dbFaqs.length > 0 ? dbFaqs : defaultFaqs;
 
-  const baseUrl = process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
 
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "SpendWise",
-    "description": "India's best UPI expense tracker for tracking daily expenses, setting monthly budgets, and gaining AI-powered financial insights. Built for the Indian financial year (April–March) with Lakhs and Crores formatting.",
+    "description": "India's best expense tracker for tracking daily expenses, setting monthly budgets, and gaining AI-powered financial insights. Built for the Indian financial year (April–March) with Lakhs and Crores formatting.",
     "url": baseUrl,
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Web, Mobile PWA",
@@ -57,13 +57,8 @@ export default async function Home() {
       "@type": "Person",
       "name": "Vinoth"
     },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "ratingCount": "1000"
-    },
     "featureList": [
-      "UPI expense tracking",
+      "Expense tracking with Needs/Wants categorization",
       "Indian financial year (April–March) reporting",
       "Lakhs and Crores formatting",
       "AI-powered forensic spending analysis",

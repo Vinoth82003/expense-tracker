@@ -44,7 +44,7 @@ const comparisonData: Record<string, {
   faqs: { q: string; a: string }[];
 }> = {
   Walnut: {
-    intro: "Walnut (now axio) was one of the first SMS-based expense trackers in India, with over 1 crore downloads. But after its rebrand to axio and pivot toward lending, many users report instability and confusion. SpendWise takes a different approach — a web-first, AI-powered UPI expense tracker built specifically around the Indian financial year.",
+    intro: "Walnut (now axio) was one of the first SMS-based expense trackers in India, with over 1 crore downloads. But after its rebrand to axio and pivot toward lending, many users report instability and confusion. SpendWise takes a different approach — a web-first, AI-powered expense tracker built specifically around the Indian financial year.",
     verdict: "SpendWise",
     verdictSummary: "For pure expense tracking with AI insights and Indian FY support, SpendWise is the clearer choice. Walnut/axio has pivoted to lending and its expense tracking has become an afterthought.",
     features: [
@@ -52,7 +52,7 @@ const comparisonData: Record<string, {
         category: "Core Expense Tracking",
         items: [
           { feature: "Manual expense entry", spendwise: true, competitor: true },
-          { feature: "UPI transaction tracking", spendwise: "Automatic with AI categorization", competitor: "SMS-based parsing" },
+          { feature: "UPI transaction tracking", spendwise: "Manual entry with auto-categorization", competitor: "SMS-based parsing" },
           { feature: "Income tracking", spendwise: true, competitor: true },
           { feature: "Receipt scanning", spendwise: false, competitor: false },
           { feature: "Multi-currency support", spendwise: true, competitor: "INR only", spendwiseNote: "With Lakhs/Crores formatting" },
@@ -64,7 +64,7 @@ const comparisonData: Record<string, {
           { feature: "April–March FY reports", spendwise: true, competitor: false, spendwiseNote: "Built-in, not an afterthought" },
           { feature: "Lakhs/Crores formatting", spendwise: true, competitor: false },
           { feature: "Tax-season PDF export", spendwise: true, competitor: false },
-          { feature: "GST-ready categorization", spendwise: true, competitor: false },
+          { feature: "GST-ready categorization", spendwise: false, competitor: false },
         ],
       },
       {
@@ -72,8 +72,8 @@ const comparisonData: Record<string, {
         items: [
           { feature: "AI spending analysis", spendwise: "Forensic behavioral analysis", competitor: "Basic categorization", spendwiseNote: "Goes beyond auto-categorization" },
           { feature: "Anomaly detection", spendwise: true, competitor: false },
-          { feature: "Subscription leak detector", spendwise: true, competitor: false },
-          { feature: "Predictive balance forecasting", spendwise: true, competitor: false },
+          { feature: "Subscription tracking", spendwise: false, competitor: false },
+          { feature: "Balance forecasting", spendwise: false, competitor: false },
         ],
       },
       {
@@ -93,7 +93,7 @@ const comparisonData: Record<string, {
           { feature: "Two-factor authentication", spendwise: true, competitor: false },
           { feature: "Bank-grade encryption", spendwise: true, competitor: true },
           { feature: "No loan cross-selling", spendwise: true, competitor: false, competitorNote: "axio heavily promotes loans" },
-          { feature: "Open-source privacy policy", spendwise: "DPDP Act 2023 compliant", competitor: "Basic privacy policy" },
+          { feature: "Privacy policy", spendwise: "Transparent privacy policy", competitor: "Basic privacy policy" },
         ],
       },
       {
@@ -106,8 +106,8 @@ const comparisonData: Record<string, {
       },
     ],
     faqs: [
-      { q: "Is SpendWise better than Walnut for UPI tracking?", a: "Yes. SpendWise is built around UPI from the ground up with AI-powered automatic categorization. Walnut relies on SMS parsing which is less reliable and has had stability issues since the axio rebrand." },
-      { q: "Can I import my Walnut data into SpendWise?", a: "Yes. SpendWise supports CSV import. Export your data from Walnut/axio and import it directly into SpendWise to get started immediately." },
+      { q: "Is SpendWise better than Walnut for UPI tracking?", a: "Yes. SpendWise provides a manual expense entry interface with AI-powered auto-categorization. Walnut relies on SMS parsing which is less reliable and has had stability issues since the axio rebrand." },
+      { q: "Can I import my Walnut data into SpendWise?", a: "Yes. SpendWise supports CSV import. Export your data from Walnut/axio and import it into SpendWise to get started." },
       { q: "Why did Walnut change to axio?", a: "Walnut rebranded to axio to reflect its pivot from expense tracking to a broader lending and credit platform. This shift has left pure expense tracking as a secondary feature." },
       { q: "Does SpendWise support the Indian financial year?", a: "Yes. SpendWise natively supports the April–March Indian financial year with Lakhs/Crores formatting, tax-season PDF exports, and FY-aligned reports. Walnut uses a standard calendar year." },
     ],
@@ -121,7 +121,7 @@ const comparisonData: Record<string, {
         category: "Core Expense Tracking",
         items: [
           { feature: "Manual expense entry", spendwise: true, competitor: true },
-          { feature: "UPI transaction tracking", spendwise: "Automatic with AI categorization", competitor: "Limited SMS-based" },
+          { feature: "UPI transaction tracking", spendwise: "Manual entry with auto-categorization", competitor: "Limited SMS-based" },
           { feature: "Income tracking", spendwise: true, competitor: "Limited" },
           { feature: "Budget management", spendwise: "Dynamic 50/30/20 budgeting", competitor: "Basic budgeting", spendwiseNote: "Needs vs Wants split" },
           { feature: "Multi-currency support", spendwise: true, competitor: "INR only", spendwiseNote: "With Lakhs/Crores formatting" },
@@ -175,7 +175,7 @@ const comparisonData: Record<string, {
     ],
     faqs: [
       { q: "Is SpendWise better than ET Money for expense tracking?", a: "Yes, if expense tracking is your primary need. ET Money is a comprehensive financial suite (SIPs, insurance, tax) that includes expense tracking as one feature. SpendWise focuses exclusively on expense tracking with deeper AI analysis." },
-      { q: "Does ET Money have AI analysis like SpendWise?", a: "ET Money provides basic spending insights. SpendWise's forensic AI goes deeper — detecting anomalies, subscription leaks, and providing behavioral spending patterns that ET Money doesn't offer." },
+      { q: "Does ET Money have AI analysis like SpendWise?", a: "ET Money provides basic spending insights. SpendWise's forensic AI goes deeper — detecting anomalies and providing behavioral spending patterns that ET Money doesn't offer." },
       { q: "Can I use both SpendWise and ET Money together?", a: "Absolutely. Many users use ET Money for investments and SIPs while using SpendWise for daily expense tracking and budget management. They complement each other well." },
       { q: "Does SpendWise support tax planning like ET Money?", a: "SpendWise provides tax-season PDF exports aligned to the Indian financial year (April–March) with GST-ready categorization. For detailed 80C/80D investment planning, ET Money is more specialized." },
     ],

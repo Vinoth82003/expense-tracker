@@ -148,7 +148,7 @@ export function TestimonialsSection({ limit = 3 }: { limit?: number }) {
             Testimonials
           </div>
           <h2 className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground max-w-[600px] mx-auto">
-            Loved by thousands.{" "}
+            Loved by our users.{" "}
             <span className="text-primary-600">Here&apos;s proof.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-[500px] text-[15px] leading-relaxed text-secondary">

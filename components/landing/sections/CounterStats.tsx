@@ -4,9 +4,16 @@ import { useEffect, useState, useRef } from "react";
 import {
   Users,
   IndianRupee,
-  ShieldCheck,
   Star,
+  FileText,
 } from "lucide-react";
+
+interface PublicStats {
+  totalUsers: number;
+  totalExpenses: number;
+  avgRating: number | null;
+  ratingCount: number;
+}
 
 function useCountUp(end: number, duration = 1800, decimals = 0) {
   const [value, setValue] = useState(0);
@@ -44,12 +51,12 @@ function useCountUp(end: number, duration = 1800, decimals = 0) {
   };
 }
 
-const counterItems = [
-  { icon: Users, value: 100, suffix: "+", label: "Active Users", decimals: 0 },
-  { icon: IndianRupee, value: 50, suffix: "L+", label: "Expenses Tracked", decimals: 0 },
-  { icon: ShieldCheck, value: 99.9, suffix: "%", label: "Uptime", decimals: 1 },
-  { icon: Star, value: 4.8, suffix: "/5", label: "User Rating", decimals: 1 },
-];
+function formatExpenses(count: number): string {
+  if (count >= 10000000) return `${(count / 10000000).toFixed(1)}Cr`;
+  if (count >= 100000) return `${(count / 100000).toFixed(1)}L`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+  return count.toString();
+}
 
 const CounterStat = ({
   icon: Icon,
@@ -83,11 +90,64 @@ const CounterStat = ({
 };
 
 export function CounterStats() {
+  const [stats, setStats] = useState<PublicStats | null>(null);
+
+  useEffect(() => {
+    fetch("/api/public/stats")
+      .then((r) => r.json())
+      .then(setStats)
+      .catch(() => {});
+  }, []);
+
+  const totalUsers = stats?.totalUsers ?? 0;
+  const totalExpenses = stats?.totalExpenses ?? 0;
+  const avgRating = stats?.avgRating ?? 0;
+  const ratingCount = stats?.ratingCount ?? 0;
+
+  const counterItems = [
+    {
+      icon: Users,
+      value: totalUsers,
+      suffix: "+",
+      label: "Active Users",
+      decimals: 0,
+    },
+    {
+      icon: IndianRupee,
+      value: totalExpenses,
+      suffix: "+",
+      label: "Expenses Tracked",
+      decimals: 0,
+      format: true,
+    },
+    {
+      icon: FileText,
+      value: ratingCount,
+      suffix: "+",
+      label: "Reviews",
+      decimals: 0,
+    },
+    {
+      icon: Star,
+      value: avgRating,
+      suffix: "/5",
+      label: "User Rating",
+      decimals: 1,
+    },
+  ];
+
   return (
     <section className="border-y border-border-subtle bg-surface py-12 md:py-16 px-5 md:px-10">
       <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
         {counterItems.map((ci) => (
-          <CounterStat key={ci.label} {...ci} />
+          <CounterStat
+            key={ci.label}
+            icon={ci.icon}
+            value={ci.value}
+            suffix={ci.suffix}
+            label={ci.label}
+            decimals={ci.decimals}
+          />
         ))}
       </div>
     </section>

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     title: "Sign In | SpendWise — AI-Powered Expense Tracker",
     description:
       "Sign in to SpendWise. Access your personal AI-powered expense tracking dashboard securely.",
-    url: "https://money-spend-tracker.vercel.app/login",
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/login`,
     type: "website",
     siteName: "SpendWise",
     images: [

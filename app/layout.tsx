@@ -43,7 +43,7 @@ export const viewport = {
 export const metadata: Metadata = {
   title: "SpendWise | Expense Tracker & Budget Manager for India",
   description:
-    "Master your personal finance with SpendWise, the smart AI-powered UPI expense tracker and budget manager built for India. Track daily spending, set monthly budgets, and gain deep financial insights — aligned to the Indian financial year (April–March).",
+    "Master your personal finance with SpendWise, the smart AI-powered expense tracker and budget manager built for India. Track daily spending, set monthly budgets, and gain deep financial insights — aligned to the Indian financial year (April–March).",
   applicationName: "SpendWise",
   keywords: [
     "expense tracker",
@@ -61,30 +61,30 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "SpendWise" }],
   robots: "index, follow",
-  metadataBase: new URL("https://money-spend-tracker.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "SpendWise | UPI Expense Tracker & Budget Manager for India",
+    title: "SpendWise | Expense Tracker & Budget Manager for India",
     description:
       "Track, categorize, and visualize your expenses. Built for India, powered by AI. Free forever.",
     type: "website",
     siteName: "SpendWise",
-    url: "https://money-spend-tracker.vercel.app",
+    url: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
     images: [
       {
         url: "/og-images/og-home-dark.png",
         width: 1200,
         height: 630,
-        alt: "SpendWise — UPI Expense Tracker for India",
+        alt: "SpendWise — Expense Tracker for India",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SpendWise | UPI Expense Tracker for India",
-    description: "Smart rupee-first UPI expense tracking for every Indian. Free forever.",
+    title: "SpendWise | Expense Tracker for India",
+    description: "Smart rupee-first expense tracking for every Indian. Free forever.",
     images: ["/og-images/og-home-dark.png"],
   },
   manifest: "/manifest.json",

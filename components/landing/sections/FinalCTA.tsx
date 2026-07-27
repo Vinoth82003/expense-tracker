@@ -8,7 +8,7 @@ import { fadeUp } from "./animations";
 const trustSignals = [
   "No credit card required",
   "Free forever tier",
-  "Cancel anytime",
+  "Export your data anytime",
 ];
 
 export function FinalCTA() {
@@ -35,7 +35,7 @@ export function FinalCTA() {
           viewport={{ once: true, margin: "-60px" }}
           className="text-[15px] md:text-[16px] text-secondary leading-relaxed max-w-[460px] mx-auto mb-10"
         >
-          Join 10,000+ people who upgraded from financial chaos to clarity.
+          Take control of your finances with AI-powered insights.
           Start free today — your future self will thank you.
         </motion.p>
 

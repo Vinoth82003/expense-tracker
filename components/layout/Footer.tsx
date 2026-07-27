@@ -65,7 +65,7 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-sm text-secondary leading-relaxed max-w-[260px]">
-              The smart UPI expense tracker and budget manager built for India.
+              The smart expense tracker and budget manager built for India.
               Master every rupee with AI-powered insights.
             </p>
             <div className="flex items-center gap-3">

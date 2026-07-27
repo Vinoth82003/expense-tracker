@@ -5,17 +5,17 @@ import Link from "next/link";
 import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "System Status | SpendWise — AI-Powered Expense Tracker for India",
+  title: "System Status | SpendWise — Expense Tracker for India",
   description:
     "Real-time status of SpendWise services including API, database, authentication, and AI features.",
   alternates: {
     canonical: "/status",
   },
   openGraph: {
-    title: "System Status | SpendWise — AI-Powered Expense Tracker for India",
+    title: "System Status | SpendWise — Expense Tracker for India",
     description:
       "Real-time status of SpendWise services including API, database, authentication, and AI features.",
-    url: "https://money-spend-tracker.vercel.app/status",
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/status`,
     images: [
       {
         url: "/og-images/og-status-dark.png",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "System Status | SpendWise — AI-Powered Expense Tracker for India",
+    title: "System Status | SpendWise — Expense Tracker for India",
     description:
       "Real-time status of SpendWise services including API, database, authentication, and AI features.",
     images: ["/og-images/og-status-dark.png"],

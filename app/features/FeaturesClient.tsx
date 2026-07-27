@@ -53,7 +53,7 @@ function FeatureDeepDive() {
           </h2>
           <p className="mx-auto max-w-[500px] text-[15px] leading-relaxed text-secondary">
             Six core capabilities. Zero bloat. Every feature is built for the
-            Indian economy — from UPI tracking to Lakhs &amp; Crores formatting.
+            Indian economy — from expense tracking to Lakhs &amp; Crores formatting.
           </p>
         </motion.div>
 
@@ -345,7 +345,7 @@ function FinalCTA() {
   const trustSignals = [
     "No credit card required",
     "Free forever tier",
-    "Cancel anytime",
+    "Export your data anytime",
   ];
 
   return (
@@ -369,7 +369,7 @@ function FinalCTA() {
           viewport={{ once: true, margin: "-60px" }}
           className="text-[15px] md:text-[16px] text-secondary leading-relaxed max-w-[460px] mx-auto mb-10"
         >
-          Join 10,000+ people who upgraded from financial chaos to clarity.
+          Take control of your finances with AI-powered insights.
           Start free today — your future self will thank you.
         </motion.p>
 

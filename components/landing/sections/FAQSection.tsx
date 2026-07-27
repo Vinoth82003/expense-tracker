@@ -8,7 +8,7 @@ import { fadeUp } from "./animations";
 const faqs = [
   {
     q: "What is SpendWise?",
-    a: "SpendWise is a smart expense tracker built for India. It auto-categorizes UPI transactions, tracks budgets in real time, and gives you AI-powered insights into where your money goes — all from your phone.",
+    a: "SpendWise is a smart expense tracker built for India. It auto-categorizes your expenses, tracks budgets in real time, and gives you AI-powered insights into where your money goes — all from your phone.",
   },
   {
     q: "How does Sage AI work?",
@@ -20,7 +20,7 @@ const faqs = [
   },
   {
     q: "Is my financial data secure?",
-    a: "Absolutely. We use Google OAuth 2.0 for authentication, encrypt all data in transit and at rest, and never store passwords. Your data stays in your account — we never share it with third parties.",
+    a: "Absolutely. We use Google OAuth 2.0 for authentication, encrypt all data in transit, and use secure password hashing. Your data stays in your account — we never share it with third parties.",
   },
   {
     q: "Can teams use SpendWise?",
@@ -36,7 +36,7 @@ const faqs = [
   },
   {
     q: "Does SpendWise support recurring expenses?",
-    a: "Yes. Track subscriptions, rent, EMIs, SIPs, and any recurring charge. SpendWise logs them automatically and alerts you before they hit your account.",
+    a: "Currently, SpendWise supports manual expense entry. You can log subscriptions, rent, EMIs, and SIPs as regular expenses and track them in your reports.",
   },
 ];
 

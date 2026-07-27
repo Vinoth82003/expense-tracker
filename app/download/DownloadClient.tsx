@@ -260,7 +260,7 @@ export default function DownloadClient() {
               {[
                 { icon: Zap, title: "Always Up to Date", desc: "Updates happen seamlessly in the background." },
                 { icon: WifiOff, title: "Offline Ready", desc: "View and add transactions even without internet." },
-                { icon: Smartphone, title: "Zero Storage Hog", desc: "Takes up barely any space on your device." },
+                { icon: Smartphone, title: "Lightweight", desc: "Takes up barely any space on your device." },
               ].map((f, i) => (
                 <div key={i} className="rounded-2xl border border-border-subtle bg-surface p-7 shadow-sm">
                   <div className="w-11 h-11 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600 mb-5">
@@ -304,8 +304,8 @@ export default function DownloadClient() {
               </h1>
 
               <p className="text-[15px] md:text-[17px] text-secondary leading-relaxed max-w-[480px]">
-                Experience unparalleled speed and native integration. SpendWise
-                Desktop puts your finances at your fingertips.
+                A fast, lightweight desktop tracker for Windows. SpendWise
+                puts your finances at your fingertips.
               </p>
             </motion.div>
 
@@ -438,7 +438,7 @@ export default function DownloadClient() {
               {
                 icon: Zap,
                 title: "Lightning Fast",
-                desc: "Native performance leveraging your hardware for instant load times.",
+                desc: "Optimised Electron build with fast load times.",
               },
               {
                 icon: WifiOff,
@@ -447,13 +447,13 @@ export default function DownloadClient() {
               },
               {
                 icon: Bell,
-                title: "Native Alerts",
+                title: "Desktop Notifications",
                 desc: "System-level notifications for budget limits and reminders.",
               },
               {
                 icon: Shield,
                 title: "Secure Storage",
-                desc: "Local encryption keeps your financial data strictly private.",
+                desc: "Your data is stored locally and transmitted encrypted.",
               },
             ].map((f, i) => (
               <div

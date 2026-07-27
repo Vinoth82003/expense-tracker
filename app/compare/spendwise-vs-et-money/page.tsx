@@ -4,15 +4,15 @@ import { CompareClient } from "../CompareClient";
 export const metadata: Metadata = {
   title: "SpendWise vs ET Money | Expense Tracker Comparison 2026",
   description:
-    "Compare SpendWise vs ET Money for personal finance management in India. See which app offers better UPI tracking, AI insights, budgeting tools, and Indian financial year support.",
+    "Compare SpendWise vs ET Money for personal finance management in India. See which app offers better expense tracking, AI insights, budgeting tools, and Indian financial year support.",
   alternates: {
     canonical: "/compare/spendwise-vs-et-money",
   },
   openGraph: {
     title: "SpendWise vs ET Money | Expense Tracker Comparison 2026",
     description:
-      "Compare SpendWise vs ET Money for personal finance management in India. UPI tracking, AI insights, budgeting tools, and Indian financial year support.",
-    url: "https://money-spend-tracker.vercel.app/compare/spendwise-vs-et-money",
+      "Compare SpendWise vs ET Money for personal finance management in India. Expense tracking, AI insights, budgeting tools, and Indian financial year support.",
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/compare/spendwise-vs-et-money`,
     type: "website",
     images: [
       {
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "SpendWise vs ET Money | Expense Tracker Comparison 2026",
     description:
-      "Compare SpendWise vs ET Money for personal finance management in India. UPI tracking, AI insights, budgeting tools, and Indian financial year support.",
+      "Compare SpendWise vs ET Money for personal finance management in India. Expense tracking, AI insights, budgeting tools, and Indian financial year support.",
     images: ["/og-images/og-home-dark.png"],
   },
 };
@@ -37,7 +37,7 @@ const comparisonStructuredData = {
   "@type": "ComparisonPage",
   "name": "SpendWise vs ET Money — Expense Tracker Comparison",
   "description": "A detailed comparison of SpendWise and ET Money for personal finance management in India.",
-  "url": "https://money-spend-tracker.vercel.app/compare/spendwise-vs-et-money",
+  "url": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/compare/spendwise-vs-et-money`,
   "about": {
     "@type": "SoftwareApplication",
     "name": "SpendWise",

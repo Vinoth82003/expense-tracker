@@ -82,11 +82,11 @@ export function BentoHighlights() {
               <Tag size={20} />
             </div>
             <h3 className="text-xl md:text-2xl font-black text-foreground mb-2">
-              Granular Tagging Systems
+              Smart Categorization
             </h3>
             <p className="text-sm text-secondary font-medium leading-relaxed max-w-md">
-              Categorize every expense with custom forensic labels and
-              multi-level tagging hierarchies.
+              Categorize every expense into Needs and Wants with custom
+              subcategories that match your spending patterns.
             </p>
           </div>
         </motion.div>
@@ -130,8 +130,8 @@ export function BentoHighlights() {
               Instant Insight Generation
             </h3>
             <p className="text-sm font-medium text-white/90 leading-relaxed">
-              Get a forensic overview of your monthly health in under 2 seconds
-              with our optimised edge engine.
+              Get a forensic overview of your monthly health
+              with our AI-powered analysis engine.
             </p>
           </div>
         </motion.div>

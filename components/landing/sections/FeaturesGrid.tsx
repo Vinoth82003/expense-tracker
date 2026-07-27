@@ -9,7 +9,6 @@ import {
   Target,
   ShieldCheck,
   FileText,
-  RefreshCw,
   Globe,
   Sparkles,
 } from "lucide-react";
@@ -38,19 +37,10 @@ const features = [
     icon: Target,
     title: "Smart Budgets",
     description:
-      "Set monthly budgets that adapt to your lifestyle. Real-time alerts fire before you overspend — not after the damage is done.",
+      "Set a monthly budget limit and track your spending against it in real time. Get email alerts before you overspend.",
     iconBg: "bg-blue-500/10",
     iconColor: "text-blue-600",
     iconBorder: "border-blue-500/20",
-  },
-  {
-    icon: RefreshCw,
-    title: "Subscriptions & Bills",
-    description:
-      "Track recurring charges across Netflix, phone bills, rent, and SIPs. Know exactly what you are locked into every month.",
-    iconBg: "bg-amber-500/10",
-    iconColor: "text-amber-600",
-    iconBorder: "border-amber-500/20",
   },
   {
     icon: FileText,
@@ -63,9 +53,9 @@ const features = [
   },
   {
     icon: ShieldCheck,
-    title: "Bank-Grade Security",
+    title: "Strong Security",
     description:
-      "Google OAuth 2.0, encryption in transit and at rest, zero password storage. Your financial data stays entirely yours.",
+      "Google OAuth 2.0, encryption in transit, bcrypt password hashing, and optional 2FA. Your financial data stays entirely yours.",
     iconBg: "bg-red-500/10",
     iconColor: "text-red-500",
     iconBorder: "border-red-500/20",

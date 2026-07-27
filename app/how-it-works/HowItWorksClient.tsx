@@ -48,7 +48,7 @@ const steps = [
     bullets: [
       "Secure Google OAuth — one tap sign-in",
       "Email + password option available",
-      "Bank-grade encryption on all data",
+      "Industry-standard security with encryption in transit",
     ],
   },
   {
@@ -550,7 +550,7 @@ export function HowItWorksClient() {
               </h2>
 
               <p className="text-[15px] md:text-[17px] text-secondary max-w-xl mx-auto leading-relaxed">
-                Join thousands of Indians who stopped guessing and started
+                Join thousands of users who stopped guessing and started
                 growing. Free forever — no credit card needed.
               </p>
 

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     title: "Contact Us | SpendWise — AI-Powered Expense Tracker",
     description:
       "Get in touch with the SpendWise support team. Send us a message, email support@spendwise.app, or call our Indian helpline.",
-    url: "https://money-spend-tracker.vercel.app/contact",
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/contact`,
     type: "website",
     siteName: "SpendWise",
     images: [
@@ -45,12 +45,12 @@ const contactStructuredData = {
   "@type": "ContactPage",
   "name": "Contact SpendWise",
   "description": "Get in touch with the SpendWise support team.",
-  "url": "https://money-spend-tracker.vercel.app/contact",
+  "url": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/contact`,
   "mainEntity": {
     "@type": "Organization",
     "name": "SpendWise",
     "email": "support@spendwise.app",
-    "url": "https://money-spend-tracker.vercel.app",
+    "url": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
   },
 };
 
@@ -62,13 +62,13 @@ const breadcrumbStructuredData = {
       "@type": "ListItem",
       "position": 1,
       "name": "Home",
-      "item": "https://money-spend-tracker.vercel.app",
+        "item": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
     },
     {
       "@type": "ListItem",
       "position": 2,
       "name": "Contact",
-      "item": "https://money-spend-tracker.vercel.app/contact",
+      "item": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/contact`,
     },
   ],
 };

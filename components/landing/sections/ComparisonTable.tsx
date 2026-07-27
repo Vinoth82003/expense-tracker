@@ -119,7 +119,7 @@ export function ComparisonTable() {
             Comparison
           </div>
           <h2 className="text-[28px] md:text-[36px] lg:text-[40px] font-bold leading-[1.15] tracking-tight text-foreground max-w-[620px] mx-auto">
-            Why teams choose{" "}
+            Why people choose{" "}
             <span className="text-primary-600">SpendWise</span>.
           </h2>
           <p className="mt-4 text-[14px] md:text-[15px] text-secondary leading-relaxed max-w-[520px] mx-auto">

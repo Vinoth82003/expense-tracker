@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     title: "FAQ | SpendWise — AI-Powered Expense Tracker",
     description:
       "Find answers to common questions about SpendWise — AI analysis, expense tracking, security, exports, and more.",
-    url: "https://money-spend-tracker.vercel.app/faq",
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/faq`,
     type: "website",
     siteName: "SpendWise",
     images: [
@@ -82,13 +82,13 @@ export default async function FAQPage() {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": "https://money-spend-tracker.vercel.app",
+        "item": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "FAQ",
-        "item": "https://money-spend-tracker.vercel.app/faq",
+        "item": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/faq`,
       },
     ],
   };

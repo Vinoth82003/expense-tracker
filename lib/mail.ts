@@ -66,7 +66,7 @@ export const wrapLayout = (content: string, recipientEmail = "") => {
         <div class="container">
           <div class="header">
             <div class="logo-box">
-              <img src="https://money-spend-tracker.vercel.app/web-app-manifest-192x192.png" width="48" height="48" alt="SpendWise Logo" style="display: block; border-radius: 14px;" />
+              <img src="${process.env.NEXT_PUBLIC_PRODUCTION_LINK || 'http://localhost:3000'}/web-app-manifest-192x192.png" width="48" height="48" alt="SpendWise Logo" style="display: block; border-radius: 14px;" />
             </div>
             <h1 class="brand-name">Spend<span>Wise</span></h1>
           </div>

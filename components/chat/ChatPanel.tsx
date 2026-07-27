@@ -872,7 +872,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
               </span>
               <div className="mt-1.5 flex items-center justify-center gap-3">
                 <a
-                  href="https://money-spend-tracker.vercel.app/docs/sage-ai-the-spendwise-chatbot"
+                  href="/docs/sage-ai-the-spendwise-chatbot"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[10px] font-bold text-primary-500/70 hover:text-primary-600 transition-colors"
@@ -881,7 +881,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 </a>
                 <span className="text-[10px] text-muted/40">•</span>
                 <a
-                  href="https://money-spend-tracker.vercel.app/docs/sage-ai-query-guide"
+                  href="/docs/sage-ai-query-guide"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[10px] font-bold text-primary-500/70 hover:text-primary-600 transition-colors"

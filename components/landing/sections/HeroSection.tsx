@@ -37,7 +37,7 @@ export function HeroSection() {
             }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
-            SpendWise 2.0 is live
+            AI-powered insights are here
           </motion.div>
 
           {/* Headline — 3 lines, gradient highlights, last word plain */}
@@ -101,7 +101,7 @@ export function HeroSection() {
             className="text-[13px] text-muted flex items-center gap-1.5"
           >
             <Zap size={13} className="text-primary-500" />
-            4,218 transactions categorized today
+            Built for the Indian financial year
           </motion.p>
         </motion.div>
 
