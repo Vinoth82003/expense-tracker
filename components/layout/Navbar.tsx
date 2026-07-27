@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, TrendingUp, ChevronRight, ArrowUp } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { AnnouncementBar } from "@/components/layout/AnnouncementBar";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -50,6 +51,7 @@ export function Navbar() {
 
   return (
     <>
+      <AnnouncementBar />
       <header
         className={cn(
           "sticky top-0 z-50 w-full bg-surface border-b border-border-subtle transition-shadow duration-200",
