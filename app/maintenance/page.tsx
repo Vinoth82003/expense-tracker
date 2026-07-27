@@ -50,7 +50,7 @@ export default function MaintenancePage() {
             <ShieldAlert size={40} className="text-amber-500" />
           </div>
 
-          <h1 className="text-3xl font-black mb-3">System Maintenance</h1>
+          <h1 className="text-[24px] font-bold mb-3">System Maintenance</h1>
           <p className="text-secondary font-medium mb-8">
             {message}
           </p>
@@ -59,14 +59,14 @@ export default function MaintenancePage() {
             <button
               onClick={fetchStatus}
               disabled={isChecking}
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary-500 text-white font-bold hover:bg-primary-600 transition-colors disabled:opacity-50 w-full"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-primary-600 text-white font-bold text-[14px] hover:bg-primary-700 shadow-lg shadow-primary-600/25 transition-colors disabled:opacity-50 w-full"
             >
               <RefreshCw size={18} className={isChecking ? "animate-spin" : ""} />
               Check Status
             </button>
             <Link
               href="/"
-              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-surface-variant text-foreground font-bold hover:bg-surface-variant/80 transition-colors w-full"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-full bg-surface-variant text-foreground font-bold text-[14px] hover:bg-surface-variant/80 border border-border-subtle transition-colors w-full"
             >
               <Home size={18} />
               Homepage

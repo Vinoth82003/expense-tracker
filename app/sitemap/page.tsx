@@ -21,37 +21,36 @@ import {
   Bell,
   Lock,
   Compass,
-  Download
+  Download,
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Sitemap | SpendWise — UPI Expense Tracker for India",
-  description: "Navigate through the full page directory, help guides, documentation articles, and user dashboard paths of SpendWise.",
+  title: "Sitemap | SpendWise — AI-Powered Expense Tracker for India",
+  description:
+    "Navigate through the full page directory, help guides, documentation articles, and user dashboard paths of SpendWise.",
   robots: "index, follow",
 };
+
+function Separator() {
+  return (
+    <div className="mx-auto max-w-[1120px]">
+      <div className="h-px w-full bg-border-subtle" />
+    </div>
+  );
+}
 
 export default async function SitemapPage() {
   let dbDocs: any[] = [];
   try {
     dbDocs = await prisma.doc.findMany({
-      where: {
-        status: "PUBLISHED",
-      },
-      orderBy: {
-        order: "asc",
-      },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        category: true,
-      }
+      where: { status: "PUBLISHED" },
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, slug: true, category: true },
     });
   } catch (error) {
     console.error("Failed to load database docs for sitemap page:", error);
   }
 
-  // Define static public routes
   const publicRoutes = [
     { label: "Home Page", href: "/", desc: "Main landing page and overview of SpendWise.", icon: Home },
     { label: "Features", href: "/features", desc: "Deep dive into budget limits, categories, and tracking.", icon: Compass },
@@ -62,20 +61,17 @@ export default async function SitemapPage() {
     { label: "System Status", href: "/status", desc: "Real-time health indicator of database, API, and app servers.", icon: Activity },
   ];
 
-  // Define comparison and tools routes
   const compareRoutes = [
     { label: "SpendWise vs Walnut", href: "/compare/spendwise-vs-walnut", desc: "Compare SpendWise with Walnut (axio) for UPI expense tracking.", icon: TrendingUp },
     { label: "SpendWise vs ET Money", href: "/compare/spendwise-vs-et-money", desc: "Compare SpendWise with ET Money for personal finance management.", icon: TrendingUp },
     { label: "50/30/20 Budget Calculator", href: "/tools/50-30-20-budget-calculator", desc: "Free calculator to split your income into Needs, Wants, and Savings.", icon: Coins },
   ];
 
-  // Define legal and compliance routes
   const legalRoutes = [
     { label: "Privacy Policy", href: "/privacy", desc: "Detailed terms on how your personal data is handled and encrypted.", icon: Shield },
     { label: "Terms of Service", href: "/terms", desc: "Governing rules and usage conditions for using SpendWise.", icon: FileText },
   ];
 
-  // Define portal / authenticated routes (indicated as secure/locked)
   const portalRoutes = [
     { label: "Sign In", href: "/login", desc: "Access your account via secure Google OAuth or credentials.", icon: Lock },
     { label: "User Onboarding", href: "/onboarding", desc: "Initial questionnaire to tailor monthly limits.", icon: HelpCircle },
@@ -92,205 +88,235 @@ export default async function SitemapPage() {
     <>
       <Navbar />
 
-      <main className="pt-32 pb-24 min-h-screen bg-background relative overflow-hidden">
-        {/* Decorative background gradients */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] pointer-events-none -z-10 overflow-hidden">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary-500/5 blur-[120px] rounded-full" />
-          <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-violet-500/5 blur-[100px] rounded-full" />
-        </div>
-
-        {/* Hero Section */}
-        <section className="px-5 md:px-10 max-w-5xl mx-auto mb-16 text-center">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/5 text-primary-600 text-[10px] font-black tracking-widest uppercase border border-primary-500/10 backdrop-blur-sm">
+      <main className="overflow-x-hidden" id="main-content">
+        {/* ═══════════ HERO ═══════════ */}
+        <section className="relative bg-surface-variant/40 py-5 md:py-10 px-5 md:px-10">
+          <div className="max-w-7xl mx-auto text-center space-y-5">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary">
+              <Compass size={12} className="text-primary-500" />
               Site Index
             </div>
-            <h1 className="text-5xl md:text-7xl font-black text-foreground tracking-tight leading-none">
-              Sitemap <br />
-              <span className="text-primary-600">Directory</span>
+
+            <h1 className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground max-w-[600px] mx-auto mb-6">
+              Sitemap <span className="text-primary-600">Directory</span>
             </h1>
-            <p className="text-lg md:text-xl text-secondary max-w-2xl mx-auto font-medium leading-relaxed opacity-80">
-              Browse through all sections, active user guides, and application tools available on the SpendWise platform.
+
+            <p className="text-[15px] md:text-[17px] text-secondary max-w-xl mx-auto leading-relaxed">
+              Browse through all sections, active user guides, and application
+              tools available on the SpendWise platform.
             </p>
           </div>
         </section>
 
-        {/* Sitemap Grid */}
-        <section className="px-5 md:px-10 max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
-            {/* 1. Public Pages */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 md:p-10 space-y-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600">
-                  <Compass size={20} />
-                </div>
-                <h2 className="text-2xl font-black text-foreground tracking-tight">Public Website</h2>
+        <Separator />
+
+        {/* ═══════════ PUBLIC PAGES ═══════════ */}
+        <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[1120px] mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600">
+                <Compass size={20} />
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                {publicRoutes.map((route) => (
-                  <Link 
-                    key={route.href} 
-                    href={route.href}
-                    className="group flex gap-4 p-4 rounded-2xl hover:bg-surface-variant/40 border border-transparent hover:border-border-subtle transition-all duration-300"
-                  >
-                    <div className="w-10 h-10 shrink-0 rounded-xl bg-surface-variant/80 group-hover:bg-primary-500 group-hover:text-white flex items-center justify-center text-secondary transition-all">
-                      <route.icon size={18} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-foreground group-hover:text-primary-600 transition-colors text-sm">
+              <h2 className="text-[22px] font-bold text-foreground">
+                Public Website
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {publicRoutes.map((route) => (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  className="group flex gap-4 p-4 rounded-2xl hover:bg-surface-variant/40 border border-transparent hover:border-border-subtle transition-all duration-300"
+                >
+                  <div className="w-10 h-10 shrink-0 rounded-xl bg-surface-variant/80 group-hover:bg-primary-500 group-hover:text-white flex items-center justify-center text-secondary transition-all">
+                    <route.icon size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-foreground group-hover:text-primary-600 transition-colors text-[14px]">
+                      {route.label}
+                    </h3>
+                    <p className="text-[12px] text-secondary font-medium mt-1 leading-normal">
+                      {route.desc}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* ═══════════ APP PORTAL ═══════════ */}
+        <section className="bg-surface-variant/40 px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[1120px] mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-600">
+                <Lock size={20} />
+              </div>
+              <h2 className="text-[22px] font-bold text-foreground">
+                App Portal & Tools
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {portalRoutes.map((route) => (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  className="group flex gap-4 p-4 rounded-2xl hover:bg-surface/60 border border-transparent hover:border-border-subtle transition-all duration-300"
+                >
+                  <div className="w-10 h-10 shrink-0 rounded-xl bg-surface/80 group-hover:bg-violet-500 group-hover:text-white flex items-center justify-center text-secondary transition-all">
+                    <route.icon size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-foreground group-hover:text-violet-600 transition-colors text-[14px]">
                         {route.label}
                       </h3>
-                      <p className="text-xs text-secondary font-medium mt-1 leading-normal">
-                        {route.desc}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. App Portal Paths */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 md:p-10 space-y-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-600">
-                  <Lock size={20} />
-                </div>
-                <h2 className="text-2xl font-black text-foreground tracking-tight">App Portal & Tools</h2>
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                {portalRoutes.map((route) => (
-                  <Link 
-                    key={route.href} 
-                    href={route.href}
-                    className="group flex gap-4 p-4 rounded-2xl hover:bg-surface-variant/40 border border-transparent hover:border-border-subtle transition-all duration-300"
-                  >
-                    <div className="w-10 h-10 shrink-0 rounded-xl bg-surface-variant/80 group-hover:bg-violet-500 group-hover:text-white flex items-center justify-center text-secondary transition-all">
-                      <route.icon size={18} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-foreground group-hover:text-violet-600 transition-colors text-sm">
-                          {route.label}
-                        </h3>
-                        {route.href !== "/login" && route.href !== "/onboarding" && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[8px] font-black uppercase tracking-wider">
+                      {route.href !== "/login" &&
+                        route.href !== "/onboarding" && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-warning/10 text-warning text-[9px] font-semibold uppercase tracking-wider">
                             Secure
                           </span>
                         )}
-                      </div>
-                      <p className="text-xs text-secondary font-medium mt-1 leading-normal">
-                        {route.desc}
-                      </p>
                     </div>
-                  </Link>
-                ))}
+                    <p className="text-[12px] text-secondary font-medium mt-1 leading-normal">
+                      {route.desc}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* ═══════════ COMPARISONS & TOOLS ═══════════ */}
+        <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[1120px] mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+                <TrendingUp size={20} />
               </div>
+              <h2 className="text-[22px] font-bold text-foreground">
+                Comparisons & Free Tools
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {compareRoutes.map((route) => (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  className="group p-5 rounded-2xl bg-surface-variant/20 border border-border-subtle hover:border-amber-500/30 hover:bg-surface-variant/40 transition-all duration-300 flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <span className="inline-block px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 text-[10px] font-semibold uppercase tracking-wider">
+                      {route.href.includes("/tools/")
+                        ? "Free Tool"
+                        : "Comparison"}
+                    </span>
+                    <h3 className="font-bold text-foreground group-hover:text-amber-600 transition-colors text-[14px] pt-1">
+                      {route.label}
+                    </h3>
+                    <p className="text-[12px] text-secondary font-medium leading-normal">
+                      {route.desc}
+                    </p>
+                  </div>
+                  <div className="text-[12px] font-semibold text-secondary group-hover:text-amber-600 flex items-center gap-1 mt-4 transition-colors">
+                    View{" "}
+                    <span className="transition-transform group-hover:translate-x-1">
+                      →
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* ═══════════ DOCUMENTATION ═══════════ */}
+        <section className="bg-surface-variant/40 px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[1120px] mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                <BookOpen size={20} />
+              </div>
+              <h2 className="text-[22px] font-bold text-foreground">
+                Product Documentation
+              </h2>
             </div>
 
-            {/* 3. Comparisons & Tools */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 md:p-10 space-y-6 shadow-sm md:col-span-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
-                  <TrendingUp size={20} />
-                </div>
-                <h2 className="text-2xl font-black text-foreground tracking-tight">Comparisons & Free Tools</h2>
-              </div>
+            {dbDocs.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {compareRoutes.map((route) => (
+                {dbDocs.map((doc) => (
                   <Link
-                    key={route.href}
-                    href={route.href}
-                    className="group p-5 rounded-2xl bg-surface-variant/20 border border-border-subtle hover:border-amber-500/30 hover:bg-surface-variant/40 transition-all duration-300 flex flex-col justify-between"
+                    key={doc.id}
+                    href={`/docs/${doc.slug}`}
+                    className="group p-5 rounded-2xl bg-surface/40 border border-border-subtle hover:border-emerald-500/30 hover:bg-surface/60 transition-all duration-300 flex flex-col justify-between"
                   >
                     <div className="space-y-2">
-                      <span className="inline-block px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-600 text-[9px] font-black uppercase tracking-widest">
-                        {route.href.includes("/tools/") ? "Free Tool" : "Comparison"}
+                      <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 text-[10px] font-semibold uppercase tracking-wider">
+                        {doc.category || "General"}
                       </span>
-                      <h3 className="font-bold text-foreground group-hover:text-amber-600 transition-colors text-sm pt-1">
-                        {route.label}
+                      <h3 className="font-bold text-foreground group-hover:text-emerald-600 transition-colors text-[14px] pt-1">
+                        {doc.title}
                       </h3>
-                      <p className="text-xs text-secondary font-medium leading-normal">
-                        {route.desc}
-                      </p>
                     </div>
-                    <div className="text-xs font-black text-secondary group-hover:text-amber-600 flex items-center gap-1 mt-4 transition-colors">
-                      View <span className="transition-transform group-hover:translate-x-1">→</span>
+                    <div className="text-[12px] font-semibold text-secondary group-hover:text-emerald-600 flex items-center gap-1 mt-4 transition-colors">
+                      Read Guide{" "}
+                      <span className="transition-transform group-hover:translate-x-1">
+                        →
+                      </span>
                     </div>
                   </Link>
                 ))}
               </div>
-            </div>
-
-            {/* 4. Documentation & Guides */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 md:p-10 space-y-6 shadow-sm md:col-span-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-                  <BookOpen size={20} />
-                </div>
-                <h2 className="text-2xl font-black text-foreground tracking-tight font-outfit">Product Documentation & Help Guides</h2>
+            ) : (
+              <div className="p-8 rounded-2xl bg-surface/40 border border-dashed border-border-subtle text-center text-secondary font-medium text-[14px]">
+                No active guides are currently published. Browse our general
+                features page for guidelines.
               </div>
-              
-              {dbDocs.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {dbDocs.map((doc) => (
-                    <Link
-                      key={doc.id}
-                      href={`/docs/${doc.slug}`}
-                      className="group p-5 rounded-2xl bg-surface-variant/20 border border-border-subtle hover:border-emerald-500/30 hover:bg-surface-variant/40 transition-all duration-300 flex flex-col justify-between"
-                    >
-                      <div className="space-y-2">
-                        <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase tracking-widest">
-                          {doc.category || "General"}
-                        </span>
-                        <h3 className="font-bold text-foreground group-hover:text-emerald-600 transition-colors text-sm pt-1">
-                          {doc.title}
-                        </h3>
-                      </div>
-                      <div className="text-xs font-black text-secondary group-hover:text-emerald-600 flex items-center gap-1 mt-4 transition-colors">
-                        Read Guide <span className="transition-transform group-hover:translate-x-1">→</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 rounded-2xl bg-surface-variant/20 border border-dashed border-border-subtle text-center text-secondary font-medium">
-                  No active guides are currently published. Browse our general features page for guidelines.
-                </div>
-              )}
-            </div>
+            )}
+          </div>
+        </section>
 
-            {/* 5. Legal Compliance */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-8 md:p-10 space-y-6 shadow-sm md:col-span-2">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-500/10 flex items-center justify-center text-slate-600">
-                  <Shield size={20} />
-                </div>
-                <h2 className="text-2xl font-black text-foreground tracking-tight">Legal & Compliance</h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {legalRoutes.map((route) => (
-                  <Link 
-                    key={route.href} 
-                    href={route.href}
-                    className="group flex gap-4 p-4 rounded-2xl hover:bg-surface-variant/40 border border-transparent hover:border-border-subtle transition-all duration-300"
-                  >
-                    <div className="w-10 h-10 shrink-0 rounded-xl bg-surface-variant/80 group-hover:bg-slate-700 group-hover:text-white flex items-center justify-center text-secondary transition-all">
-                      <route.icon size={18} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-foreground group-hover:text-slate-700 transition-colors text-sm">
-                        {route.label}
-                      </h3>
-                      <p className="text-xs text-secondary font-medium mt-1 leading-normal">
-                        {route.desc}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
+        <Separator />
 
+        {/* ═══════════ LEGAL ═══════════ */}
+        <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[1120px] mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-slate-500/10 flex items-center justify-center text-slate-600">
+                <Shield size={20} />
+              </div>
+              <h2 className="text-[22px] font-bold text-foreground">
+                Legal & Compliance
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {legalRoutes.map((route) => (
+                <Link
+                  key={route.href}
+                  href={route.href}
+                  className="group flex gap-4 p-4 rounded-2xl hover:bg-surface-variant/40 border border-transparent hover:border-border-subtle transition-all duration-300"
+                >
+                  <div className="w-10 h-10 shrink-0 rounded-xl bg-surface-variant/80 group-hover:bg-slate-700 group-hover:text-white flex items-center justify-center text-secondary transition-all">
+                    <route.icon size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-foreground group-hover:text-slate-700 transition-colors text-[14px]">
+                      {route.label}
+                    </h3>
+                    <p className="text-[12px] text-secondary font-medium mt-1 leading-normal">
+                      {route.desc}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
       </main>

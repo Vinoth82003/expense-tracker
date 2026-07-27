@@ -183,9 +183,17 @@ const comparisonData: Record<string, {
 };
 
 const fadeUp = {
-  hidden: { y: 24, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const } },
+  hidden: { y: 32, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const } },
 };
+
+function Separator() {
+  return (
+    <div className="mx-auto max-w-[1120px]">
+      <div className="h-px w-full bg-border-subtle" />
+    </div>
+  );
+}
 
 export function CompareClient({ competitor, competitorAlt, slug }: CompareClientProps) {
   const data = comparisonData[competitor] || comparisonData.Walnut;
@@ -194,21 +202,21 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
     <>
       <Navbar />
 
-      <main className="pt-32 pb-24 min-h-screen bg-background">
+      <main className="pt-28 pb-0 min-h-screen bg-background">
         <div className="max-w-5xl mx-auto px-5 md:px-10">
-
           {/* Hero */}
           <motion.section
             initial="hidden"
             animate="visible"
             variants={fadeUp}
-            className="text-center mb-20"
+            className="text-center mb-20 mt-10"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/5 text-primary-600 text-[10px] font-black tracking-widest uppercase border border-primary-500/10 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary mb-6">
               Comparison
             </div>
-            <h1 className="text-4xl md:text-6xl font-black text-foreground tracking-tight leading-tight mb-6">
-              SpendWise vs <span className="text-primary-600">{competitor}</span>
+            <h1 className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground max-w-[600px] mx-auto mb-6">
+              SpendWise vs{" "}
+              <span className="text-primary-600">{competitor}</span>
             </h1>
             <p className="text-lg text-secondary max-w-2xl mx-auto font-medium leading-relaxed">
               {data.intro}
@@ -223,9 +231,15 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
             variants={fadeUp}
             className="mb-16 p-8 bg-gradient-to-r from-primary-500/10 to-violet-500/10 border border-primary-500/20 rounded-[2rem] text-center"
           >
-            <p className="text-[10px] font-black uppercase tracking-widest text-primary-600 mb-2">Our Verdict</p>
-            <p className="text-2xl md:text-3xl font-black text-foreground mb-2">{data.verdict} Wins</p>
-            <p className="text-secondary font-medium max-w-xl mx-auto">{data.verdictSummary}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-primary-600 mb-2">
+              Our Verdict
+            </p>
+            <p className="text-[24px] md:text-[28px] font-bold text-foreground mb-2">
+              {data.verdict} Wins
+            </p>
+            <p className="text-secondary font-medium max-w-xl mx-auto">
+              {data.verdictSummary}
+            </p>
           </motion.div>
 
           {/* Feature Comparison Tables */}
@@ -239,8 +253,8 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
               transition={{ delay: sIdx * 0.05 }}
               className="mb-12"
             >
-              <h2 className="text-xl font-black text-foreground mb-6 flex items-center gap-3">
-                <span className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600 text-sm font-black">
+              <h2 className="text-[18px] font-bold text-foreground mb-6 flex items-center gap-3">
+                <span className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600 text-[13px] font-bold">
                   {sIdx + 1}
                 </span>
                 {section.category}
@@ -248,9 +262,15 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
               <div className="bg-surface border border-border-subtle rounded-[1.5rem] overflow-hidden">
                 {/* Header */}
                 <div className="grid grid-cols-3 gap-4 p-4 border-b border-border-subtle bg-surface-variant/30">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-muted">Feature</div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-primary-600 text-center">SpendWise</div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-muted text-center">{competitor}</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+                    Feature
+                  </div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-primary-600 text-center">
+                    SpendWise
+                  </div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted text-center">
+                    {competitor}
+                  </div>
                 </div>
                 {/* Rows */}
                 {section.items.map((item, i) => (
@@ -258,19 +278,28 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
                     key={item.feature}
                     className={`grid grid-cols-3 gap-4 p-4 items-center ${i < section.items.length - 1 ? "border-b border-border-subtle/50" : ""}`}
                   >
-                    <div className="text-sm font-bold text-foreground">{item.feature}</div>
+                    <div className="text-sm font-bold text-foreground">
+                      {item.feature}
+                    </div>
                     <div className="text-center">
                       {typeof item.spendwise === "boolean" ? (
                         item.spendwise ? (
-                          <Check size={18} className="mx-auto text-emerald-500" />
+                          <Check
+                            size={18}
+                            className="mx-auto text-emerald-500"
+                          />
                         ) : (
                           <X size={18} className="mx-auto text-red-400" />
                         )
                       ) : (
                         <div>
-                          <span className="text-xs font-bold text-primary-600">{item.spendwise}</span>
+                          <span className="text-xs font-bold text-primary-600">
+                            {item.spendwise}
+                          </span>
                           {item.spendwiseNote && (
-                            <p className="text-[10px] text-muted mt-0.5">{item.spendwiseNote}</p>
+                            <p className="text-[10px] text-muted mt-0.5">
+                              {item.spendwiseNote}
+                            </p>
                           )}
                         </div>
                       )}
@@ -278,15 +307,22 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
                     <div className="text-center">
                       {typeof item.competitor === "boolean" ? (
                         item.competitor ? (
-                          <Check size={18} className="mx-auto text-emerald-500" />
+                          <Check
+                            size={18}
+                            className="mx-auto text-emerald-500"
+                          />
                         ) : (
                           <X size={18} className="mx-auto text-red-400" />
                         )
                       ) : (
                         <div>
-                          <span className="text-xs font-bold text-secondary">{item.competitor}</span>
+                          <span className="text-xs font-bold text-secondary">
+                            {item.competitor}
+                          </span>
                           {item.competitorNote && (
-                            <p className="text-[10px] text-muted mt-0.5">{item.competitorNote}</p>
+                            <p className="text-[10px] text-muted mt-0.5">
+                              {item.competitorNote}
+                            </p>
                           )}
                         </div>
                       )}
@@ -305,15 +341,16 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
             variants={fadeUp}
             className="text-center mt-20 mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-black text-foreground mb-4">
+            <h2 className="text-[28px] md:text-[36px] font-bold text-foreground mb-4">
               Ready to try SpendWise?
             </h2>
             <p className="text-secondary font-medium mb-8 max-w-lg mx-auto">
-              Join thousands of Indians tracking their expenses with AI-powered insights and Indian financial year reporting.
+              Join thousands of Indians tracking their expenses with AI-powered
+              insights and Indian financial year reporting.
             </p>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/30"
+              className="inline-flex items-center justify-center gap-2.5 px-10 py-4 rounded-full bg-primary-600 text-white text-[16px] font-bold shadow-lg shadow-primary-600/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 min-h-[52px]"
             >
               Get Started Free <ArrowRight size={18} />
             </Link>
@@ -327,14 +364,19 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
             variants={fadeUp}
             className="mt-16"
           >
-            <h2 className="text-2xl font-black text-foreground mb-8 text-center">
+            <h2 className="text-[22px] font-bold text-foreground mb-8 text-center">
               Frequently Asked Questions
             </h2>
             <div className="space-y-4 max-w-3xl mx-auto">
               {data.faqs.map((faq, i) => (
-                <div key={i} className="p-6 bg-surface border border-border-subtle rounded-2xl">
-                  <h3 className="font-black text-foreground mb-2">{faq.q}</h3>
-                  <p className="text-secondary font-medium leading-relaxed text-sm">{faq.a}</p>
+                <div
+                  key={i}
+                  className="p-6 rounded-2xl border border-border-subtle bg-surface shadow-sm"
+                >
+                  <h3 className="font-bold text-foreground mb-2">{faq.q}</h3>
+                  <p className="text-secondary font-medium leading-relaxed text-[14px]">
+                    {faq.a}
+                  </p>
                 </div>
               ))}
             </div>
@@ -346,23 +388,30 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeUp}
-            className="mt-16 text-center"
+            className="mt-16 text-center pb-16"
           >
-            <p className="text-sm text-muted font-bold mb-4">More Comparisons</p>
+            <p className="text-[13px] text-muted font-semibold mb-4">
+              More Comparisons
+            </p>
             <div className="flex flex-wrap justify-center gap-4">
               {slug !== "spendwise-vs-walnut" && (
-                <Link href="/compare/spendwise-vs-walnut" className="px-5 py-2.5 bg-surface border border-border-subtle rounded-xl text-sm font-bold text-secondary hover:text-primary-600 hover:border-primary-500/30 transition-all">
+                <Link
+                  href="/compare/spendwise-vs-walnut"
+                  className="px-5 py-2.5 bg-surface border border-border-subtle rounded-xl text-[13px] font-bold text-secondary hover:text-primary-600 hover:border-primary-500/30 transition-all"
+                >
                   vs Walnut (axio)
                 </Link>
               )}
               {slug !== "spendwise-vs-et-money" && (
-                <Link href="/compare/spendwise-vs-et-money" className="px-5 py-2.5 bg-surface border border-border-subtle rounded-xl text-sm font-bold text-secondary hover:text-primary-600 hover:border-primary-500/30 transition-all">
+                <Link
+                  href="/compare/spendwise-vs-et-money"
+                  className="px-5 py-2.5 bg-surface border border-border-subtle rounded-xl text-[13px] font-bold text-secondary hover:text-primary-600 hover:border-primary-500/30 transition-all"
+                >
                   vs ET Money
                 </Link>
               )}
             </div>
           </motion.section>
-
         </div>
       </main>
 

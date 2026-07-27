@@ -19,11 +19,30 @@ import {
   Share,
   PlusSquare,
   Globe,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import Link from "next/link";
+import type { Variants } from "framer-motion";
+
+const fadeUp: Variants = {
+  hidden: { y: 32, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+function Separator() {
+  return (
+    <div className="mx-auto max-w-[1120px]">
+      <div className="h-px w-full bg-border-subtle" />
+    </div>
+  );
+}
 
 const DOWNLOAD_URL =
   "https://github.com/Vinoth82003/expense-tracker/releases/download/Next.js/SpendWise.Setup.1.0.0.exe";
@@ -76,16 +95,13 @@ export default function DownloadClient() {
 
   const handleDownload = () => {
     setDownloading(true);
-
     const link = document.createElement("a");
     link.href = DOWNLOAD_URL;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
-
     document.body.appendChild(link);
     link.click();
     link.remove();
-
     setDownloading(false);
     setDownloaded(true);
   };
@@ -94,7 +110,7 @@ export default function DownloadClient() {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
+      if (outcome === "accepted") {
         setDeferredPrompt(null);
       }
     }
@@ -102,186 +118,220 @@ export default function DownloadClient() {
 
   const isWindows = os === "windows";
 
+  /* ── MOBILE / TABLET VIEW ── */
   if (deviceType === "mobile" || deviceType === "tablet") {
     return (
       <>
         <Navbar />
-        <main className="min-h-screen pt-24 pb-12 px-4 md:px-8 max-w-2xl mx-auto space-y-12">
-          {/* Mobile Hero */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-6"
-          >
-            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Smartphone size={40} className="text-white" />
-            </div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-              SpendWise on the Go
-            </h1>
-            <p className="text-lg text-secondary max-w-md mx-auto">
-              Install our Progressive Web App for a native-like experience with offline support and zero App Store friction.
-            </p>
-            {deferredPrompt && (
-              <button
-                onClick={handlePwaInstall}
-                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-xl font-semibold transition-all shadow-lg shadow-indigo-600/30"
+        <main className="overflow-x-hidden" id="main-content">
+          {/* Hero */}
+          <section className="relative bg-surface-variant/40 py-5 md:py-10 px-5 md:px-10">
+            <div className="max-w-7xl mx-auto text-center space-y-5">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary"
               >
-                <Download size={20} />
-                Install App Now
-              </button>
-            )}
-          </motion.div>
+                <Smartphone size={12} className="text-primary-500" />
+                Mobile
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-[36px] md:text-[48px] font-bold leading-[1.1] tracking-tight text-foreground max-w-3xl mx-auto"
+              >
+                SpendWise{" "}
+                <span className="text-primary-600">on the go.</span>
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-[15px] text-secondary max-w-xl mx-auto leading-relaxed"
+              >
+                Install our Progressive Web App for a native-like experience
+                with offline support and zero App Store friction.
+              </motion.p>
+
+              {deferredPrompt && (
+                <motion.button
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  onClick={handlePwaInstall}
+                  className="inline-flex items-center justify-center gap-2.5 px-10 py-4 rounded-full bg-primary-600 text-white text-[16px] font-bold shadow-lg shadow-primary-600/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-200 min-h-[52px]"
+                >
+                  <Download size={18} />
+                  Install App Now
+                </motion.button>
+              )}
+            </div>
+          </section>
+
+          <Separator />
 
           {/* Installation Steps */}
-          <div className="bg-surface border border-border-subtle rounded-3xl p-6 md:p-8">
-            <h2 className="text-2xl font-semibold mb-6 text-center text-foreground">Installation Guide</h2>
-            <div className="flex gap-2 p-1 bg-surface-variant rounded-xl mb-8">
-              <button
-                onClick={() => setActiveTab("ios")}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition ${activeTab === "ios" ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
-              >
-                <Apple size={18} />
-                iOS (Safari)
-              </button>
-              <button
-                onClick={() => setActiveTab("android")}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition ${activeTab === "android" ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
-              >
-                <Globe size={18} />
-                Android (Chrome)
-              </button>
-            </div>
+          <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
+            <div className="max-w-[600px] mx-auto space-y-6">
+              <div className="text-center space-y-3">
+                <h2 className="text-[28px] md:text-[36px] font-bold leading-[1.15] tracking-tight text-foreground">
+                  Installation{" "}
+                  <span className="text-primary-600">Guide</span>
+                </h2>
+                <p className="text-[15px] text-secondary leading-relaxed">
+                  Follow these steps to install SpendWise on your device.
+                </p>
+              </div>
 
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="space-y-6"
-              >
-                {activeTab === "ios" ? (
-                  <>
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant">
-                      <div className="w-10 h-10 shrink-0 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">1</div>
-                      <div>
-                        <p className="font-medium text-foreground">Open in Safari</p>
-                        <p className="text-sm text-secondary">Make sure you are using Safari browser on your iPhone or iPad.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant">
-                      <div className="w-10 h-10 shrink-0 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">2</div>
-                      <div>
-                        <p className="font-medium flex items-center gap-2 text-foreground">Tap the Share button <Share size={16} className="text-blue-500" /></p>
-                        <p className="text-sm text-secondary">It's located at the bottom of your screen on iPhone.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant">
-                      <div className="w-10 h-10 shrink-0 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">3</div>
-                      <div>
-                        <p className="font-medium flex items-center gap-2 text-foreground">Select "Add to Home Screen" <PlusSquare size={16} className="text-blue-500" /></p>
-                        <p className="text-sm text-secondary">Scroll down the share menu to find this option.</p>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant">
-                      <div className="w-10 h-10 shrink-0 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">1</div>
-                      <div>
-                        <p className="font-medium text-foreground">Open in Google Chrome</p>
-                        <p className="text-sm text-secondary">Use Chrome for the best installation experience on Android.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant">
-                      <div className="w-10 h-10 shrink-0 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">2</div>
-                      <div>
-                        <p className="font-medium text-foreground">Tap the Menu (3 dots)</p>
-                        <p className="text-sm text-secondary">Located in the top right corner of the browser.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant">
-                      <div className="w-10 h-10 shrink-0 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">3</div>
-                      <div>
-                        <p className="font-medium text-foreground">Select "Install App"</p>
-                        <p className="text-sm text-secondary">Follow the prompt to add SpendWise to your home screen.</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+              {/* Tab switcher */}
+              <div className="flex gap-2 p-1 bg-surface-variant rounded-xl">
+                <button
+                  onClick={() => setActiveTab("ios")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-bold text-[13px] transition ${
+                    activeTab === "ios"
+                      ? "bg-surface text-foreground shadow-sm"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  <Apple size={16} />
+                  iOS (Safari)
+                </button>
+                <button
+                  onClick={() => setActiveTab("android")}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-bold text-[13px] transition ${
+                    activeTab === "android"
+                      ? "bg-surface text-foreground shadow-sm"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  <Globe size={16} />
+                  Android (Chrome)
+                </button>
+              </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="space-y-4"
+                >
+                  {activeTab === "ios"
+                    ? [
+                        { step: "1", title: "Open in Safari", desc: "Make sure you are using Safari browser on your iPhone or iPad." },
+                        { step: "2", title: "Tap the Share button", desc: "It's located at the bottom of your screen on iPhone." },
+                        { step: "3", title: 'Select "Add to Home Screen"', desc: "Scroll down the share menu to find this option." },
+                      ].map((s) => (
+                        <div key={s.step} className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant/60 border border-border-subtle/50">
+                          <div className="w-9 h-9 shrink-0 rounded-full bg-primary-500/10 flex items-center justify-center text-primary-600 text-[13px] font-bold">{s.step}</div>
+                          <div>
+                            <p className="font-bold text-[14px] text-foreground">{s.title}</p>
+                            <p className="text-[13px] text-secondary mt-0.5">{s.desc}</p>
+                          </div>
+                        </div>
+                      ))
+                    : [
+                        { step: "1", title: "Open in Google Chrome", desc: "Use Chrome for the best installation experience on Android." },
+                        { step: "2", title: "Tap the Menu (3 dots)", desc: "Located in the top right corner of the browser." },
+                        { step: "3", title: 'Select "Install App"', desc: "Follow the prompt to add SpendWise to your home screen." },
+                      ].map((s) => (
+                        <div key={s.step} className="flex items-start gap-4 p-4 rounded-xl bg-surface-variant/60 border border-border-subtle/50">
+                          <div className="w-9 h-9 shrink-0 rounded-full bg-primary-500/10 flex items-center justify-center text-primary-600 text-[13px] font-bold">{s.step}</div>
+                          <div>
+                            <p className="font-bold text-[14px] text-foreground">{s.title}</p>
+                            <p className="text-[13px] text-secondary mt-0.5">{s.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </section>
+
+          <Separator />
 
           {/* Why PWA */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 bg-surface border border-border-subtle rounded-2xl">
-              <Zap className="text-yellow-500 mb-4" size={24} />
-              <h3 className="font-medium mb-2 text-foreground">Always Up to Date</h3>
-              <p className="text-sm text-secondary">Updates happen seamlessly in the background.</p>
+          <section className="bg-surface-variant/40 px-5 md:px-10 py-5 md:py-10">
+            <div className="max-w-[1120px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { icon: Zap, title: "Always Up to Date", desc: "Updates happen seamlessly in the background." },
+                { icon: WifiOff, title: "Offline Ready", desc: "View and add transactions even without internet." },
+                { icon: Smartphone, title: "Zero Storage Hog", desc: "Takes up barely any space on your device." },
+              ].map((f, i) => (
+                <div key={i} className="rounded-2xl border border-border-subtle bg-surface p-7 shadow-sm">
+                  <div className="w-11 h-11 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600 mb-5">
+                    <f.icon size={20} strokeWidth={2} />
+                  </div>
+                  <h3 className="text-[16px] font-bold text-foreground mb-2">{f.title}</h3>
+                  <p className="text-[13px] text-secondary font-medium leading-relaxed">{f.desc}</p>
+                </div>
+              ))}
             </div>
-            <div className="p-6 bg-surface border border-border-subtle rounded-2xl">
-              <WifiOff className="text-blue-500 mb-4" size={24} />
-              <h3 className="font-medium mb-2 text-foreground">Offline Ready</h3>
-              <p className="text-sm text-secondary">View and add transactions even without internet.</p>
-            </div>
-            <div className="p-6 bg-surface border border-border-subtle rounded-2xl">
-              <Smartphone className="text-purple-500 mb-4" size={24} />
-              <h3 className="font-medium mb-2 text-foreground">Zero Storage Hog</h3>
-              <p className="text-sm text-secondary">Takes up barely any space on your device.</p>
-            </div>
-          </div>
+          </section>
         </main>
         <Footer />
       </>
     );
   }
 
-  // Desktop View
+  /* ── DESKTOP VIEW ── */
   return (
     <>
       <Navbar />
-      <main className="min-h-screen relative overflow-hidden pt-20" id="main-content">
-        {/* Background glow effects */}
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/10 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none" />
-
-        <div className="max-w-6xl mx-auto px-6 py-20 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-
-            {/* Left Column: Hero & Actions */}
+      <main className="overflow-x-hidden" id="main-content">
+        {/* ═══════════ HERO ═══════════ */}
+        <section className="relative bg-surface-variant/40 py-5 md:py-10 px-5 md:px-10">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            {/* Left: Copy */}
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              className="space-y-8"
+              variants={fadeUp}
+              initial="hidden"
+              animate="visible"
+              className="space-y-6"
             >
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-border-subtle text-sm font-medium mb-6">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  Version 1.0.0
-                </div>
-                <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight mb-6 text-foreground">
-                  The Ultimate <br />Desktop Tracker
-                </h1>
-                <p className="text-xl text-secondary max-w-md leading-relaxed">
-                  Experience unparalleled speed and native integration. SpendWise Desktop puts your finances at your fingertips.
-                </p>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary">
+                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                Version 1.0.0
               </div>
 
-              <div className="bg-surface border border-border-subtle rounded-3xl p-8 shadow-xl relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5" />
+              <h1 className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground max-w-[600px] mx-auto mb-6">
+                The ultimate{" "}
+                <span className="text-primary-600">desktop tracker.</span>
+              </h1>
 
-                <div className="relative z-10 space-y-6">
+              <p className="text-[15px] md:text-[17px] text-secondary leading-relaxed max-w-[480px]">
+                Experience unparalleled speed and native integration. SpendWise
+                Desktop puts your finances at your fingertips.
+              </p>
+            </motion.div>
+
+            {/* Right: Download Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.7,
+                delay: 0.2,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="relative"
+            >
+              <div className="rounded-2xl border border-border-subtle bg-surface shadow-xl overflow-hidden">
+                <div className="p-8 space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-2xl font-bold text-foreground">Windows OS</h3>
-                      <p className="text-muted text-sm mt-1 flex items-center gap-1">
-                        <Laptop size={14} /> Detected Platform
+                      <h3 className="text-[20px] font-bold text-foreground">
+                        Windows OS
+                      </h3>
+                      <p className="text-[13px] text-muted flex items-center gap-1.5 mt-1">
+                        <Laptop size={13} /> Detected Platform
                       </p>
                     </div>
-                    <Monitor className="text-muted" size={48} />
+                    <Monitor className="text-muted" size={40} />
                   </div>
 
                   {isWindows ? (
@@ -289,25 +339,43 @@ export default function DownloadClient() {
                       <button
                         onClick={handleDownload}
                         disabled={downloading}
-                        className="w-full flex items-center justify-center gap-3 rounded-2xl bg-indigo-600 text-white py-4 font-semibold hover:bg-indigo-700 transition-all disabled:opacity-80 disabled:cursor-not-allowed group"
+                        className="w-full flex items-center justify-center gap-2.5 py-4 px-6 bg-primary-600 text-white rounded-full font-bold text-[15px] shadow-lg shadow-primary-600/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/30 active:scale-[0.98] transition-all disabled:opacity-60"
                       >
                         {downloading ? (
-                          <><Loader2 className="animate-spin text-white" size={24} /> Downloading...</>
+                          <>
+                            <Loader2 className="animate-spin" size={18} />
+                            Downloading...
+                          </>
                         ) : downloaded ? (
-                          <><CheckCircle className="text-green-300" size={24} /> Download Complete</>
+                          <>
+                            <CheckCircle size={18} />
+                            Download Complete
+                          </>
                         ) : (
-                          <><Download size={24} className="group-hover:translate-y-1 transition-transform" /> Download for Windows</>
+                          <>
+                            <Download size={18} />
+                            Download for Windows
+                          </>
                         )}
                       </button>
 
                       <AnimatePresence>
                         {downloading && (
-                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-2">
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="space-y-2"
+                          >
                             <div className="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
-                              <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${progress}%` }} />
+                              <div
+                                className="h-full bg-primary-500 transition-all duration-300 rounded-full"
+                                style={{ width: `${progress}%` }}
+                              />
                             </div>
-                            <div className="flex justify-between text-xs text-secondary font-medium">
-                              <span>{progress > 0 ? `${progress}%` : "Preparing..."}</span>
+                            <div className="flex justify-between text-[11px] text-secondary font-medium">
+                              <span>
+                                {progress > 0 ? `${progress}%` : "Preparing..."}
+                              </span>
                               <span>{downloadSpeed}</span>
                             </div>
                           </motion.div>
@@ -315,113 +383,201 @@ export default function DownloadClient() {
                       </AnimatePresence>
                     </div>
                   ) : (
-                    <div className="p-4 bg-surface-variant rounded-2xl border border-border-subtle text-center text-secondary text-sm">
-                      It looks like you're not on Windows. <br /> You can still download the installer.
-                      <button onClick={handleDownload} className="mt-3 w-full py-2 bg-surface rounded-xl hover:bg-surface-variant transition shadow-sm border border-border-subtle">
+                    <div className="p-4 bg-surface-variant/60 rounded-xl border border-border-subtle text-center">
+                      <p className="text-[13px] text-secondary">
+                        It looks like you're not on Windows. You can still
+                        download the installer.
+                      </p>
+                      <button
+                        onClick={handleDownload}
+                        className="mt-3 w-full py-2.5 bg-surface rounded-xl hover:bg-surface-variant transition font-bold text-[13px] border border-border-subtle"
+                      >
                         Download Anyway
                       </button>
                     </div>
                   )}
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-5 rounded-2xl bg-surface border border-border-subtle flex flex-col items-center justify-center text-center group hover:bg-surface-variant transition-colors">
-                  <Apple size={28} className="text-muted mb-3 group-hover:text-foreground transition-colors" />
-                  <h4 className="font-medium text-sm text-foreground">macOS</h4>
-                  <span className="text-xs text-muted mt-1">Coming Q3 2026</span>
-                </div>
-                <div className="p-5 rounded-2xl bg-surface border border-border-subtle flex flex-col items-center justify-center text-center group hover:bg-surface-variant transition-colors">
-                  <Terminal size={28} className="text-muted mb-3 group-hover:text-foreground transition-colors" />
-                  <h4 className="font-medium text-sm text-foreground">Linux</h4>
-                  <span className="text-xs text-muted mt-1">Coming Q4 2026</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Right Column: Features & Info */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="space-y-6"
-            >
-              {/* Features Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-6 rounded-2xl bg-surface border border-border-subtle hover:border-indigo-500/30 transition-colors">
-                  <Zap className="text-indigo-500 mb-4" size={24} />
-                  <h3 className="font-semibold mb-2 text-foreground">Lightning Fast</h3>
-                  <p className="text-sm text-secondary">Native performance leveraging your hardware for instant load times.</p>
-                </div>
-                <div className="p-6 rounded-2xl bg-surface border border-border-subtle hover:border-purple-500/30 transition-colors">
-                  <WifiOff className="text-purple-500 mb-4" size={24} />
-                  <h3 className="font-semibold mb-2 text-foreground">Offline First</h3>
-                  <p className="text-sm text-secondary">Add expenses without connection. Syncs automatically when online.</p>
-                </div>
-                <div className="p-6 rounded-2xl bg-surface border border-border-subtle hover:border-blue-500/30 transition-colors">
-                  <Bell className="text-blue-500 mb-4" size={24} />
-                  <h3 className="font-semibold mb-2 text-foreground">Native Alerts</h3>
-                  <p className="text-sm text-secondary">System-level notifications for budget limits and reminders.</p>
-                </div>
-                <div className="p-6 rounded-2xl bg-surface border border-border-subtle hover:border-green-500/30 transition-colors">
-                  <Shield className="text-green-500 mb-4" size={24} />
-                  <h3 className="font-semibold mb-2 text-foreground">Secure Storage</h3>
-                  <p className="text-sm text-secondary">Local encryption keeps your financial data strictly private.</p>
-                </div>
-              </div>
-
-              {/* Accordions */}
-              <div className="space-y-3">
-                <div className="border border-border-subtle rounded-2xl bg-surface overflow-hidden">
-                  <button
-                    onClick={() => setSysReqOpen(!sysReqOpen)}
-                    className="w-full flex items-center justify-between p-5 text-left font-medium text-foreground hover:bg-surface-variant transition-colors"
-                  >
-                    System Requirements
-                    {sysReqOpen ? <ChevronUp size={20} className="text-muted" /> : <ChevronDown size={20} className="text-muted" />}
-                  </button>
-                  <AnimatePresence>
-                    {sysReqOpen && (
-                      <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                        <div className="p-5 pt-0 text-sm text-secondary space-y-2 border-t border-border-subtle mt-2 pt-4">
-                          <p><strong>OS:</strong> Windows 10 (64-bit) or later</p>
-                          <p><strong>Processor:</strong> 1.5 GHz dual-core or faster</p>
-                          <p><strong>Memory:</strong> 4 GB RAM minimum</p>
-                          <p><strong>Storage:</strong> 250 MB available space</p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                <div className="border border-border-subtle rounded-2xl bg-surface overflow-hidden">
-                  <button
-                    onClick={() => setChangelogOpen(!changelogOpen)}
-                    className="w-full flex items-center justify-between p-5 text-left font-medium text-foreground hover:bg-surface-variant transition-colors"
-                  >
-                    Release Notes (v1.0.0)
-                    {changelogOpen ? <ChevronUp size={20} className="text-muted" /> : <ChevronDown size={20} className="text-muted" />}
-                  </button>
-                  <AnimatePresence>
-                    {changelogOpen && (
-                      <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                        <div className="p-5 pt-0 text-sm text-secondary space-y-3 border-t border-border-subtle mt-2 pt-4">
-                          <ul className="list-disc pl-5 space-y-1">
-                            <li>Initial public release of SpendWise Desktop.</li>
-                            <li>Seamless cloud syncing across all devices.</li>
-                            <li>Added comprehensive expense categorization.</li>
-                            <li>Introduced dark mode native support.</li>
-                          </ul>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-
             </motion.div>
           </div>
-        </div>
+        </section>
+
+        <Separator />
+
+        {/* ═══════════ PLATFORM CARDS ═══════════ */}
+        <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[1120px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {[
+              { icon: Apple, name: "macOS", status: "Coming Q3 2026" },
+              { icon: Terminal, name: "Linux", status: "Coming Q4 2026" },
+            ].map((p, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-border-subtle bg-surface-variant/40 p-6 flex items-center gap-4"
+              >
+                <div className="w-11 h-11 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600">
+                  <p.icon size={20} strokeWidth={2} />
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-bold text-foreground">
+                    {p.name}
+                  </h3>
+                  <p className="text-[13px] text-muted">{p.status}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* ═══════════ FEATURES ═══════════ */}
+        <section className="bg-surface-variant/40 px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[1120px] mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {[
+              {
+                icon: Zap,
+                title: "Lightning Fast",
+                desc: "Native performance leveraging your hardware for instant load times.",
+              },
+              {
+                icon: WifiOff,
+                title: "Offline First",
+                desc: "Add expenses without connection. Syncs automatically when online.",
+              },
+              {
+                icon: Bell,
+                title: "Native Alerts",
+                desc: "System-level notifications for budget limits and reminders.",
+              },
+              {
+                icon: Shield,
+                title: "Secure Storage",
+                desc: "Local encryption keeps your financial data strictly private.",
+              },
+            ].map((f, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-border-subtle bg-surface p-7 shadow-sm hover:shadow-lg hover:border-primary-500/20 transition-all"
+              >
+                <div className="w-11 h-11 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-600 mb-5">
+                  <f.icon size={20} strokeWidth={2} />
+                </div>
+                <h3 className="text-[16px] font-bold text-foreground mb-2">
+                  {f.title}
+                </h3>
+                <p className="text-[13px] text-secondary font-medium leading-relaxed">
+                  {f.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* ═══════════ ACCORDIONS ═══════════ */}
+        <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[700px] mx-auto space-y-4">
+            <div className="rounded-2xl border border-border-subtle bg-surface shadow-sm overflow-hidden">
+              <button
+                onClick={() => setSysReqOpen(!sysReqOpen)}
+                className="w-full flex items-center justify-between p-5 text-left font-bold text-[15px] text-foreground hover:bg-surface-variant/40 transition-colors"
+              >
+                System Requirements
+                {sysReqOpen ? (
+                  <ChevronUp size={18} className="text-muted" />
+                ) : (
+                  <ChevronDown size={18} className="text-muted" />
+                )}
+              </button>
+              <AnimatePresence>
+                {sysReqOpen && (
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: "auto" }}
+                    exit={{ height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-5 pt-0 text-[13px] text-secondary space-y-2 border-t border-border-subtle mt-2 pt-4">
+                      <p>
+                        <strong className="text-foreground">OS:</strong> Windows
+                        10 (64-bit) or later
+                      </p>
+                      <p>
+                        <strong className="text-foreground">Processor:</strong>{" "}
+                        1.5 GHz dual-core or faster
+                      </p>
+                      <p>
+                        <strong className="text-foreground">Memory:</strong> 4
+                        GB RAM minimum
+                      </p>
+                      <p>
+                        <strong className="text-foreground">Storage:</strong>{" "}
+                        250 MB available space
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="rounded-2xl border border-border-subtle bg-surface shadow-sm overflow-hidden">
+              <button
+                onClick={() => setChangelogOpen(!changelogOpen)}
+                className="w-full flex items-center justify-between p-5 text-left font-bold text-[15px] text-foreground hover:bg-surface-variant/40 transition-colors"
+              >
+                Release Notes (v1.0.0)
+                {changelogOpen ? (
+                  <ChevronUp size={18} className="text-muted" />
+                ) : (
+                  <ChevronDown size={18} className="text-muted" />
+                )}
+              </button>
+              <AnimatePresence>
+                {changelogOpen && (
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: "auto" }}
+                    exit={{ height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-5 pt-0 text-[13px] text-secondary space-y-2 border-t border-border-subtle mt-2 pt-4">
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Initial public release of SpendWise Desktop.</li>
+                        <li>Seamless cloud syncing across all devices.</li>
+                        <li>Added comprehensive expense categorization.</li>
+                        <li>Introduced dark mode native support.</li>
+                      </ul>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* ═══════════ CTA ═══════════ */}
+        <section className="bg-surface-variant/40 px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[600px] mx-auto text-center space-y-5">
+            <h2 className="text-[28px] md:text-[36px] font-bold leading-[1.15] tracking-tight text-foreground">
+              Prefer <span className="text-primary-600">mobile?</span>
+            </h2>
+            <p className="text-[15px] text-secondary leading-relaxed max-w-[460px] mx-auto">
+              Install SpendWise as a PWA on your phone for the same experience
+              with offline support.
+            </p>
+            <Link
+              href="/download"
+              className="inline-flex items-center gap-2 text-[14px] font-semibold text-primary-600 hover:text-primary-700 transition-colors"
+            >
+              View Mobile Install Guide
+              <ArrowRight size={14} />
+            </Link>
+          </div>
+        </section>
       </main>
       <Footer />
     </>

@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import Link from "next/link";
 import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "System Status | SpendWise — UPI Expense Tracker for India",
+  title: "System Status | SpendWise — AI-Powered Expense Tracker for India",
   description:
     "Real-time status of SpendWise services including API, database, authentication, and AI features.",
   alternates: {
     canonical: "/status",
   },
   openGraph: {
-    title: "System Status | SpendWise — UPI Expense Tracker for India",
+    title: "System Status | SpendWise — AI-Powered Expense Tracker for India",
     description:
       "Real-time status of SpendWise services including API, database, authentication, and AI features.",
     url: "https://money-spend-tracker.vercel.app/status",
     images: [
       {
-        url: "/og-images/og-sitemap-dark.png",
+        url: "/og-images/og-status-dark.png",
         width: 1200,
         height: 630,
         alt: "SpendWise System Status",
@@ -26,16 +27,13 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "System Status | SpendWise — UPI Expense Tracker for India",
+    title: "System Status | SpendWise — AI-Powered Expense Tracker for India",
     description:
       "Real-time status of SpendWise services including API, database, authentication, and AI features.",
-    images: ["/og-images/og-sitemap-dark.png"],
+    images: ["/og-images/og-status-dark.png"],
   },
 };
 
-// ---------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------
 type ServiceStatus = "operational" | "degraded" | "down";
 
 interface ServiceCheck {
@@ -45,14 +43,10 @@ interface ServiceCheck {
   latencyMs?: number;
 }
 
-// ---------------------------------------------------------------
-// Server-side health checks
-// ---------------------------------------------------------------
 async function checkDatabase(): Promise<ServiceCheck> {
   const start = Date.now();
   try {
     const { prisma } = await import("@/lib/prisma");
-    // Use findFirst instead of $queryRaw — compatible with MongoDB and SQL
     await prisma.user.findFirst({ select: { id: true }, take: 1 });
     return {
       name: "Database",
@@ -68,7 +62,6 @@ async function checkDatabase(): Promise<ServiceCheck> {
     };
   }
 }
-
 
 async function checkApi(): Promise<ServiceCheck> {
   return {
@@ -96,29 +89,26 @@ async function checkAI(): Promise<ServiceCheck> {
   };
 }
 
-// ---------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------
 const STATUS_META: Record<
   ServiceStatus,
   { label: string; color: string; bg: string; Icon: typeof CheckCircle2 }
 > = {
   operational: {
     label: "Operational",
-    color: "text-emerald-600",
-    bg: "bg-emerald-500/10",
+    color: "text-success",
+    bg: "bg-success/10",
     Icon: CheckCircle2,
   },
   degraded: {
     label: "Degraded",
-    color: "text-amber-600",
-    bg: "bg-amber-500/10",
+    color: "text-warning",
+    bg: "bg-warning/10",
     Icon: Clock,
   },
   down: {
     label: "Down",
-    color: "text-red-600",
-    bg: "bg-red-500/10",
+    color: "text-error",
+    bg: "bg-error/10",
     Icon: AlertCircle,
   },
 };
@@ -129,9 +119,14 @@ function overallStatus(services: ServiceCheck[]): ServiceStatus {
   return "operational";
 }
 
-// ---------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------
+function Separator() {
+  return (
+    <div className="mx-auto max-w-[1120px]">
+      <div className="h-px w-full bg-border-subtle" />
+    </div>
+  );
+}
+
 export default async function StatusPage() {
   const [db, api, auth, ai] = await Promise.all([
     checkDatabase(),
@@ -155,49 +150,56 @@ export default async function StatusPage() {
     <>
       <Navbar />
 
-      <main className="pt-36 pb-24 min-h-screen bg-background">
-        <div className="max-w-3xl mx-auto px-5 md:px-10">
-
-          {/* Header */}
-          <div className="mb-12 text-center">
+      <main className="overflow-x-hidden" id="main-content">
+        {/* ═══════════ HERO ═══════════ */}
+        <section className="relative bg-surface-variant/40 py-5 md:py-10 px-5 md:px-10">
+          <div className="max-w-7xl mx-auto text-center space-y-5">
             <div
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${overallMeta.bg} ${overallMeta.color} text-[10px] font-black tracking-widest uppercase border border-current/10 mb-6`}
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase ${overallMeta.color}`}
             >
               <OverallIcon size={12} />
               {overallMeta.label}
             </div>
-            <h1 className="text-5xl md:text-6xl font-black text-foreground tracking-tight leading-tight mb-4">
-              System Status
+
+            <h1 className="text-[28px] md:text-[36px] lg:text-[44px] font-bold leading-[1.15] tracking-tight text-foreground max-w-[600px] mx-auto mb-6">
+              All systems <span className="text-primary-600">operational.</span>
             </h1>
-            <p className="text-secondary font-medium text-sm">
+
+            <p className="text-[15px] text-secondary max-w-xl mx-auto leading-relaxed">
               Last checked: {now} IST
             </p>
           </div>
+        </section>
 
-          {/* Services */}
-          <div className="space-y-4">
+        <Separator />
+
+        {/* ═══════════ SERVICES ═══════════ */}
+        <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[700px] mx-auto space-y-4">
             {services.map((svc) => {
               const meta = STATUS_META[svc.status];
               const Icon = meta.Icon;
               return (
                 <div
                   key={svc.name}
-                  className="flex items-center justify-between p-6 bg-surface border border-border-subtle rounded-2xl gap-4"
+                  className="flex items-center justify-between p-5 rounded-2xl border border-border-subtle bg-surface shadow-sm"
                 >
                   <div>
-                    <p className="font-black text-foreground">{svc.name}</p>
-                    <p className="text-xs text-muted font-medium mt-0.5">
+                    <p className="text-[15px] font-bold text-foreground">
+                      {svc.name}
+                    </p>
+                    <p className="text-[12px] text-muted font-medium mt-0.5">
                       {svc.description}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-3 shrink-0">
                     {svc.latencyMs !== undefined && svc.latencyMs > 0 && (
-                      <span className="text-xs font-bold text-muted hidden sm:block">
+                      <span className="text-[12px] font-medium text-muted hidden sm:block">
                         {svc.latencyMs} ms
                       </span>
                     )}
                     <div
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${meta.bg} ${meta.color} text-xs font-black`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl ${meta.bg} ${meta.color} text-[12px] font-semibold`}
                     >
                       <Icon size={13} />
                       {meta.label}
@@ -207,19 +209,25 @@ export default async function StatusPage() {
               );
             })}
           </div>
+        </section>
 
-          {/* Footer note */}
-          <p className="mt-10 text-center text-xs text-muted font-medium">
-            This page is rendered server-side on every request and reflects live
-            service health.{" "}
-            <a
-              href="/contact"
-              className="text-primary-600 font-black hover:underline"
-            >
-              Report an issue
-            </a>
-          </p>
-        </div>
+        <Separator />
+
+        {/* ═══════════ FOOTER NOTE ═══════════ */}
+        <section className="bg-surface-variant/40 px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[600px] mx-auto text-center">
+            <p className="text-[13px] text-muted font-medium">
+              This page is rendered server-side on every request and reflects
+              live service health.{" "}
+              <Link
+                href="/contact"
+                className="text-primary-600 font-semibold hover:text-primary-700 transition-colors"
+              >
+                Report an issue
+              </Link>
+            </p>
+          </div>
+        </section>
       </main>
 
       <Footer />

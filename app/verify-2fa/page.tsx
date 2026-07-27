@@ -130,7 +130,7 @@ function Verify2FAContent() {
         <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
           <TrendingUp size={22} color="white" strokeWidth={2.5} />
         </div>
-        <span className="font-extrabold text-2xl tracking-tight">
+        <span className="font-bold text-[20px] tracking-tight">
           Spend<span className="text-primary-600">Wise</span>
         </span>
       </motion.div>
@@ -152,7 +152,7 @@ function Verify2FAContent() {
           </div>
         </div>
 
-        <h1 className="text-2xl font-black text-center mb-2">Two-Factor Verification</h1>
+        <h1 className="text-[22px] font-bold text-center mb-2">Two-Factor Verification</h1>
         <p className="text-secondary text-center text-sm mb-8">
           {isSent
             ? `We sent a 6-digit code to ${session?.user?.email}`
