@@ -98,11 +98,10 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-      // After sign-in, always check onboarded status client-side.
-      // Default: send to /onboarding — the onboarding page guards
-      // and redirects to /dashboard if already onboarded.
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (new URL(url).origin === baseUrl) return url;
+      try {
+        if (new URL(url).origin === baseUrl) return url;
+      } catch {}
       return `${baseUrl}/onboarding`;
     },
 
@@ -186,6 +185,7 @@ export const authOptions: AuthOptions = {
             (session.user as any).monthlyLimit = dbUser.monthlyLimit;
             (session.user as any).twoFactorEnabled = (dbUser as any).twoFactorEnabled;
             (session.user as any).isSuspended = dbUser.isSuspended;
+            (session.user as any).redirectTo = dbUser.onboarded ? "dashboard" : "onboarding";
           }
         } catch (error) {
           console.error("Error fetching session user from Prisma:", error);

@@ -49,17 +49,34 @@ export function LoginClient() {
     setError("");
 
     try {
-      const res = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
+      let res: any;
+      try {
+        res = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        });
+      } catch (signInErr: any) {
+        if (signInErr?.name === "TypeError" && /Invalid URL/i.test(signInErr?.message)) {
+          res = null;
+        } else {
+          throw signInErr;
+        }
+      }
 
       if (res?.error) {
         setError(res.error);
         setIsLoading(false);
       } else {
-        router.push("/onboarding");
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
+        if (session?.user) {
+          const redirectTo = (session.user as any).redirectTo || "onboarding";
+          router.push("/" + redirectTo);
+        } else {
+          setError("Invalid email or password");
+          setIsLoading(false);
+        }
       }
     } catch {
       setError("An unexpected error occurred");
@@ -83,7 +100,7 @@ export function LoginClient() {
           />
         </div>
 
-        <div className="relative z-10 w-full max-w-[460px] px-10">
+        <div className="relative z-10 w-full px-10">
           {/* Dashboard mockup — same as hero */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
