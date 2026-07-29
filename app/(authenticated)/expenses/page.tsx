@@ -256,9 +256,9 @@ export default function ExpensesPage() {
   const wantsTotal = filteredExpenses.filter((e) => e.category === "Wants").reduce((s, e) => s + e.amount, 0);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4 pb-24">
+    <div className="mx-auto space-y-4 pb-24 px-4">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-10 -mx-4 px-4 pt-2 pb-3 bg-background/90 backdrop-blur-lg">
+      <div className="-mx-4 px-4 pt-2 pb-3">
         <div className="flex items-center justify-between mb-3">
           <div>
             <div className="text-xl font-bold text-foreground">{formatCurrency(monthTotal)}</div>

@@ -1,31 +1,28 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSession } from "next-auth/react";
-import { 
-  Banknote, 
-  Search, 
-  Plus, 
-  CalendarDays, 
-  ChevronLeft, 
-  ChevronRight, 
-  Download, 
-  Trash2, 
-  Pencil, 
-  MoreVertical,
+import {
+  Search,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  Pencil,
+  Banknote,
   Briefcase,
   TrendingUp,
   Gift,
   Sparkles,
-  ArrowUpRight,
-  TrendingDown
+  Receipt,
+  Loader2,
+  X,
+  Calendar,
+  IndianRupee,
+  Save,
 } from "lucide-react";
-import { AddIncomeModal } from "@/components/income/AddIncomeModal";
-import { TransactionDetailModal } from "@/components/ui/TransactionDetailModal";
 import { useUI } from "@/context/UIContext";
 import { useDashboard } from "@/context/DashboardContext";
-import { Loader2, Eye } from "lucide-react";
 
 interface Income {
   id: string;
@@ -35,7 +32,7 @@ interface Income {
   date: string;
 }
 
-const SOURCE_ICONS: Record<string, any> = {
+const SOURCE_ICONS: Record<string, typeof Banknote> = {
   Salary: Briefcase,
   Freelance: TrendingUp,
   Investment: Banknote,
@@ -43,437 +40,625 @@ const SOURCE_ICONS: Record<string, any> = {
   Others: Sparkles,
 };
 
+function getSourceIcon(name: string) {
+  return SOURCE_ICONS[name] || Banknote;
+}
+
+function formatCurrency(n: number) {
+  return `\u20B9${n.toLocaleString("en-IN")}`;
+}
+
+const INCOME_SOURCES = [
+  { name: "Salary", icon: Briefcase },
+  { name: "Freelance", icon: TrendingUp },
+  { name: "Investment", icon: Banknote },
+  { name: "Gift", icon: Gift },
+  { name: "Others", icon: Sparkles },
+];
+
 export default function IncomePage() {
-  const { data: session } = useSession();
-  const { 
-    incomes: contextIncomes, 
-    loading: contextLoading, 
-    refreshData: refreshContext 
-  } = useDashboard();
+  const { incomes: contextIncomes, loading: contextLoading, refreshData: refreshContext } = useDashboard();
+  const { toast, confirm } = useUI();
 
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"month" | "range">("month");
-  
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
-  const [dateRange, setDateRange] = useState({ from: "", to: "" });
 
-  const { toast, confirm } = useUI();
   const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [detailTransaction, setDetailTransaction] = useState<Income | null>(null);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [form, setForm] = useState({
+    amount: "",
+    source: "Salary",
+    note: "",
+    date: "",
+  });
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const fetchIncomes = async () => {
+  useEffect(() => {
+    if (showMobileSearch && searchRef.current) {
+      searchRef.current.focus();
+    }
+  }, [showMobileSearch]);
+
+  const fetchIncomes = async (month?: string) => {
     setLoading(true);
     try {
-      let query = "";
-      if (viewMode === "month") {
-        query = `?month=${currentMonth}`;
-      } else {
-        query = `?fromDate=${dateRange.from}&toDate=${dateRange.to}`;
-      }
-      
-      const res = await fetch(`/api/income${query}`);
+      const m = month || currentMonth;
+      const res = await fetch(`/api/income?month=${m}`);
       const data = await res.json();
       setIncomes(data.incomes || []);
-    } catch (error) {
-      console.error("Failed to fetch incomes:", error);
-      toast.error("Failed to sync earnings data");
+    } catch {
+      toast.error("Failed to load income");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    const ACTUAL_CURRENT_MONTH = (() => {
+    const actualCurrentMonth = (() => {
       const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     })();
 
-    if (viewMode === "month" && currentMonth === ACTUAL_CURRENT_MONTH) {
+    if (currentMonth === actualCurrentMonth) {
       setIncomes(contextIncomes);
       setLoading(contextLoading);
     } else {
-      if (viewMode === "month" || (dateRange.from && dateRange.to)) {
-        fetchIncomes();
-      }
+      fetchIncomes();
     }
-    
+
     const handleRefresh = () => {
-      if (viewMode === "month" && currentMonth === ACTUAL_CURRENT_MONTH) {
+      if (currentMonth === actualCurrentMonth) {
         refreshContext();
       } else {
         fetchIncomes();
       }
     };
 
-    window.addEventListener('incomeAdded', handleRefresh);
-    window.addEventListener('expenseAdded', handleRefresh);
-    
+    window.addEventListener("incomeAdded", handleRefresh);
+    window.addEventListener("expenseAdded", handleRefresh);
     return () => {
-      window.removeEventListener('incomeAdded', handleRefresh);
-      window.removeEventListener('expenseAdded', handleRefresh);
+      window.removeEventListener("incomeAdded", handleRefresh);
+      window.removeEventListener("expenseAdded", handleRefresh);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMonth, viewMode, dateRange, contextIncomes, contextLoading]);
+  }, [currentMonth, contextIncomes, contextLoading]);
 
   const changeMonth = (offset: number) => {
-    const [year, month] = currentMonth.split('-').map(Number);
+    const [year, month] = currentMonth.split("-").map(Number);
     const date = new Date(year, month - 1 + offset, 1);
-    setCurrentMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    setCurrentMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
   };
 
   const filteredIncomes = useMemo(() => {
-    return incomes.filter(inc => 
-      inc.source.toLowerCase().includes(search.toLowerCase()) || 
-      (inc.note && inc.note.toLowerCase().includes(search.toLowerCase()))
+    return incomes.filter(
+      (inc) =>
+        inc.source.toLowerCase().includes(search.toLowerCase()) ||
+        (inc.note && inc.note.toLowerCase().includes(search.toLowerCase()))
     );
   }, [incomes, search]);
 
-  const stats = useMemo(() => {
-    const total = filteredIncomes.reduce((sum, inc) => sum + inc.amount, 0);
-    const count = filteredIncomes.length;
-    const avg = count > 0 ? total / count : 0;
-    return { total, count, avg };
+  const monthTotal = useMemo(() => {
+    return filteredIncomes.reduce((s, i) => s + i.amount, 0);
   }, [filteredIncomes]);
 
-  const handleDelete = async (id: string) => {
-    const ok = await confirm({
-        title: "Remove Earnings Entry?",
-        message: "This will permanently delete this income record. This action cannot be undone.",
-        confirmText: "Yes, Delete",
-        cancelText: "Cancel",
-        variant: "danger"
+  function openDetail(income: Income) {
+    setSelectedIncome(income);
+    setForm({
+      amount: income.amount.toString(),
+      source: income.source,
+      note: income.note || "",
+      date: income.date.split("T")[0],
     });
+    setDeleting(false);
+    setShowDetail(true);
+  }
 
+  function closeDetail() {
+    setShowDetail(false);
+    setSelectedIncome(null);
+    setSaving(false);
+    setDeleting(false);
+  }
+
+  async function handleSave() {
+    if (!selectedIncome) return;
+    const amount = parseFloat(form.amount);
+    if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    if (!form.source) { toast.error("Select a source"); return; }
+    if (!form.date) { toast.error("Select a date"); return; }
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/income/${selectedIncome.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, source: form.source, note: form.note, date: form.date }),
+      });
+      if (res.ok) {
+        toast.success("Income updated");
+        window.dispatchEvent(new CustomEvent("incomeAdded"));
+        closeDetail();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Failed to update");
+      }
+    } catch {
+      toast.error("An error occurred");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!selectedIncome) return;
+    const ok = await confirm({
+      title: "Delete Income?",
+      message: "This action cannot be undone.",
+      confirmText: "Yes, Delete",
+      cancelText: "Keep it",
+      variant: "danger",
+    });
     if (!ok) return;
 
-    setDeletingId(id);
+    setDeleting(true);
     try {
-      const res = await fetch(`/api/income/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/income/${selectedIncome.id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Income record removed");
-        fetchIncomes();
-        window.dispatchEvent(new CustomEvent('incomeAdded'));
+        toast.success("Income deleted");
+        window.dispatchEvent(new CustomEvent("incomeAdded"));
+        closeDetail();
       } else {
-        toast.error("Failed to delete record");
+        toast.error("Failed to delete");
+        setDeleting(false);
       }
-    } catch (err) {
-      console.error("Failed to delete income:", err);
-      toast.error("An error occurred. Try again.");
-    } finally {
-      setDeletingId(null);
+    } catch {
+      toast.error("An error occurred");
+      setDeleting(false);
     }
-  };
+  }
 
-  const exportToCSV = () => {
-    const headers = ["Date", "Source", "Amount", "Note"];
-    const rows = filteredIncomes.map(i => [
-      new Date(i.date).toLocaleDateString('en-IN'),
-      i.source,
-      i.amount,
-      i.note || ""
-    ]);
-    const csvContent = [headers, ...rows].map(r => r.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `SpendWise_Income_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const monthName = new Date(currentMonth + "-01").toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  const monthName = new Date(currentMonth + "-01").toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Income Summary Header */}
-      <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-5 sm:p-8 shadow-sm relative overflow-hidden group">
-         <div className="absolute top-0 right-0 w-96 h-96 bg-success/5 blur-[100px] -mr-48 -mt-48 rounded-full pointer-events-none" />
-         
-         <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div>
-               <div className="flex items-center gap-2 text-success font-black uppercase tracking-[0.2em] text-xs mb-4">
-                  <Banknote size={16} />
-                  Total Earnings
-               </div>
-               <h2 className="text-4xl sm:text-6xl font-black tracking-tighter mb-2 text-success">
-                 ₹{stats.total.toLocaleString('en-IN')}
-               </h2>
-               <p className="text-secondary font-bold text-lg">
-                 Total income {viewMode === "month" ? "this month" : "in this period"}.
-               </p>
+    <div className="mx-auto space-y-4 pb-24 px-4">
+      {/* Sticky Header */}
+      <div className="-mx-4 px-4 pt-2 pb-3">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="text-xl font-bold text-foreground">{formatCurrency(monthTotal)}</div>
+            <div className="text-[11px] text-muted">
+              {filteredIncomes.length} income{filteredIncomes.length !== 1 ? "s" : ""}
             </div>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedIncome(null);
+              setForm({
+                amount: "",
+                source: "Salary",
+                note: "",
+                date: new Date().toISOString().split("T")[0],
+              });
+              setShowDetail(true);
+            }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-success text-white text-sm font-semibold rounded-xl shadow-lg shadow-success/20 hover:bg-success/90 active:scale-95 transition-all"
+          >
+            <Plus size={16} />
+            <span className="hidden sm:inline">Add</span>
+          </button>
+        </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-surface-variant/50 p-6 rounded-[2rem] border border-border-subtle backdrop-blur-sm">
-                <span className="block text-[9px] font-black uppercase tracking-widest text-muted mb-2">Transactions</span>
-                <span className="text-2xl font-black">{stats.count}</span>
+        {/* Search + Nav */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-surface border border-border-subtle rounded-xl overflow-hidden flex-shrink-0">
+            <button onClick={() => changeMonth(-1)} className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
+              <ChevronLeft size={16} />
+            </button>
+            <button onClick={() => changeMonth(1)} className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            {showMobileSearch ? (
+              <div className="flex items-center gap-2">
+                <input
+                  ref={searchRef}
+                  type="text"
+                  placeholder="Search..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-sm outline-none focus:border-success transition-colors"
+                />
+                <button onClick={() => { setSearch(""); setShowMobileSearch(false); }} className="p-2 text-muted hover:text-foreground">
+                  <X size={16} />
+                </button>
               </div>
-              <div className="bg-surface-variant/50 p-6 rounded-[2rem] border border-border-subtle backdrop-blur-sm">
-                <span className="block text-[9px] font-black uppercase tracking-widest text-muted mb-2">Average Entry</span>
-                <span className="text-lg font-black">₹{Math.round(stats.avg).toLocaleString('en-IN')}</span>
-              </div>
-            </div>
-         </div>
-      </section>
-
-      {/* Filters Bar */}
-      <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
-         <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-4 border-b border-border-subtle/50 pb-4">
-            <div className="flex w-full p-1 bg-surface-variant rounded-xl gap-1">
-               <button 
-                onClick={() => setViewMode("month")}
-                className={`w-full px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
-                  viewMode === "month" ? "bg-success text-white shadow-lg shadow-success/20" : "text-secondary hover:text-foreground"
-                }`}
-               >
-                 By Month
-               </button>
-               <button 
-                onClick={() => setViewMode("range")}
-                className={`w-full px-6 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
-                  viewMode === "range" ? "bg-success text-white shadow-lg shadow-success/20" : "text-secondary hover:text-foreground"
-                }`}
-               >
-                 Custom Range
-               </button>
-            </div>
-
-            <div className="flex w-full items-center gap-2">
-               <button 
-                onClick={exportToCSV}
-                className="w-full flex items-center gap-2 px-5 py-2.5 bg-surface-variant rounded-xl text-secondary hover:text-foreground font-black text-xs uppercase tracking-widest transition-all border border-transparent hover:border-border-subtle active:scale-95"
-               >
-                 <Download size={16} />
-                 Export
-               </button>
-               <button 
-                onClick={() => {
-                  setSelectedIncome(null);
-                  setIsModalOpen(true);
-                }}
-                className="w-full flex items-center gap-2 px-5 py-2.5 bg-success text-white rounded-xl font-black text-xs uppercase tracking-widest hover:shadow-lg transition-all active:scale-95 shadow-lg shadow-success/10"
-               >
-                 <Plus size={16} />
-                 Add Income
-               </button>
-            </div>
-         </div>
-
-         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-            <div className="relative lg:col-span-1">
-               <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" />
-               <input 
-                type="text" 
-                placeholder="Search sources or notes..." 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-surface-variant/30 border-2 border-transparent focus:border-success rounded-2xl py-4 pl-12 pr-4 font-bold focus:outline-none transition-all"
-               />
-            </div>
-
-            <div className="lg:col-span-2 flex flex-col sm:flex-row items-center gap-3">
-               {viewMode === "month" ? (
-                 <div className="flex items-center justify-between w-full bg-surface-variant/30 border border-border-subtle p-1.5 rounded-2xl">
-                    <button onClick={() => changeMonth(-1)} className="p-3 text-secondary hover:text-foreground transition-colors"><ChevronLeft size={20} /></button>
-                    <span className="font-black tracking-tight text-lg">{monthName}</span>
-                    <button onClick={() => changeMonth(1)} className="p-3 text-secondary hover:text-foreground transition-colors"><ChevronRight size={20} /></button>
-                 </div>
-               ) : (
-                 <div className="flex items-center gap-3 w-full">
-                    <div className="relative flex-1">
-                       <CalendarDays size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" />
-                       <input 
-                        type="date" 
-                        value={dateRange.from}
-                        onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-                        className="w-full bg-surface-variant/30 border border-border-subtle rounded-2xl py-3.5 pl-12 pr-4 font-black text-xs focus:outline-none focus:border-success transition-all uppercase"
-                       />
-                    </div>
-                    <div className="w-4 h-0.5 bg-border-subtle" />
-                    <div className="relative flex-1">
-                       <input 
-                        type="date" 
-                        value={dateRange.to}
-                        onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-                        className="w-full bg-surface-variant/30 border border-border-subtle rounded-2xl py-3.5 px-4 font-black text-xs focus:outline-none focus:border-success transition-all uppercase"
-                       />
-                    </div>
-                 </div>
-               )}
-            </div>
-         </div>
-      </section>
-
-      {/* Income List */}
-      <div className="bg-surface border border-border-subtle rounded-[2.5rem] shadow-sm">
-        {loading ? (
-          <div className="p-32 flex flex-col items-center gap-6">
-            <div className="w-12 h-12 border-4 border-success border-t-transparent rounded-full animate-spin" />
-            <p className="font-black text-secondary uppercase tracking-widest text-xs">Syncing your earnings...</p>
+            ) : (
+              <button
+                onClick={() => setShowMobileSearch(true)}
+                className="w-full flex items-center gap-2 bg-surface border border-border-subtle rounded-xl px-3 py-2 text-sm text-muted hover:text-foreground hover:border-border-hover transition-colors text-left"
+              >
+                <Search size={14} />
+                <span className="truncate">{search || "Search..."}</span>
+              </button>
+            )}
           </div>
-        ) : filteredIncomes.length === 0 ? (
-          <div className="p-20 text-center flex flex-col items-center justify-center">
-             <div className="w-20 h-20 bg-success/10 text-success rounded-full flex items-center justify-center mb-8">
-                <Banknote size={32} />
-             </div>
-             <h3 className="text-2xl font-black mb-2">No income entries</h3>
-             <p className="text-secondary font-medium max-w-[280px]">Start tracking your earnings to see your financial growth.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border-subtle/30">
-            {filteredIncomes.map((income, i) => {
-              const Icon = SOURCE_ICONS[income.source] || Sparkles;
-              return (
-                <motion.div 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.02 }}
-                  key={income.id} 
-                  className={`p-5 sm:p-6 hover:bg-success/5 transition-all flex items-center gap-4 sm:gap-6 group ${
-                    i === 0 ? "rounded-t-[2.5rem]" : ""
-                  } ${
-                    i === filteredIncomes.length - 1 ? "rounded-b-[2.5rem]" : ""
-                  }`}
-                >
-                  {/* 1. Icon Column */}
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg flex-shrink-0 bg-success">
-                    <Icon size={24} />
-                  </div>
-                  
-                  {/* 2. Text Info Column (Flexible) */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1 mb-1">
-                      <h3 className="font-black text-base sm:text-xl leading-tight group-hover:text-success transition-colors truncate">
-                        {income.source}
-                      </h3>
-                      <span className="w-fit text-[9px] font-black uppercase tracking-[0.1em] px-2 py-0.5 rounded-md bg-success/10 text-success">
-                         Deposited
-                      </span>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-secondary">
-                      <span className="flex items-center gap-1 shrink-0 font-black text-[10px] sm:text-xs">
-                        <CalendarDays size={12} className="text-muted" />
-                        {new Date(income.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                      </span>
-                      {income.note && (
-                        <>
-                          <span className="hidden sm:block w-1 h-1 rounded-full bg-border-subtle shrink-0" />
-                          <p className="w-full sm:w-auto italic text-muted font-medium normal-case first-letter:uppercase text-[11px] sm:text-xs truncate sm:break-words leading-relaxed">
-                            {income.note}
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 3. Amount + Menu Column (Fixed stability) */}
-                  <div className="flex-shrink-0 flex items-center gap-2 sm:gap-4 min-w-[90px] sm:min-w-[120px] justify-end">
-                    <div className="text-right">
-                      <span className="block text-xl sm:text-3xl font-black leading-none tracking-tighter text-success">
-                        ₹{income.amount.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                    
-                    {/* Actions */}
-                    <div className="relative flex-shrink-0">
-                      <button 
-                        disabled={deletingId === income.id}
-                        onClick={() => setActiveMenuId(activeMenuId === income.id ? null : income.id)}
-                        className="p-3 rounded-xl hover:bg-surface-variant text-secondary transition-all active:scale-95 disabled:opacity-50"
-                      >
-                        {deletingId === income.id ? (
-                          <Loader2 className="animate-spin" size={20} />
-                        ) : (
-                          <MoreVertical size={20} />
-                        )}
-                      </button>
-                      
-                      <AnimatePresence>
-                        {activeMenuId === income.id && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)} />
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                              className={`absolute right-0 w-48 bg-surface border border-border-subtle rounded-2xl shadow-2xl z-20 p-2 overflow-hidden ${
-                                i >= filteredIncomes.length - 2
-                                  ? "bottom-full mb-2" 
-                                  : "top-full mt-2"
-                              }`}
-                            >
-                              <button 
-                                onClick={() => {
-                                  setDetailTransaction(income);
-                                  setIsDetailModalOpen(true);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant transition-colors font-bold text-sm"
-                              >
-                                <Eye size={18} className="text-muted" />
-                                View Details
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  setSelectedIncome(income);
-                                  setIsModalOpen(true);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface-variant transition-colors font-bold text-sm"
-                              >
-                                <Pencil size={18} className="text-success" />
-                                Edit Entry
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  handleDelete(income.id);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-error/10 text-error transition-colors font-bold text-sm"
-                              >
-                                <Trash2 size={18} />
-                                Delete Entry
-                              </button>
-                            </motion.div>
-                          </>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+          <span className="text-xs font-semibold text-muted whitespace-nowrap px-1">{monthName}</span>
+        </div>
       </div>
 
-      <div className="w-full h-[50px]"></div>
+      {/* Income List */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-muted">
+          <Loader2 className="animate-spin mb-3" size={24} />
+          <span className="text-xs font-medium">Loading...</span>
+        </div>
+      ) : filteredIncomes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-surface-variant flex items-center justify-center mb-4">
+            <Receipt size={24} className="text-muted" />
+          </div>
+          <p className="text-sm font-semibold text-foreground mb-1">
+            {search ? "No matching income" : "No income yet"}
+          </p>
+          <p className="text-xs text-muted mb-5 max-w-[220px]">
+            {search ? "Try a different search term" : "Track your earnings to see your financial growth"}
+          </p>
+          {!search && (
+            <button
+              onClick={() => {
+                setSelectedIncome(null);
+                setForm({ amount: "", source: "Salary", note: "", date: new Date().toISOString().split("T")[0] });
+                setShowDetail(true);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 bg-success text-white text-sm font-semibold rounded-xl"
+            >
+              <Plus size={16} /> Add Income
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {(() => {
+            const groups: Record<string, Income[]> = {};
+            filteredIncomes.forEach((inc) => {
+              const key = inc.date.split("T")[0];
+              if (!groups[key]) groups[key] = [];
+              groups[key].push(inc);
+            });
 
-      <AddIncomeModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={fetchIncomes}
-        editIncome={selectedIncome}
-      />
-      <TransactionDetailModal 
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        transaction={detailTransaction}
-        type="income"
-      />
+            return Object.entries(groups).map(([dateKey, items]) => {
+              const dayTotal = items.reduce((s, i) => s + i.amount, 0);
+              const d = new Date(dateKey);
+              const isToday = d.toDateString() === new Date().toDateString();
+              const isYesterday = d.toDateString() === new Date(Date.now() - 86400000).toDateString();
+              const label = isToday ? "Today" : isYesterday ? "Yesterday" : d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+
+              return (
+                <div key={dateKey}>
+                  <div className="flex items-center justify-between px-1 py-2">
+                    <span className="text-xs font-semibold text-muted">{label}</span>
+                    <span className="text-xs font-semibold text-success">{formatCurrency(dayTotal)}</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {items.map((income) => {
+                      const Icon = getSourceIcon(income.source);
+                      return (
+                        <motion.button
+                          key={income.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          onClick={() => openDetail(income)}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border-subtle hover:border-border-hover hover:bg-surface-variant/30 transition-all text-left active:scale-[0.98]"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center flex-shrink-0">
+                            <Icon size={16} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-semibold text-foreground truncate">{income.source}</span>
+                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-success/10 text-success">
+                                Income
+                              </span>
+                            </div>
+                            {income.note && (
+                              <p className="text-xs text-muted truncate mt-0.5">{income.note}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <span className="text-sm font-bold text-success tabular-nums">{formatCurrency(income.amount)}</span>
+                            <Pencil size={12} className="text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            });
+          })()}
+        </div>
+      )}
+
+      {/* Detail / Edit Bottom Sheet */}
+      <AnimatePresence>
+        {showDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeDetail}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="relative w-full sm:max-w-md bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border-subtle max-h-[85vh] overflow-y-auto"
+            >
+              {/* Drag Handle */}
+              <div className="sm:hidden flex justify-center pt-3 pb-1 sticky top-0 bg-surface z-10">
+                <div className="w-10 h-1 rounded-full bg-border-subtle" />
+              </div>
+
+              {selectedIncome && selectedIncome.id ? (
+                /* EDIT MODE */
+                <div className="px-5 pt-2 pb-8 sm:p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+                        <Pencil size={18} />
+                      </div>
+                      <h2 className="text-lg font-bold text-foreground">Edit Income</h2>
+                    </div>
+                    <button onClick={closeDetail} className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95">
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="mb-6">
+                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Amount</label>
+                    <div className="relative">
+                      <IndianRupee size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={form.amount}
+                        onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-lg font-bold text-foreground outline-none focus:border-success transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Source */}
+                  <div className="mb-6">
+                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Source</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {INCOME_SOURCES.map((src) => {
+                        const isActive = form.source === src.name;
+                        return (
+                          <button
+                            key={src.name}
+                            onClick={() => setForm({ ...form, source: src.name })}
+                            className={`flex items-center gap-2 p-3 rounded-xl border text-sm font-semibold transition-all ${
+                              isActive
+                                ? "border-success bg-success/5 text-foreground shadow-sm"
+                                : "border-border-subtle bg-surface-variant/30 text-muted hover:text-foreground hover:border-border-hover"
+                            }`}
+                          >
+                            <src.icon size={16} className={isActive ? "text-success" : ""} />
+                            {src.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Date */}
+                  <div className="mb-6">
+                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Date</label>
+                    <div className="relative">
+                      <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                      <input
+                        type="date"
+                        value={form.date}
+                        onChange={(e) => setForm({ ...form, date: e.target.value })}
+                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:border-success transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Note */}
+                  <div className="mb-6">
+                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Note</label>
+                    <textarea
+                      value={form.note}
+                      onChange={(e) => setForm({ ...form, note: e.target.value })}
+                      rows={2}
+                      placeholder="Add a note..."
+                      className="w-full bg-background border border-border-subtle rounded-xl py-3 px-4 text-sm font-medium text-foreground outline-none focus:border-success transition-colors resize-none"
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-success text-white font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                      {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                      {saving ? "Saving..." : "Save Changes"}
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-error font-medium text-sm hover:bg-error/5 active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                      {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                      {deleting ? "Deleting..." : "Delete Income"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ADD NEW INCOME */
+                <div className="px-5 pt-2 pb-8 sm:p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
+                        <Plus size={18} />
+                      </div>
+                      <h2 className="text-lg font-bold text-foreground">New Income</h2>
+                    </div>
+                    <button onClick={closeDetail} className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95">
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  {/* Amount */}
+                  <div className="mb-6">
+                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Amount</label>
+                    <div className="relative">
+                      <IndianRupee size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        autoFocus
+                        value={form.amount}
+                        onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                        placeholder="0.00"
+                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-lg font-bold text-foreground outline-none focus:border-success transition-colors placeholder:text-muted"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Source */}
+                  <div className="mb-6">
+                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Source</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {INCOME_SOURCES.map((src) => {
+                        const isActive = form.source === src.name;
+                        return (
+                          <button
+                            key={src.name}
+                            onClick={() => setForm({ ...form, source: src.name })}
+                            className={`flex items-center gap-2 p-3 rounded-xl border text-sm font-semibold transition-all ${
+                              isActive
+                                ? "border-success bg-success/5 text-foreground shadow-sm"
+                                : "border-border-subtle bg-surface-variant/30 text-muted hover:text-foreground hover:border-border-hover"
+                            }`}
+                          >
+                            <src.icon size={16} className={isActive ? "text-success" : ""} />
+                            {src.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Date */}
+                  <div className="mb-6">
+                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Date</label>
+                    <div className="relative">
+                      <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                      <input
+                        type="date"
+                        value={form.date}
+                        onChange={(e) => setForm({ ...form, date: e.target.value })}
+                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:border-success transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Note */}
+                  <div className="mb-6">
+                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Note</label>
+                    <textarea
+                      value={form.note}
+                      onChange={(e) => setForm({ ...form, note: e.target.value })}
+                      rows={2}
+                      placeholder="Add a note..."
+                      className="w-full bg-background border border-border-subtle rounded-xl py-3 px-4 text-sm font-medium text-foreground outline-none focus:border-success transition-colors resize-none placeholder:text-muted"
+                    />
+                  </div>
+
+                  {/* Submit */}
+                  <button
+                    onClick={async () => {
+                      const amount = parseFloat(form.amount);
+                      if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+                      if (!form.source) { toast.error("Select a source"); return; }
+                      if (!form.date) { toast.error("Select a date"); return; }
+
+                      setSaving(true);
+                      try {
+                        const res = await fetch("/api/income", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ amount, source: form.source, note: form.note, date: form.date }),
+                        });
+                        if (res.ok) {
+                          toast.success("Income recorded!");
+                          window.dispatchEvent(new CustomEvent("incomeAdded"));
+                          closeDetail();
+                        } else {
+                          const err = await res.json();
+                          toast.error(err.error || "Failed to save");
+                        }
+                      } catch {
+                        toast.error("An error occurred");
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                    disabled={saving}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-success text-white font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    {saving ? "Saving..." : "Add Income"}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* FAB for mobile */}
+      <button
+        onClick={() => {
+          setSelectedIncome(null);
+          setForm({ amount: "", source: "Salary", note: "", date: new Date().toISOString().split("T")[0] });
+          setShowDetail(true);
+        }}
+        className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full bg-success text-white shadow-xl shadow-success/30 flex items-center justify-center active:scale-90 transition-transform z-20"
+      >
+        <Plus size={28} />
+      </button>
     </div>
   );
 }
