@@ -208,17 +208,7 @@ export default function ExpensesPage() {
             </div>
           </div>
           <button
-            onClick={() => {
-              setSelectedExpense(null);
-              setForm({
-                amount: "",
-                category: "Needs",
-                subcategory: "",
-                note: "",
-                date: new Date().toISOString().split("T")[0],
-              });
-              setShowDetail(true);
-            }}
+            onClick={() => window.dispatchEvent(new CustomEvent("open-add-expense"))}
             className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-primary-500/20 hover:bg-primary-600 active:scale-95 transition-all"
           >
             <Plus size={16} />
@@ -310,7 +300,7 @@ export default function ExpensesPage() {
           </p>
           {!search && (
             <button
-              onClick={() => openDetail({ id: "", amount: 0, category: "Needs", subcategory: "", note: "", date: new Date().toISOString() })}
+              onClick={() => window.dispatchEvent(new CustomEvent("open-add-expense"))}
               className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 text-white text-sm font-semibold rounded-xl"
             >
               <Plus size={16} /> Add Expense
@@ -413,246 +403,116 @@ export default function ExpensesPage() {
                 <div className="w-10 h-1 rounded-full bg-border-subtle" />
               </div>
 
-              {selectedExpense && selectedExpense.id ? (
-                /* EDIT MODE */
-                <div className="px-5 pt-2 pb-8 sm:p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
-                        <Pencil size={18} />
-                      </div>
-                      <h2 className="text-lg font-bold text-foreground">Edit Transaction</h2>
+              <div className="px-5 pt-2 pb-8 sm:p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
+                      <Pencil size={18} />
                     </div>
-                    <button onClick={closeDetail} className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95">
-                      <X size={18} />
-                    </button>
+                    <h2 className="text-lg font-bold text-foreground">Edit Transaction</h2>
                   </div>
+                  <button onClick={closeDetail} className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95">
+                    <X size={18} />
+                  </button>
+                </div>
 
-                  {/* Amount */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Amount</label>
-                    <div className="relative">
-                      <IndianRupee size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={form.amount}
-                        onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-lg font-bold text-foreground outline-none focus:border-primary-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Category Toggle */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Category</label>
-                    <div className="grid grid-cols-2 gap-2 p-1 bg-surface-variant rounded-xl">
-                      {["Needs", "Wants"].map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => setForm({ ...form, category: type })}
-                          className={`py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                            form.category === type
-                              ? "bg-primary-500 text-white shadow-sm"
-                              : "text-muted hover:text-foreground"
-                          }`}
-                        >
-                          {type === "Needs" ? <ShoppingCart size={14} /> : <Sparkles size={14} />}
-                          {type}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Subcategory */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Subcategory</label>
-                    <div className="relative">
-                      <Tag size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                      <input
-                        type="text"
-                        value={form.subcategory}
-                        onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
-                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Date */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Date</label>
-                    <div className="relative">
-                      <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                      <input
-                        type="date"
-                        value={form.date}
-                        onChange={(e) => setForm({ ...form, date: e.target.value })}
-                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Note */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Note</label>
-                    <textarea
-                      value={form.note}
-                      onChange={(e) => setForm({ ...form, note: e.target.value })}
-                      rows={2}
-                      placeholder="Add a note..."
-                      className="w-full bg-background border border-border-subtle rounded-xl py-3 px-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors resize-none"
+                {/* Amount */}
+                <div className="mb-6">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Amount</label>
+                  <div className="relative">
+                    <IndianRupee size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.amount}
+                      onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                      className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-lg font-bold text-foreground outline-none focus:border-primary-500 transition-colors"
                     />
-                  </div>
-
-                  {/* Actions */}
-                  <div className="space-y-2">
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-foreground text-background font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
-                    >
-                      {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                      {saving ? "Saving..." : "Save Changes"}
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={deleting}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-error font-medium text-sm hover:bg-error/5 active:scale-[0.98] transition-all disabled:opacity-50"
-                    >
-                      {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                      {deleting ? "Deleting..." : "Delete Transaction"}
-                    </button>
                   </div>
                 </div>
-              ) : (
-                /* ADD NEW EXPENSE MODE */
-                <div className="px-5 pt-2 pb-8 sm:p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
-                        <Plus size={18} />
-                      </div>
-                      <h2 className="text-lg font-bold text-foreground">New Expense</h2>
-                    </div>
-                    <button onClick={closeDetail} className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95">
-                      <X size={18} />
-                    </button>
-                  </div>
 
-                  {/* Amount */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Amount</label>
-                    <div className="relative">
-                      <IndianRupee size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        autoFocus
-                        value={form.amount}
-                        onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                        placeholder="0.00"
-                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-lg font-bold text-foreground outline-none focus:border-primary-500 transition-colors placeholder:text-muted"
-                      />
-                    </div>
+                {/* Category Toggle */}
+                <div className="mb-6">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Category</label>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-surface-variant rounded-xl">
+                    {["Needs", "Wants"].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setForm({ ...form, category: type })}
+                        className={`py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                          form.category === type
+                            ? "bg-primary-500 text-white shadow-sm"
+                            : "text-muted hover:text-foreground"
+                        }`}
+                      >
+                        {type === "Needs" ? <ShoppingCart size={14} /> : <Sparkles size={14} />}
+                        {type}
+                      </button>
+                    ))}
                   </div>
+                </div>
 
-                  {/* Category Toggle */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Category</label>
-                    <div className="grid grid-cols-2 gap-2 p-1 bg-surface-variant rounded-xl">
-                      {["Needs", "Wants"].map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => setForm({ ...form, category: type })}
-                          className={`py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
-                            form.category === type
-                              ? "bg-primary-500 text-white shadow-sm"
-                              : "text-muted hover:text-foreground"
-                          }`}
-                        >
-                          {type === "Needs" ? <ShoppingCart size={14} /> : <Sparkles size={14} />}
-                          {type}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Subcategory */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Subcategory</label>
-                    <div className="relative">
-                      <Tag size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                      <input
-                        type="text"
-                        value={form.subcategory}
-                        onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
-                        placeholder="e.g. Groceries, Rent, Uber"
-                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors placeholder:text-muted"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Date */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Date</label>
-                    <div className="relative">
-                      <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                      <input
-                        type="date"
-                        value={form.date}
-                        onChange={(e) => setForm({ ...form, date: e.target.value })}
-                        className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Note */}
-                  <div className="mb-6">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Note</label>
-                    <textarea
-                      value={form.note}
-                      onChange={(e) => setForm({ ...form, note: e.target.value })}
-                      rows={2}
-                      placeholder="Add a note..."
-                      className="w-full bg-background border border-border-subtle rounded-xl py-3 px-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors resize-none placeholder:text-muted"
+                {/* Subcategory */}
+                <div className="mb-6">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Subcategory</label>
+                  <div className="relative">
+                    <Tag size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                    <input
+                      type="text"
+                      value={form.subcategory}
+                      onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+                      className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors"
                     />
                   </div>
+                </div>
 
-                  {/* Submit */}
+                {/* Date */}
+                <div className="mb-6">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Date</label>
+                  <div className="relative">
+                    <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+                    <input
+                      type="date"
+                      value={form.date}
+                      onChange={(e) => setForm({ ...form, date: e.target.value })}
+                      className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Note */}
+                <div className="mb-6">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Note</label>
+                  <textarea
+                    value={form.note}
+                    onChange={(e) => setForm({ ...form, note: e.target.value })}
+                    rows={2}
+                    placeholder="Add a note..."
+                    className="w-full bg-background border border-border-subtle rounded-xl py-3 px-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors resize-none"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-2">
                   <button
-                    onClick={async () => {
-                      const amount = parseFloat(form.amount);
-                      if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
-                      if (!form.subcategory.trim()) { toast.error("Enter a subcategory"); return; }
-                      if (!form.date) { toast.error("Select a date"); return; }
-
-                      setSaving(true);
-                      try {
-                        await mutations.createExpense({
-                          amount,
-                          category: form.category,
-                          subcategory: form.subcategory.trim(),
-                          note: form.note,
-                          date: form.date,
-                        });
-                        toast.success("Expense recorded!");
-                        closeDetail();
-                      } catch (e: any) {
-                        toast.error(e.message || "Failed to save");
-                      } finally {
-                        setSaving(false);
-                      }
-                    }}
+                    onClick={handleSave}
                     disabled={saving}
                     className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-foreground text-background font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
                   >
                     {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                    {saving ? "Saving..." : "Add Expense"}
+                    {saving ? "Saving..." : "Save Changes"}
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-error font-medium text-sm hover:bg-error/5 active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                    {deleting ? "Deleting..." : "Delete Transaction"}
                   </button>
                 </div>
-              )}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -660,17 +520,7 @@ export default function ExpensesPage() {
 
       {/* FAB for mobile */}
       <button
-        onClick={() => {
-          setSelectedExpense(null);
-          setForm({
-            amount: "",
-            category: "Needs",
-            subcategory: "",
-            note: "",
-            date: new Date().toISOString().split("T")[0],
-          });
-          setShowDetail(true);
-        }}
+        onClick={() => window.dispatchEvent(new CustomEvent("open-add-expense"))}
         className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white shadow-xl shadow-primary-500/30 flex items-center justify-center active:scale-90 transition-transform z-20"
       >
         <Plus size={28} />

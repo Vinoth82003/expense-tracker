@@ -118,8 +118,12 @@ export default function DashboardLayout({
       handleAppInstalled();
     }
 
+    const handleOpenAddExpense = () => setIsAddExpenseOpen(true);
+    window.addEventListener("open-add-expense", handleOpenAddExpense);
+
     return () => {
       window.removeEventListener("appinstalled", handleAppInstalled);
+      window.removeEventListener("open-add-expense", handleOpenAddExpense);
     };
   }, []);
 
