@@ -2,521 +2,576 @@
 
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import { 
-  Sparkles, 
-  Wallet, 
-  ShoppingCart, 
-  Activity,
-  CalendarDays,
-  PieChart as PieChartIcon,
-  ArrowRight,
-  TrendingUp,
+import {
+  Wallet,
   Banknote,
   Scale,
-  Settings2,
+  Activity,
+  CalendarDays,
+  TrendingUp,
+  TrendingDown,
+  ArrowRight,
+  ShoppingCart,
+  Utensils,
+  Car,
+  Home,
+  Zap,
+  Shirt,
+  Plane,
+  GraduationCap,
+  Film,
+  Gift,
+  Plus,
   AlertTriangle,
-  Triangle
+  PiggyBank,
+  Target,
+  PieChart as PieChartIcon,
+  Settings2,
 } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useDashboard } from "@/context/DashboardContext";
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  ResponsiveContainer, 
-  Tooltip,
-  Radar, 
-  RadarChart, 
-  PolarGrid, 
-  PolarAngleAxis, 
-  PolarRadiusAxis
-} from "recharts";
 
-const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#06b6d4", "#f59e0b", "#10b981"];
+const COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#f59e0b", "#ec4899", "#10b981"];
+const CATEGORY_ICONS: Record<string, typeof Wallet> = {
+  Food: Utensils,
+  Rent: Home,
+  Transport: Car,
+  Utilities: Zap,
+  Shopping: Shirt,
+  Travel: Plane,
+  Education: GraduationCap,
+  Entertainment: Film,
+  Gift: Gift,
+  Other: ShoppingCart,
+};
+
+function getCategoryIcon(name: string) {
+  return CATEGORY_ICONS[name] || ShoppingCart;
+}
+
+function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  color,
+  delay,
+  loading,
+}: {
+  icon: typeof Wallet;
+  label: string;
+  value: string;
+  color: string;
+  delay: number;
+  loading: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      className="p-5 rounded-2xl bg-surface border border-border-subtle shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+    >
+      <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl -mr-16 -mt-16 rounded-full ${color}/5`} />
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-9 h-9 rounded-xl ${color}/10 text-${color.startsWith('text-') ? color.replace('text-', '') : color} flex items-center justify-center`}>
+          <Icon size={18} />
+        </div>
+      </div>
+      <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-0.5">{label}</div>
+      <div className="text-xl font-bold text-foreground">
+        {loading ? <span className="text-muted animate-pulse">...</span> : value}
+      </div>
+    </motion.div>
+  );
+}
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const { 
-    expenses, 
-    incomes, 
-    monthlyLimit, 
-    expenseMode, 
-    loading, 
+  const {
+    expenses,
+    incomes,
+    prevExpenses,
+    prevIncomes,
+    monthlyLimit,
+    expenseMode,
+    loading,
     isTogglingMode,
-    toggleExpenseMode 
+    toggleExpenseMode,
   } = useDashboard();
-  
-  const [mounted, setMounted] = useState(false);
+
   const firstName = session?.user?.name?.split(" ")[0] || "there";
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
   const stats = useMemo(() => {
-    const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const totalIncome = incomes.reduce((sum, inc) => sum + inc.amount, 0);
+    const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+    const totalIncome = incomes.reduce((s, i) => s + i.amount, 0);
     const netBalance = totalIncome - totalSpent;
     const remaining = monthlyLimit - totalSpent;
-    const dailyAverage = totalSpent / (new Date().getDate() || 1);
 
-    // Daily Limit Logic
     const today = new Date();
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const currentDay = today.getDate();
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const daysLeft = daysInMonth - currentDay + 1;
-    
-    const todayStr = today.toISOString().split('T')[0];
-    const todaySpend = expenses
-      .filter(e => e.date.startsWith(todayStr))
-      .reduce((sum, exp) => sum + exp.amount, 0);
-    
+    const dailyAverage = totalSpent / (currentDay || 1);
+
+    const todayStr = today.toISOString().split("T")[0];
+    const todaySpend = expenses.filter((e) => e.date.startsWith(todayStr)).reduce((s, e) => s + e.amount, 0);
     const dailyLimit = expenseMode === "limit" ? Math.max(0, (monthlyLimit - (totalSpent - todaySpend)) / daysLeft) : 0;
     const todayUsagePercent = dailyLimit > 0 ? (todaySpend / dailyLimit) * 100 : 0;
 
-    // 50/30/20 Breakdown
-    const needs = expenses.filter(e => e.category === "Needs").reduce((sum, exp) => sum + exp.amount, 0);
-    const wants = expenses.filter(e => e.category === "Wants").reduce((sum, exp) => sum + exp.amount, 0);
+    const needs = expenses.filter((e) => e.category === "Needs").reduce((s, e) => s + e.amount, 0);
+    const wants = expenses.filter((e) => e.category === "Wants").reduce((s, e) => s + e.amount, 0);
     const savings = Math.max(0, totalIncome - totalSpent);
-    
-    const totalAllocated = totalIncome || (totalSpent > 0 ? totalSpent : 1);
-    const needsPct = (needs / totalAllocated) * 100;
-    const wantsPct = (wants / totalAllocated) * 100;
-    const savingsPct = (savings / totalAllocated) * 100;
+    const totalBase = totalIncome || totalSpent || 1;
 
-    // Category breakdown for chart
+    const prevTotalSpent = prevExpenses.reduce((s, e) => s + e.amount, 0);
+    const prevTotalIncome = prevIncomes.reduce((s, i) => s + i.amount, 0);
+    const spendChange = prevTotalSpent ? ((totalSpent - prevTotalSpent) / prevTotalSpent) * 100 : 0;
+    const incomeChange = prevTotalIncome ? ((totalIncome - prevTotalIncome) / prevTotalIncome) * 100 : 0;
+
     const catMap = new Map<string, number>();
-    expenses.forEach(e => catMap.set(e.category, (catMap.get(e.category) || 0) + e.amount));
-    const chartData = Array.from(catMap.entries()).map(([name, value]) => ({ name, value }));
+    expenses.forEach((e) => catMap.set(e.subcategory, (catMap.get(e.subcategory) || 0) + e.amount));
+    const chartData = Array.from(catMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
 
-    // Radar Data for Triangle Rule
-    const radarData = [
-      { subject: `Needs (50%)`, A: Number(needsPct.toFixed(1)), B: 50 },
-      { subject: `Wants (30%)`, A: Number(wantsPct.toFixed(1)), B: 30 },
-      { subject: `Savings (20%)`, A: Number(savingsPct.toFixed(1)), B: 20 },
-    ];
+    const needsCatMap = new Map<string, number>();
+    const wantsCatMap = new Map<string, number>();
+    expenses.forEach((e) => {
+      if (e.category === "Needs") needsCatMap.set(e.subcategory, (needsCatMap.get(e.subcategory) || 0) + e.amount);
+      else wantsCatMap.set(e.subcategory, (wantsCatMap.get(e.subcategory) || 0) + e.amount);
+    });
 
-    return { 
-      totalSpent, 
-      totalIncome, 
-      netBalance, 
-      dailyAverage, 
-      remaining, 
+    return {
+      totalSpent, totalIncome, netBalance, remaining,
+      dailyAverage, dailyLimit, todaySpend, todayUsagePercent, daysLeft,
+      needs, wants, savings,
+      needsPct: (needs / totalBase) * 100,
+      wantsPct: (wants / totalBase) * 100,
+      savingsPct: (savings / totalBase) * 100,
+      spendChange, incomeChange,
       chartData,
-      radarData,
-      dailyLimit,
-      todaySpend,
-      todayUsagePercent,
-      daysLeft,
-      breakdown503020: { needs, wants, savings, needsPct, wantsPct, savingsPct }
+      needsChartData: Array.from(needsCatMap.entries()).map(([n, v]) => ({ name: n, value: v })),
+      wantsChartData: Array.from(wantsCatMap.entries()).map(([n, v]) => ({ name: n, value: v })),
     };
-  }, [expenses, incomes, expenseMode, monthlyLimit]);
+  }, [expenses, incomes, prevExpenses, prevIncomes, expenseMode, monthlyLimit]);
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      {/* Welcome Header */}
-      <section>
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-6"
-        >
-          <div>
-            <div className="flex items-center gap-2 text-primary-600 font-black text-xs tracking-widest uppercase mb-2">
-              <Sparkles size={16} />
-              Personal Finance Assistant
-            </div>
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-none mb-2 break-words max-w-[90vw]">
-              Hey {firstName}! 👋
-            </h1>
-            <p className="text-secondary font-bold text-base sm:text-lg">Your financial pulse for {new Date().toLocaleDateString('en-IN', { month: 'long' })}.</p>
+    <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      >
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Welcome back, {firstName}
+          </h1>
+          <p className="text-sm text-muted mt-1">
+            Here&apos;s your financial overview for{" "}
+            {new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleExpenseMode}
+            disabled={isTogglingMode}
+            className="flex items-center gap-2 text-xs font-semibold bg-surface border border-border-subtle px-3 py-2 rounded-xl hover:bg-surface-variant transition-colors disabled:opacity-50"
+          >
+            <Settings2 size={14} className={expenseMode === "limit" ? "text-primary-500" : "text-muted"} />
+            {expenseMode === "limit" ? "Budget Mode" : "Free Mode"}
+          </button>
+          <div className="flex items-center gap-2 text-sm text-muted bg-surface border border-border-subtle px-3 py-2 rounded-xl">
+            <CalendarDays size={14} />
+            {new Date().toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
           </div>
-          
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <button
-              onClick={toggleExpenseMode}
-              disabled={isTogglingMode}
-              className="flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest bg-surface border border-border-subtle px-4 py-3 rounded-2xl shadow-sm hover:bg-surface-variant transition-colors disabled:opacity-50"
-            >
-              <Settings2 size={16} className={expenseMode === "limit" ? "text-primary-500" : "text-muted"} />
-              {expenseMode === "limit" ? "Limit Active" : "No Limit"}
-            </button>
-            <div className="flex items-center justify-center gap-2 text-foreground font-black bg-surface border border-border-subtle px-5 py-3 rounded-2xl shadow-sm">
-              <CalendarDays size={18} className="text-primary-500" />
-              {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-            </div>
-          </div>
-        </motion.div>
-      </section>
+        </div>
+      </motion.div>
 
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
-          className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 blur-3xl -mr-16 -mt-16 rounded-full" />
-          <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <Wallet size={20} />
-          </div>
-          <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Total Spent</div>
-          <div className="text-2xl font-black text-foreground">
-            {loading ? "..." : `₹${stats.totalSpent.toLocaleString('en-IN')}`}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-success/5 blur-3xl -mr-16 -mt-16 rounded-full" />
-          <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-            <Banknote size={20} />
-          </div>
-          <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Total Income</div>
-          <div className="text-2xl font-black text-foreground">
-            {loading ? "..." : `₹${stats.totalIncome.toLocaleString('en-IN')}`}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
-        >
-          <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl -mr-16 -mt-16 rounded-full ${stats.netBalance >= 0 ? "bg-success/5" : "bg-error/5"}`} />
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${stats.netBalance >= 0 ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
-            <Scale size={20} />
-          </div>
-          <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Net Balance</div>
-          <div className="text-2xl font-black text-foreground">
-            {loading ? "..." : `₹${stats.netBalance.toLocaleString('en-IN')}`}
-          </div>
-        </motion.div>
-
+      {/* KPI Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <KpiCard icon={Wallet} label="Total Spent" value={`\u20B9${stats.totalSpent.toLocaleString("en-IN")}`} color="bg-primary-500" delay={0.05} loading={loading} />
+        <KpiCard icon={Banknote} label="Total Income" value={`\u20B9${stats.totalIncome.toLocaleString("en-IN")}`} color="bg-success" delay={0.1} loading={loading} />
+        <KpiCard
+          icon={Scale}
+          label="Net Balance"
+          value={`\u20B9${stats.netBalance.toLocaleString("en-IN")}`}
+          color={stats.netBalance >= 0 ? "bg-success" : "bg-error"}
+          delay={0.15}
+          loading={loading}
+        />
         {expenseMode === "limit" ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-            className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
-          >
-            <div className={`absolute top-0 right-0 w-32 h-32 blur-3xl -mr-16 -mt-16 rounded-full ${stats.remaining! >= 0 ? "bg-primary-500/5" : "bg-error/5"}`} />
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${stats.remaining! >= 0 ? "bg-primary-500/10 text-primary-500" : "bg-error/10 text-error"}`}>
-              <Activity size={20} />
-            </div>
-            <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Budget Left</div>
-            <div className="text-2xl font-black text-foreground">
-              {loading ? "..." : `₹${stats.remaining!.toLocaleString('en-IN')}`}
-            </div>
-          </motion.div>
+          <KpiCard
+            icon={Target}
+            label="Budget Left"
+            value={`\u20B9${Math.max(0, stats.remaining).toLocaleString("en-IN")}`}
+            color={stats.remaining >= 0 ? "bg-primary-500" : "bg-error"}
+            delay={0.2}
+            loading={loading}
+          />
         ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-            className="p-6 rounded-[2rem] bg-surface border border-border-subtle shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-muted/5 blur-3xl -mr-16 -mt-16 rounded-full" />
-            <div className="w-10 h-10 rounded-xl bg-surface-variant text-secondary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <ShoppingCart size={20} />
-            </div>
-            <div className="text-[10px] font-black text-muted uppercase tracking-widest mb-1">Daily Avg</div>
-            <div className="text-2xl font-black text-foreground">
-              {loading ? "..." : `₹${Math.round(stats.dailyAverage).toLocaleString('en-IN')}`}
-            </div>
-          </motion.div>
+          <KpiCard icon={Activity} label="Daily Avg" value={`\u20B9${Math.round(stats.dailyAverage).toLocaleString("en-IN")}`} color="bg-tertiary-500" delay={0.2} loading={loading} />
         )}
       </div>
-      
-      {/* Daily Limit Warning - Condition: limit mode active and budget set */}
+
+      {/* Daily Budget Bar */}
       {expenseMode === "limit" && monthlyLimit > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-          className={`p-6 rounded-[2.5rem] border shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group ${
-            stats.todayUsagePercent <= 25 ? "bg-success/5 border-success/20" :
-            stats.todayUsagePercent <= 50 ? "bg-warning/5 border-warning/20" :
-            stats.todayUsagePercent <= 75 ? "bg-orange-500/5 border-orange-500/20" :
-            "bg-error/5 border-error/20"
-          }`}
+          transition={{ delay: 0.25 }}
+          className="p-4 sm:p-5 rounded-2xl bg-surface border border-border-subtle shadow-sm"
         >
-          <div className="flex items-center gap-4 relative z-10">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110 ${
-              stats.todayUsagePercent <= 25 ? "bg-success text-white" :
-              stats.todayUsagePercent <= 50 ? "bg-warning text-white" :
-              stats.todayUsagePercent <= 75 ? "bg-orange-500 text-white" :
-              "bg-error text-white"
-            }`}>
-              <AlertTriangle size={28} />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                stats.todayUsagePercent <= 50 ? "bg-success/10 text-success" :
+                stats.todayUsagePercent <= 75 ? "bg-warning/10 text-warning" : "bg-error/10 text-error"
+              }`}>
+                <AlertTriangle size={18} />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-foreground">Daily Budget</div>
+                <div className="text-xs text-muted">
+                  <span className="font-semibold text-foreground/80">{stats.dailyLimit > 0 ? `\u20B9${Math.round(stats.dailyLimit).toLocaleString("en-IN")}` : "\u20B90"}</span> left to spend today
+                </div>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-black">Daily Spending Limit</h3>
-              <p className="text-secondary font-bold">
-                You have <span className="text-foreground">₹{Math.round(stats.dailyLimit).toLocaleString('en-IN')}</span> to spend today.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center md:items-end gap-1 relative z-10">
-            <div className="text-[10px] font-black uppercase tracking-widest text-muted">Today&apos;s Spend</div>
-            <div className={`text-3xl font-black ${
-              stats.todayUsagePercent <= 25 ? "text-success" :
-              stats.todayUsagePercent <= 50 ? "text-warning" :
-              stats.todayUsagePercent <= 75 ? "text-orange-500" :
-              "text-error"
-            }`}>
-              ₹{stats.todaySpend.toLocaleString('en-IN')}
-            </div>
-            <div className="text-xs font-bold text-secondary">
-              {stats.todayUsagePercent.toFixed(1)}% of daily quota used
+            <div className="text-right">
+              <div className={`text-lg font-bold ${
+                stats.todayUsagePercent <= 50 ? "text-success" :
+                stats.todayUsagePercent <= 75 ? "text-warning" : "text-error"
+              }`}>
+                {`\u20B9${stats.todaySpend.toLocaleString("en-IN")}`}
+              </div>
+              <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">
+                {stats.todayUsagePercent.toFixed(0)}% used
+              </div>
             </div>
           </div>
-          
-          {/* Progress background bar */}
-          <div className="absolute bottom-0 left-0 h-1.5 bg-surface-variant w-full">
-            <motion.div 
+          <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
+            <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(100, stats.todayUsagePercent)}%` }}
-              className={`h-full transition-all duration-1000 ${
-                stats.todayUsagePercent <= 25 ? "bg-success" :
-                stats.todayUsagePercent <= 50 ? "bg-warning" :
-                stats.todayUsagePercent <= 75 ? "bg-orange-500" :
-                "bg-error"
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className={`h-full rounded-full ${
+                stats.todayUsagePercent <= 50 ? "bg-success" :
+                stats.todayUsagePercent <= 75 ? "bg-warning" : "bg-error"
               }`}
             />
           </div>
         </motion.div>
       )}
 
-      {/* Main Analysis Grid */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
-      >
-        {/* Recent Activity */}
-        <div className="lg:col-span-1 bg-surface rounded-[2.5rem] border border-border-subtle overflow-hidden flex flex-col shadow-sm">
-          <div className="p-8 flex items-center justify-between border-b border-border-subtle">
-            <h3 className="text-2xl font-black">Recent Activity</h3>
-            <Link href="/expenses" className="text-sm font-black text-primary-500 hover:text-primary-600 flex items-center gap-1.5 px-4 py-2 bg-primary-500/5 rounded-full transition-colors">
-              More <ArrowRight size={16} />
+      {/* Recent Transactions + Category Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* Recent Transactions */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-2xl bg-surface border border-border-subtle shadow-sm overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
+            <h2 className="text-sm font-bold text-foreground">Recent Transactions</h2>
+            <Link
+              href="/expenses"
+              className="text-xs font-semibold text-primary-500 hover:text-primary-600 flex items-center gap-1"
+            >
+              View all <ArrowRight size={12} />
             </Link>
           </div>
-          <div className="flex-1">
-             {loading ? (
-               <div className="p-12 text-center text-muted font-bold italic animate-pulse uppercase tracking-widest text-xs">Fetching transactions...</div>
-             ) : expenses.length === 0 ? (
-               <div className="p-12 text-center text-muted font-medium italic">
-                 No expenses found for this month. 💸
-               </div>
-             ) : (
-               <div className="divide-y divide-border-subtle">
-                 {expenses.slice(0, 4).map((exp) => (
-                   <div key={exp.id} className="p-4 sm:p-6 flex items-center gap-4 hover:bg-surface-variant transition-colors group">
-                     <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-white font-black shadow-sm group-hover:scale-110 transition-transform flex-shrink-0 ${
-                       exp.category === "Needs" ? "bg-primary-500" : "bg-tertiary-500"
-                     }`}>
-                       {exp.subcategory.charAt(0).toUpperCase()}
-                     </div>
-                     <div className="flex-1 min-w-0">
-                       <h4 className="font-black text-base sm:text-lg truncate">{exp.subcategory}</h4>
-                       <div className="text-[10px] text-muted font-black uppercase tracking-widest mt-0.5 truncate">
-                         {new Date(exp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {exp.category}
-                       </div>
-                     </div>
-                     <div className="flex-shrink-0 text-right">
-                       <span className="font-black text-lg sm:text-xl">₹{exp.amount.toLocaleString('en-IN')}</span>
-                     </div>
-                   </div>
-                 ))}
-                 <Link href="/expenses" className="block text-center py-5 font-black text-xs uppercase tracking-widest text-secondary hover:text-primary-500 transition-colors bg-surface-variant/30">
-                    See 10+ more transactions
-                 </Link>
-               </div>
-             )}
-          </div>
-        </div>
-
-        {/* Category Breakdown Chart */}
-        <div className="bg-surface rounded-[2.5rem] border border-border-subtle p-8 shadow-sm flex flex-col">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-2xl font-black">Category Split</h3>
-            <Link href="/reports" className="text-primary-500">
-               <TrendingUp size={24} />
-            </Link>
-          </div>
-          
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[300px]">
+          <div>
             {loading ? (
-               <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+              <div className="p-8 text-center text-xs text-muted animate-pulse">Loading...</div>
             ) : expenses.length === 0 ? (
-              <div className="text-center group cursor-pointer">
-                 <div className="w-20 h-20 rounded-full bg-surface-variant flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-all">
-                    <PieChartIcon size={32} className="text-muted" />
-                 </div>
-                 <p className="text-muted font-bold italic">No data to visualize yet</p>
+              <div className="p-8 text-center">
+                <div className="w-12 h-12 rounded-xl bg-surface-variant flex items-center justify-center mx-auto mb-3">
+                  <ShoppingCart size={20} className="text-muted" />
+                </div>
+                <p className="text-sm text-muted mb-3">No expenses this month</p>
+                <Link
+                  href="/expenses"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-500 bg-primary-500/10 px-3 py-1.5 rounded-lg hover:bg-primary-500/20 transition-colors"
+                >
+                  <Plus size={12} /> Add your first expense
+                </Link>
               </div>
             ) : (
               <>
-                <div className="h-64 sm:h-72 w-full mt-4 relative">
-                  {mounted && !loading && stats.chartData.length > 0 && (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart key={`pie-${stats.chartData.length}-${stats.totalSpent}`}>
-                        <Pie
-                          data={stats.chartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={90}
-                          paddingAngle={8}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          {stats.chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-subtle)', borderRadius: '1rem', fontWeight: 'bold' }}
-                          itemStyle={{ color: 'var(--foreground)' }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
-                
-                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
-                  {stats.chartData.map((entry, idx) => (
-                    <div key={entry.name} className="flex items-center gap-3 bg-surface-variant/30 p-2.5 sm:p-3 rounded-2xl border border-border-subtle">
-                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[9px] sm:text-[10px] font-black uppercase text-muted truncate">{entry.name}</p>
-                        <p className="font-black text-sm sm:text-base">₹{entry.value.toLocaleString('en-IN')}</p>
+                {expenses.slice(0, 5).map((exp) => {
+                  const Icon = getCategoryIcon(exp.subcategory);
+                  return (
+                    <div
+                      key={exp.id}
+                      className="flex items-center gap-3 px-5 py-3.5 hover:bg-surface-variant/50 transition-colors border-b border-border-subtle last:border-0"
+                    >
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        exp.category === "Needs" ? "bg-primary-500/10 text-primary-500" : "bg-tertiary-500/10 text-tertiary-500"
+                      }`}>
+                        <Icon size={16} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-foreground truncate">{exp.subcategory}</div>
+                        <div className="text-[11px] text-muted">
+                          {new Date(exp.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                          {exp.note ? ` \u2022 ${exp.note}` : ""}
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-foreground flex-shrink-0 whitespace-nowrap tabular-nums">
+                        -{`\u20B9${exp.amount.toLocaleString("en-IN")}`}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </>
             )}
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* 50/30/20 Triangle Graph Section */}
-      <motion.section
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="bg-surface rounded-[3rem] border border-border-subtle p-8 sm:p-12 shadow-sm overflow-hidden relative"
-      >
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 blur-[100px] rounded-full -mr-32 -mt-32" />
-        
-        <div className="flex flex-col items-center text-center mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-500/10 text-primary-500 text-[10px] font-black uppercase tracking-widest mb-4">
-            <Triangle size={14} />
-            Budget Strategy
+        {/* Category Breakdown */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="rounded-2xl bg-surface border border-border-subtle shadow-sm p-5"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-foreground">Spending by Category</h2>
+            <Link href="/reports">
+              <PieChartIcon size={16} className="text-muted hover:text-foreground transition-colors" />
+            </Link>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight mb-2">50/30/20 Rule Analysis</h2>
-          <p className="text-secondary font-medium max-w-xl">
-            Comparing your actual spending habits with the ideal financial health triangle for current month.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Triangle Visualization */}
-          <div className="relative flex justify-center">
-              <div className="w-full h-[400px] relative flex items-center justify-center">
-                <ResponsiveContainer width="100%" height={250} minWidth={100} minHeight={100}>
-                  <RadarChart key={`radar-${stats.radarData[0].A}-${stats.radarData[1].A}-${stats.radarData[2].A}`} cx="50%" cy="50%" outerRadius="70%" data={stats.radarData}>
-                    <PolarGrid stroke="#6366f120" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: "currentColor", fontSize: 10, fontWeight: 800 }} className="text-secondary" />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} axisLine={false} tick={false} />
-                    <Radar
-                      name="Actual"
-                      dataKey="A"
-                      stroke="#6366f1"
-                      fill="#6366f1"
-                      fillOpacity={0.6}
-                    />
-                    <Radar
-                      name="Suggested"
-                      dataKey="B"
-                      stroke="#06b6d4"
-                      fill="#06b6d4"
-                      fillOpacity={0.3}
-                      strokeDasharray="4 4"
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-subtle)', borderRadius: '1rem', fontWeight: 'bold' }}
-                      itemStyle={{ color: 'var(--foreground)' }}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
+          {loading ? (
+            <div className="flex items-center justify-center h-48 text-xs text-muted animate-pulse">Loading...</div>
+          ) : stats.chartData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-center">
+              <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center mb-2">
+                <PieChartIcon size={18} className="text-muted" />
               </div>
+              <p className="text-xs text-muted">No data to show yet</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-foreground tabular-nums">
+                  {`\u20B9${stats.totalSpent.toLocaleString("en-IN")}`}
+                </div>
+                <div className="text-[11px] text-muted font-medium uppercase tracking-wider">Total Spent</div>
+              </div>
+              <div className="space-y-3.5">
+                {stats.chartData.slice(0, 6).map((entry, idx) => {
+                  const pct = (entry.value / stats.totalSpent) * 100;
+                  return (
+                    <div key={entry.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                          <span className="text-xs font-semibold text-foreground truncate">{entry.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-sm font-bold text-foreground tabular-nums">
+                            {`\u20B9${entry.value.toLocaleString("en-IN")}`}
+                          </span>
+                          <span className="text-[11px] font-bold text-muted w-10 text-right tabular-nums">
+                            {pct.toFixed(0)}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2.5 bg-surface-variant rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, pct)}%` }}
+                          transition={{ duration: 0.8, delay: idx * 0.06, ease: "easeOut" }}
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {stats.chartData.length > 6 && (
+                <Link
+                  href="/reports"
+                  className="block text-center text-xs font-semibold text-primary-500 hover:text-primary-600 pt-1"
+                >
+                  View all {stats.chartData.length} categories
+                </Link>
+              )}
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Monthly Comparison + 50/30/20 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* Monthly Comparison */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="rounded-2xl bg-surface border border-border-subtle shadow-sm p-5"
+        >
+          <h2 className="text-sm font-bold text-foreground mb-4">Month-over-Month</h2>
+          {loading ? (
+            <div className="flex items-center justify-center h-40 text-xs text-muted animate-pulse">Loading...</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface-variant/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-error/10 text-error flex items-center justify-center">
+                    <TrendingDown size={18} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted">Spending</div>
+                    <div className="text-sm font-bold text-foreground">
+                      {`\u20B9${stats.totalSpent.toLocaleString("en-IN")}`}
+                    </div>
+                  </div>
+                </div>
+                <div className={`text-sm font-semibold flex items-center gap-1 ${stats.spendChange <= 0 ? "text-success" : "text-error"}`}>
+                  {stats.spendChange <= 0 ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                  {Math.abs(stats.spendChange).toFixed(1)}%
+                </div>
+              </div>
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-surface-variant/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-success/10 text-success flex items-center justify-center">
+                    <TrendingUp size={18} />
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted">Income</div>
+                    <div className="text-sm font-bold text-foreground">
+                      {`\u20B9${stats.totalIncome.toLocaleString("en-IN")}`}
+                    </div>
+                  </div>
+                </div>
+                <div className={`text-sm font-semibold flex items-center gap-1 ${stats.incomeChange >= 0 ? "text-success" : "text-error"}`}>
+                  {stats.incomeChange >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                  {Math.abs(stats.incomeChange).toFixed(1)}%
+                </div>
+              </div>
+              {expenseMode === "limit" && (
+                <div className="pt-2">
+                  <div className="flex items-center justify-between text-xs text-muted mb-2">
+                    <span>Budget used</span>
+                    <span className="font-semibold text-foreground">
+                      {monthlyLimit > 0 ? `${Math.min(100, ((stats.totalSpent / monthlyLimit) * 100)).toFixed(0)}%` : "N/A"}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${monthlyLimit > 0 ? Math.min(100, (stats.totalSpent / monthlyLimit) * 100) : 0}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className={`h-full rounded-full ${
+                        (stats.totalSpent / monthlyLimit) <= 0.5 ? "bg-success" :
+                        (stats.totalSpent / monthlyLimit) <= 0.75 ? "bg-warning" : "bg-error"
+                      }`}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+
+        {/* 50/30/20 Rule */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="rounded-2xl bg-surface border border-border-subtle shadow-sm p-5"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <PiggyBank size={16} className="text-primary-500" />
+            <h2 className="text-sm font-bold text-foreground">50/30/20 Rule</h2>
           </div>
-
-          {/* Text Breakdown */}
-          <div className="space-y-6">
-            <div className="p-6 rounded-3xl bg-surface-variant/30 border border-border-subtle hover:border-primary-500/50 transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-primary-500" />
-                  <span className="font-black uppercase tracking-widest text-xs">Essential Needs</span>
+          {loading ? (
+            <div className="flex items-center justify-center h-40 text-xs text-muted animate-pulse">Loading...</div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-primary-500" />
+                    <span className="text-xs font-semibold text-foreground">Needs</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold ${stats.needsPct <= 50 ? "text-success" : "text-error"}`}>
+                      {stats.needsPct.toFixed(1)}%
+                    </span>
+                    <span className="text-[10px] text-muted">target 50%</span>
+                  </div>
                 </div>
-                <span className={`font-black ${stats.breakdown503020.needsPct > 50 ? "text-error" : "text-success"}`}>
-                  {stats.breakdown503020.needsPct.toFixed(1)}%
-                </span>
-              </div>
-              <p className="text-sm text-secondary font-medium leading-relaxed">
-                Your actual spending on essentials like Rent, Utilities, and Groceries is 
-                <span className="text-foreground font-bold"> ₹{stats.breakdown503020.needs.toLocaleString('en-IN')}</span>. 
-                {stats.breakdown503020.needsPct > 50 ? " You are exceeding the recommended 50% limit." : " You are well within the 50% target."}
-              </p>
-            </div>
-
-            <div className="p-6 rounded-3xl bg-surface-variant/30 border border-border-subtle hover:border-cyan-500/50 transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-cyan-500" />
-                  <span className="font-black uppercase tracking-widest text-xs">Lifestyle Wants</span>
+                <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, stats.needsPct)}%` }}
+                    transition={{ duration: 0.8, delay: 0.1 }}
+                    className={`h-full rounded-full ${stats.needsPct <= 50 ? "bg-primary-500" : "bg-error"}`}
+                  />
                 </div>
-                <span className={`font-black ${stats.breakdown503020.wantsPct > 30 ? "text-error" : "text-success"}`}>
-                  {stats.breakdown503020.wantsPct.toFixed(1)}%
-                </span>
-              </div>
-              <p className="text-sm text-secondary font-medium leading-relaxed">
-                You spent <span className="text-foreground font-bold">₹{stats.breakdown503020.wants.toLocaleString('en-IN')}</span> on 
-                discretionary items. {stats.breakdown503020.wantsPct > 30 ? " Try to reduce lifestyle inflation." : " Excellent control over discretionary spending!"}
-              </p>
-            </div>
-
-            <div className="p-6 rounded-3xl bg-surface-variant/30 border border-border-subtle hover:border-success/50 transition-colors">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-success" />
-                  <span className="font-black uppercase tracking-widest text-xs">Financial Savings</span>
+                <div className="text-xs font-semibold text-foreground/80 mt-1">
+                  {`\u20B9${stats.needs.toLocaleString("en-IN")}`} spent
                 </div>
-                <span className={`font-black ${stats.breakdown503020.savingsPct < 20 ? "text-warning" : "text-success"}`}>
-                  {stats.breakdown503020.savingsPct.toFixed(1)}%
-                </span>
               </div>
-              <p className="text-sm text-secondary font-medium leading-relaxed">
-                Your net savings for this month is <span className="text-foreground font-bold">₹{stats.breakdown503020.savings.toLocaleString('en-IN')}</span>. 
-                {stats.breakdown503020.savingsPct < 20 ? " Aim to increase your savings rate to reach the 20% milestone." : " You've hit your financial freedom target!"}
-              </p>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-tertiary-500" />
+                    <span className="text-xs font-semibold text-foreground">Wants</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold ${stats.wantsPct <= 30 ? "text-success" : "text-error"}`}>
+                      {stats.wantsPct.toFixed(1)}%
+                    </span>
+                    <span className="text-[10px] text-muted">target 30%</span>
+                  </div>
+                </div>
+                <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, stats.wantsPct)}%` }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                    className={`h-full rounded-full ${stats.wantsPct <= 30 ? "bg-tertiary-500" : "bg-error"}`}
+                  />
+                </div>
+                <div className="text-xs font-semibold text-foreground/80 mt-1">
+                  {`\u20B9${stats.wants.toLocaleString("en-IN")}`} spent
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-success" />
+                    <span className="text-xs font-semibold text-foreground">Savings</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold ${stats.savingsPct >= 20 ? "text-success" : "text-warning"}`}>
+                      {stats.savingsPct.toFixed(1)}%
+                    </span>
+                    <span className="text-[10px] text-muted">target 20%</span>
+                  </div>
+                </div>
+                <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, stats.savingsPct)}%` }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
+                    className={`h-full rounded-full ${stats.savingsPct >= 20 ? "bg-success" : "bg-warning"}`}
+                  />
+                </div>
+                <div className="text-xs font-semibold text-foreground/80 mt-1">
+                  {`\u20B9${stats.savings.toLocaleString("en-IN")}`} saved
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </motion.section>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 }

@@ -206,104 +206,94 @@ export default function DashboardLayout({
   const content = (
     <div className="min-h-screen flex bg-background text-foreground">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-72 bg-surface border-r border-border-subtle p-6 sticky top-0 h-screen">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-3 mb-10 px-2 group/logo hover:scale-[1.02] transition-all active:scale-95"
-        >
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg group-hover/logo:shadow-indigo-500/30 transition-all">
-            <TrendingUp size={22} color="white" strokeWidth={2.5} />
-          </div>
-          <span className="font-extrabold text-2xl tracking-tight">
-            Spend<span className="text-primary-600">Wise</span>
-          </span>
-        </Link>
-
-        <div className="flex-1 space-y-8 overflow-y-auto no-scrollbar pr-2">
-          {navGroups.map((group) => (
-            <div key={group.title} className="space-y-3">
-              <h3 className="px-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted">
-                {group.title}
-              </h3>
-              <nav
-                className="space-y-1"
-                aria-label={`${group.title} Navigation`}
-              >
-                {group.items.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all group ${
-                        isActive
-                          ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
-                          : "text-secondary hover:bg-surface-variant hover:text-foreground"
-                      }`}
-                    >
-                      <item.icon
-                        size={18}
-                        className={
-                          isActive
-                            ? ""
-                            : "group-hover:scale-110 transition-transform"
-                        }
-                      />
-                      <span className="font-bold text-sm">{item.name}</span>
-                      {item.premium && !isActive && (
-                        <div className="ml-auto w-4 h-4 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center">
-                          <Sparkles size={10} />
-                        </div>
-                      )}
-                    </Link>
-                  );
-                })}
-              </nav>
+      <aside className="hidden lg:flex flex-col w-64 bg-surface border-r border-border-subtle sticky top-0 h-screen">
+        <div className="px-5 py-5 border-b border-border-subtle">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2.5 group/logo"
+          >
+            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-sm group-hover/logo:shadow-indigo-500/20 transition-shadow">
+              <TrendingUp size={20} color="white" strokeWidth={2.5} />
             </div>
-          ))}
+            <span className="font-extrabold text-xl tracking-tight">
+              Spend<span className="text-primary-500">Wise</span>
+            </span>
+          </Link>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-border-subtle space-y-4">
+        <nav className="flex-1 overflow-y-auto no-scrollbar px-3 py-5 space-y-6">
+          {navGroups.map((group) => (
+            <div key={group.title} className="space-y-1">
+              <h3 className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+                {group.title}
+              </h3>
+              {group.items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                      isActive
+                        ? "bg-primary-500/10 text-primary-600 font-semibold"
+                        : "text-secondary hover:bg-surface-variant hover:text-foreground"
+                    }`}
+                  >
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary-500 rounded-full" />
+                    )}
+                    <item.icon size={17} strokeWidth={isActive ? 2.5 : 1.5} />
+                    <span className="text-sm">{item.name}</span>
+                    {item.premium && (
+                      <div className="ml-auto w-4 h-4 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center">
+                        <Sparkles size={9} />
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-border-subtle space-y-2">
           <Link
             href="/profile"
-            className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
               pathname === "/profile"
-                ? "bg-surface-variant text-foreground shadow-sm"
-                : "text-secondary hover:text-foreground"
+                ? "bg-surface-variant"
+                : "hover:bg-surface-variant"
             }`}
           >
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-primary-500/10 border border-primary-500/20 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full overflow-hidden bg-primary-500/10 flex items-center justify-center flex-shrink-0">
               {session.user?.image ? (
                 <img
                   src={session.user.image}
-                  alt={`${session.user.name || "User"}'s avatar`}
-                  width={32}
-                  height={32}
+                  alt=""
+                  width={28}
+                  height={28}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <User size={16} className="text-primary-600" />
+                <User size={13} className="text-primary-600" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black truncate">
+              <p className="text-xs font-semibold truncate text-foreground">
                 {session.user?.name || "Profile"}
               </p>
-              <p className="text-[10px] text-muted font-bold truncate">
+              <p className="text-[10px] text-muted truncate">
                 {session.user?.email}
               </p>
             </div>
-            <ChevronRight size={14} className="text-muted" />
           </Link>
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold group"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-muted hover:text-error hover:bg-error/5 transition-all"
           >
-            <div className="w-8 h-8 rounded-xl bg-error/5 text-error flex items-center justify-center group-hover:scale-110 transition-transform">
-              <LogOut size={18} />
-            </div>
-            <span className="text-sm">Sign Out</span>
+            <LogOut size={14} />
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
@@ -311,62 +301,62 @@ export default function DashboardLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
         {/* Top Header - Sticky */}
-        <header className="sticky top-0 z-30 flex items-center justify-between p-4 lg:p-6 bg-background/80 backdrop-blur-md border-b border-border-subtle lg:border-none">
-          <div className="flex items-center gap-4">
+        <header className="sticky top-0 z-30 flex items-center justify-between px-4 lg:px-6 py-3 bg-background/80 backdrop-blur-md border-b border-border-subtle lg:border-b lg:border-border-subtle">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open mobile navigation menu"
-              className="lg:hidden p-2 rounded-xl bg-surface border border-border-subtle text-secondary focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:outline-none"
+              className="lg:hidden p-2 rounded-lg bg-surface border border-border-subtle text-secondary"
             >
-              <Menu size={24} />
+              <Menu size={20} />
             </button>
-            <h1 className="text-xl lg:text-3xl font-black tracking-tight">
+            <h1 className="text-lg lg:text-xl font-bold tracking-tight text-foreground">
               {navGroups
                 .flatMap((g) => g.items)
                 .find((item) => item.href === pathname)?.name || "Dashboard"}
             </h1>
           </div>
 
-          <div className="flex items-center gap-3 lg:gap-4">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setIsAddExpenseOpen(true)}
-              className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-500 text-white font-bold shadow-lg shadow-primary-500/20 hover:scale-105 transition-transform active:scale-95"
+              className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors active:scale-[0.97]"
             >
-              <Plus size={20} />
+              <Plus size={16} />
               Add Expense
             </button>
 
-
-
-            <NotificationDropdown />
-
-            <button
-              onClick={toggleTheme}
-              className="p-2.5 lg:p-3 rounded-xl bg-surface border border-border-subtle text-secondary hover:text-foreground transition-all active:scale-95 shadow-sm"
-            >
-              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
+            <div className="flex items-center gap-1 bg-surface border border-border-subtle rounded-lg p-0.5">
+              <NotificationDropdown />
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-md text-muted hover:text-foreground hover:bg-surface-variant transition-colors"
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+              </button>
+            </div>
 
             <Link
               href="/profile"
-              className="relative group active:scale-95 transition-transform"
+              className="relative"
             >
-              <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-full overflow-hidden border-2 border-background shadow-md flex items-center justify-center transition-all group-hover:ring-2 group-hover:ring-primary-500/50">
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-border-subtle flex items-center justify-center">
                 {session.user?.image ? (
                   <img
                     src={session.user.image}
-                    alt={`${session.user.name || "User"}'s profile picture`}
-                    width={44}
-                    height={44}
+                    alt=""
+                    width={32}
+                    height={32}
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-lime-500 to-green-600 flex items-center justify-center text-white font-black text-lg">
+                  <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold">
                     {session.user?.name?.charAt(0) || "U"}
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success border-2 border-background rounded-full shadow-sm"></div>
+              <div className="absolute -bottom-px -right-px w-2.5 h-2.5 bg-success border-2 border-background rounded-full" />
             </Link>
           </div>
         </header>
@@ -394,71 +384,72 @@ export default function DashboardLayout({
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="absolute top-0 left-0 bottom-0 w-80 bg-surface border-r border-border-subtle p-6 flex flex-col"
+              className="absolute top-0 left-0 bottom-0 w-80 bg-surface border-r border-border-subtle flex flex-col"
             >
-              <div className="flex items-center justify-between mb-10 px-2">
+              <div className="flex items-center justify-between px-5 py-5 border-b border-border-subtle">
                 <Link
                   href="/dashboard"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 group/logo"
+                  className="flex items-center gap-2.5"
                 >
-                  <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <TrendingUp size={22} color="white" strokeWidth={2.5} />
+                  <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-sm">
+                    <TrendingUp size={20} color="white" strokeWidth={2.5} />
                   </div>
-                  <span className="font-extrabold text-2xl tracking-tight">
-                    Spend<span className="text-primary-600">Wise</span>
+                  <span className="font-extrabold text-xl tracking-tight">
+                    Spend<span className="text-primary-500">Wise</span>
                   </span>
                 </Link>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-secondary"
+                  className="p-1.5 text-muted hover:text-foreground"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
 
-              <div className="flex-1 space-y-8 overflow-y-auto pr-2">
+              <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
                 {navGroups.map((group) => (
-                  <div key={group.title} className="space-y-3">
-                    <h3 className="px-4 text-[10px] font-black uppercase tracking-widest text-muted">
+                  <div key={group.title} className="space-y-1">
+                    <h3 className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
                       {group.title}
                     </h3>
-                    <nav
-                      className="space-y-1"
-                      aria-label={`${group.title} Mobile Navigation`}
-                    >
-                      {group.items.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-                              isActive
-                                ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
-                                : "text-secondary hover:bg-surface-variant hover:text-foreground"
-                            }`}
-                          >
-                            <item.icon size={20} />
-                            <span className="font-bold">{item.name}</span>
-                          </Link>
-                        );
-                      })}
-                    </nav>
+                    {group.items.map((item) => {
+                      const isActive = pathname === item.href;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                            isActive
+                              ? "bg-primary-500/10 text-primary-600 font-semibold"
+                              : "text-secondary hover:bg-surface-variant hover:text-foreground"
+                          }`}
+                        >
+                          {isActive && (
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary-500 rounded-full" />
+                          )}
+                          <item.icon size={17} strokeWidth={isActive ? 2.5 : 1.5} />
+                          <span className="text-sm">{item.name}</span>
+                          {item.premium && (
+                            <div className="ml-auto w-4 h-4 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center">
+                              <Sparkles size={9} />
+                            </div>
+                          )}
+                        </Link>
+                      );
+                    })}
                   </div>
                 ))}
-              </div>
+              </nav>
 
-              <div className="mt-auto pt-6 border-t border-border-subtle">
+              <div className="px-3 py-4 border-t border-border-subtle">
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-secondary hover:bg-error/10 hover:text-error transition-all font-bold group"
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-muted hover:text-error hover:bg-error/5 transition-all"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-error/5 text-error flex items-center justify-center">
-                    <LogOut size={20} />
-                  </div>
-                  <span>Sign Out Session</span>
+                  <LogOut size={14} />
+                  <span>Sign Out</span>
                 </button>
               </div>
             </motion.div>
