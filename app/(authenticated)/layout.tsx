@@ -301,47 +301,58 @@ export default function DashboardLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
         {/* Top Header - Sticky */}
-        <header className="sticky top-0 z-30 flex items-center justify-between px-4 lg:px-6 py-3 bg-background/80 backdrop-blur-md border-b border-border-subtle lg:border-b lg:border-border-subtle">
+        <header className="sticky top-0 z-30 flex items-center justify-between px-4 lg:px-6 py-2.5 bg-background/80 backdrop-blur-md border-b border-border-subtle">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
               aria-label="Open mobile navigation menu"
-              className="lg:hidden p-2 rounded-lg bg-surface border border-border-subtle text-secondary"
+              className="lg:hidden p-2 rounded-lg bg-surface border border-border-subtle text-secondary hover:text-foreground hover:bg-surface-variant transition-colors"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
-            <h1 className="text-lg lg:text-xl font-bold tracking-tight text-foreground">
-              {navGroups
-                .flatMap((g) => g.items)
-                .find((item) => item.href === pathname)?.name || "Dashboard"}
-            </h1>
+            <div>
+              <h1 className="text-[15px] lg:text-lg font-bold tracking-tight text-foreground">
+                {navGroups
+                  .flatMap((g) => g.items)
+                  .find((item) => item.href === pathname)?.name || "Dashboard"}
+              </h1>
+              <p className="text-[10px] text-muted hidden sm:block">
+                {new Date().toLocaleDateString("en-IN", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsAddExpenseOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600 transition-colors active:scale-[0.97]"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 transition-colors active:scale-[0.97] shadow-sm shadow-primary-500/20"
             >
-              <Plus size={16} />
-              Add Expense
+              <Plus size={15} />
+              Add
             </button>
 
-            <div className="flex items-center gap-1 bg-surface border border-border-subtle rounded-lg p-0.5">
+            <div className="flex items-center gap-0.5 bg-surface border border-border-subtle rounded-lg p-0.5">
               <NotificationDropdown />
+              <div className="w-px h-5 bg-border-subtle" />
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-md text-muted hover:text-foreground hover:bg-surface-variant transition-colors"
+                className="p-1.5 rounded-md text-muted hover:text-foreground hover:bg-surface-variant transition-colors"
                 aria-label="Toggle theme"
               >
-                {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+                {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
               </button>
             </div>
 
             <Link
               href="/profile"
-              className="relative"
+              className="relative ml-0.5"
             >
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-border-subtle flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-border-subtle hover:ring-primary-500/30 transition-all flex items-center justify-center">
                 {session.user?.image ? (
                   <img
                     src={session.user.image}
@@ -351,7 +362,7 @@ export default function DashboardLayout({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold">
+                  <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-[11px] font-bold">
                     {session.user?.name?.charAt(0) || "U"}
                   </div>
                 )}
