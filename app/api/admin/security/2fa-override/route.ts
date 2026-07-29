@@ -1,4 +1,5 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { getAdminInfo } from "@/lib/admin/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies, headers } from "next/headers";
@@ -17,7 +18,8 @@ export async function POST(req: NextRequest) {
     const ip = headerList.get("x-forwarded-for") || "127.0.0.1";
 
     // 1. Verify admin password
-    if (adminPassword !== (process.env.ADMIN_OVERRIDE_PASSWORD || "admin123")) {
+    // SECURITY FIX: VULN-006 — No hardcoded fallback; ADMIN_OVERRIDE_PASSWORD must be set
+    if (!process.env.ADMIN_OVERRIDE_PASSWORD || adminPassword !== process.env.ADMIN_OVERRIDE_PASSWORD) {
       logger.error("Invalid admin password for 2FA override", { userId, ip });
       return NextResponse.json({ error: "Invalid admin password" }, { status: 403 });
     }
@@ -31,10 +33,12 @@ export async function POST(req: NextRequest) {
     logger.info("Admin disabled 2FA for user", { targetEmail: user.email, reason });
 
     // 3. Log to audit trail
+    // SECURITY FIX: VULN-019 — Resolve real admin identity from session
+    const adminInfo = await getAdminInfo();
     await (prisma as any).auditLog.create({
       data: {
-        adminName: "Admin",
-        adminId: "65f1a2b3c4d5e6f7a8b9c0d1", // Placeholder admin ID
+        adminName: adminInfo?.adminName || "Admin",
+        adminId: adminInfo?.adminId || "unknown",
         actionType: "2FA_RESET",
         target: user.email,
         details: `2FA force disabled by admin. Reason: ${reason}`,

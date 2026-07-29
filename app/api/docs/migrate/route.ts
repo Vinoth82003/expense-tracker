@@ -25,9 +25,10 @@ export async function GET() {
     }, { status: 200 });
   } catch (error: any) {
     console.error("Migration failed", error);
+    // SECURITY FIX: VULN-010 — Return generic error, log details server-side
+    console.error("Migration failed", error);
     return NextResponse.json({ 
-      message: "Migration failed", 
-      error: error.message 
+      message: "Migration failed" 
     }, { status: 500 });
   }
 }

@@ -37,9 +37,10 @@ export async function POST(req: NextRequest) {
       port: config?.port,
       code: error.code 
     }, "MAIL");
+    // SECURITY FIX: VULN-010 — Return generic error, log details server-side
+    console.error("SMTP Test Failed:", error);
     return NextResponse.json({ 
-      error: error.message || "Connection failed", 
-      details: error.code || "UNKNOWN_ERROR"
+      error: "SMTP connection test failed" 
     }, { status: 400 });
   }
 }

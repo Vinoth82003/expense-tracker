@@ -63,9 +63,8 @@ export async function DELETE(
     });
 
     // Log the administrative action
+    // SECURITY FIX: VULN-019 — logAudit now auto-resolves real admin identity from session
     await logAudit({
-      adminName: "Admin", // Should be real admin name from session
-      adminId: "000000000000000000000000", // Should be real admin ID
       actionType: "SESSION_REVOKED",
       target: session.user.email,
       details: `Revoked session ${id} (${session.browser} on ${session.device})`,

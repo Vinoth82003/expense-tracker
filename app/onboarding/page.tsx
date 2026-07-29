@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import {
   Target,
   Zap,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   TrendingUp,
   Check,
+  Loader2,
 } from "lucide-react";
 
 export default function OnboardingPage() {
@@ -46,9 +48,14 @@ export default function OnboardingPage() {
       if (res.ok) {
         await update();
         router.push("/dashboard");
+        return;
       }
+
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error || "Something went wrong. Please try again.");
     } catch (error) {
       console.error("Onboarding failed", error);
+      toast.error("Network error. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -203,14 +210,17 @@ export default function OnboardingPage() {
           {/* Submit */}
           <div className="space-y-4">
             <motion.button
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={loading ? undefined : { y: -1 }}
+              whileTap={loading ? undefined : { scale: 0.98 }}
               onClick={handleSubmit}
               disabled={loading}
-              className="w-full py-4 rounded-full bg-primary-600 text-white font-bold text-[15px] shadow-lg shadow-primary-600/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-60"
+              className="w-full py-4 rounded-full bg-primary-600 text-white font-bold text-[15px] shadow-lg shadow-primary-600/25 hover:bg-primary-700 hover:shadow-xl hover:shadow-primary-600/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Getting Started…
+                </>
               ) : (
                 <>
                   Get Started

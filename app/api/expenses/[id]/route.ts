@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { checkUserRateLimit } from "@/lib/rateLimit";
+import { validateOrigin } from "@/lib/csrf";
 
 // GET - Fetch a single personal expense by ID
 export async function GET(
@@ -55,6 +57,14 @@ export async function PATCH(
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // SECURITY FIX: VULN-020 — CSRF origin validation
+    const csrfCheck = validateOrigin(req);
+    if (csrfCheck) return csrfCheck;
+
+    // SECURITY FIX: VULN-023 — Rate limit expense updates per user
+    const rateLimitResult = await checkUserRateLimit(session.user.email, "expense-update", 20, 60000);
+    if (rateLimitResult) return rateLimitResult;
 
     const params = await context.params;
     const { id } = params;
@@ -110,6 +120,14 @@ export async function DELETE(
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // SECURITY FIX: VULN-020 — CSRF origin validation
+    const csrfCheck = validateOrigin(req);
+    if (csrfCheck) return csrfCheck;
+
+    // SECURITY FIX: VULN-023 — Rate limit expense deletion per user
+    const rateLimitResult = await checkUserRateLimit(session.user.email, "expense-delete", 20, 60000);
+    if (rateLimitResult) return rateLimitResult;
 
     const params = await context.params;
     const { id } = params;

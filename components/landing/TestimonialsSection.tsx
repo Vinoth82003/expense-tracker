@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Star, MessageSquare, Quote } from "lucide-react";
+import { Star, MessageSquare, Quote, ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { fadeUp } from "./sections/animations";
 
 interface ReviewUser {
@@ -85,6 +86,46 @@ function ReviewerAvatar({ user }: { user: ReviewUser | null }) {
   );
 }
 
+const PREVIEW_LENGTH = 150;
+
+function ReviewComment({ comment }: { comment: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const needsTruncation = comment.length > PREVIEW_LENGTH;
+
+  return (
+    <div className="relative mb-5">
+      <Quote
+        size={20}
+        className="absolute -top-1 -left-0.5 text-primary-500/15"
+      />
+      <p className="text-[14px] text-secondary font-medium leading-relaxed pl-5">
+        &ldquo;{needsTruncation && !expanded
+          ? `${comment.slice(0, PREVIEW_LENGTH)}…`
+          : comment}
+        &rdquo;
+      </p>
+      {needsTruncation && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="ml-5 mt-1.5 inline-flex items-center gap-1 text-[12px] font-semibold text-primary-600 hover:text-primary-700 transition-colors"
+        >
+          {expanded ? (
+            <>
+              Show Less
+              <ChevronUp size={14} />
+            </>
+          ) : (
+            <>
+              Read More
+              <ChevronDown size={14} />
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function SkeletonCard() {
   return (
     <div className="rounded-2xl border border-border-subtle bg-surface p-7 animate-pulse">
@@ -109,7 +150,7 @@ function SkeletonCard() {
   );
 }
 
-export function TestimonialsSection({ limit = 3 }: { limit?: number }) {
+export function TestimonialsSection({ limit = 3, showViewMore = true }: { limit?: number; showViewMore?: boolean }) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -196,17 +237,7 @@ export function TestimonialsSection({ limit = 3 }: { limit?: number }) {
               >
                 <StarRating rating={review.rating} />
 
-                <div className="relative mb-5">
-                  <Quote
-                    size={20}
-                    className="absolute -top-1 -left-0.5 text-primary-500/15"
-                  />
-                  <p className="text-[14px] text-secondary font-medium leading-relaxed pl-5">
-                    {review.comment.length > 220
-                      ? `"${review.comment.slice(0, 220)}…"`
-                      : `"${review.comment}"`}
-                  </p>
-                </div>
+                <ReviewComment comment={review.comment} />
 
                 <div className="mt-auto flex items-center gap-3 pt-4 border-t border-border-subtle">
                   <ReviewerAvatar user={review.user} />
@@ -222,6 +253,25 @@ export function TestimonialsSection({ limit = 3 }: { limit?: number }) {
               </motion.div>
             ))}
           </div>
+        )}
+
+        {/* ── View More CTA ── */}
+        {showViewMore && reviews.length > limit && (
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="text-center mt-12"
+          >
+            <Link
+              href="/reviews"
+              className="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-full bg-surface border border-border-subtle text-[14px] font-bold text-foreground hover:border-primary-500/30 hover:bg-primary-500/5 hover:text-primary-600 transition-all shadow-sm"
+            >
+              View More Reviews
+              <ChevronDown size={16} />
+            </Link>
+          </motion.div>
         )}
       </div>
     </section>

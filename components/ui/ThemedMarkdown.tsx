@@ -2,8 +2,9 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
 import { cn } from "@/lib/utils";
+
+// SECURITY FIX: VULN-004 — Removed rehypeRaw plugin to prevent stored XSS via raw HTML in markdown
 
 interface Props {
   content: string;
@@ -26,7 +27,6 @@ export function ThemedMarkdown({ content, className }: Props) {
     )}>
       <ReactMarkdown 
         remarkPlugins={[remarkGfm]} 
-        rehypePlugins={[rehypeRaw]}
         components={{
           h1: ({ children }) => {
             const id = children?.toString().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");

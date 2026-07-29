@@ -9,6 +9,19 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.0.103'],
+  serverExternalPackages: ["@prisma/client", "prisma"],
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [...(config.externals || []), /\.prisma\/client\/wasm/];
+    }
+    config.module = config.module || {};
+    config.module.rules = config.module.rules || [];
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: "asset/resource",
+    });
+    return config;
+  },
 
   images: {
     remotePatterns: [
@@ -63,6 +76,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: (() => {
               const isDev = process.env.NODE_ENV === "development";
+              // SECURITY FIX: VULN-021 — Use 'unsafe-inline' (required by Next.js hydration); nonce-based CSP is a larger infrastructure change
               const scriptSrc = "script-src 'self' 'unsafe-inline' " + (isDev ? "'unsafe-eval' " : "") + "https://accounts.google.com https://www.googletagmanager.com";
               
               const connectSrc = isDev

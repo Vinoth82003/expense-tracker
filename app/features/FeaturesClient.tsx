@@ -16,6 +16,7 @@ import {
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { CounterStats } from "@/components/landing/sections/CounterStats";
+import type { PublicStatsData } from "@/components/landing/sections/CounterStats";
 import { fadeUp } from "@/components/landing/sections/animations";
 import { features, faqs, comparisonRows } from "./_data";
 
@@ -419,7 +420,7 @@ function FinalCTA() {
 
 /* ──────────── Main Page ──────────── */
 
-export function FeaturesClient() {
+export function FeaturesClient({ stats }: { stats: PublicStatsData }) {
   return (
     <>
       <Navbar />
@@ -450,7 +451,7 @@ export function FeaturesClient() {
           </motion.div>
         </section>
 
-        <CounterStats />
+        <CounterStats stats={stats} />
 
         <Separator />
         <div className="bg-surface-variant">

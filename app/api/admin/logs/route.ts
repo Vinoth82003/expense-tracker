@@ -44,8 +44,9 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
+    // SECURITY FIX: VULN-010 — Return generic error, log details server-side
     console.error("[API] Failed to fetch logs:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch logs" }, { status: 500 });
   }
 }
 
@@ -73,7 +74,8 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    // SECURITY FIX: VULN-010 — Return generic error, log details server-side
     console.error("[API] Failed to clear logs:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to clear logs" }, { status: 500 });
   }
 }

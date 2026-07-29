@@ -1,4 +1,5 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { getAdminInfo } from "@/lib/admin/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendAutomatedEmail } from "@/lib/mail";
@@ -31,10 +32,12 @@ export async function PATCH(
     });
 
     // Create Audit Log
+    // SECURITY FIX: VULN-019 — Resolve real admin identity from session
+    const adminInfo = await getAdminInfo();
     await (prisma as any).auditLog.create({
       data: {
-        adminName: "Admin",
-        adminId: "000000000000000000000000",
+        adminName: adminInfo?.adminName || "Admin",
+        adminId: adminInfo?.adminId || "unknown",
         actionType: (updatedUser as any).isSuspended ? "USER_SUSPENDED" : "USER_UNSUSPENDED",
         target: user.email,
         details: `Reason: ${reason || 'N/A'}`,

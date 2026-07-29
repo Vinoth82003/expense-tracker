@@ -13,6 +13,7 @@ import { ComparisonTable } from "./sections/ComparisonTable";
 import { FreeToolsCTA } from "./sections/FreeToolsCTA";
 import { FinalCTA } from "./sections/FinalCTA";
 import { FAQSection } from "./sections/FAQSection";
+import type { PublicStatsData } from "./sections/CounterStats";
 
 const TestimonialsSection = lazy(() =>
   import("./TestimonialsSection").then((m) => ({ default: m.TestimonialsSection }))
@@ -26,14 +27,14 @@ function Separator() {
   );
 }
 
-export function HomeClient() {
+export function HomeClient({ stats }: { stats: PublicStatsData }) {
   return (
     <>
       <Navbar />
 
       <main className="overflow-x-hidden" id="main-content">
         <HeroSection />
-        <CounterStats />
+        <CounterStats stats={stats} />
 
         <ProblemSection />
 

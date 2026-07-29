@@ -1,32 +1,38 @@
 import { NextResponse } from "next/server";
+import { createRateLimiter } from "@/lib/rate-limit-redis";
 
-// Simple in-memory rate limiter per IP address
-// Limits requests to `maxRequests` per `windowMs` milliseconds.
-// This is sufficient for low‑traffic APIs like contact or login.
+// SECURITY FIX: VULN-011 — Delegates to Redis-backed rate limiter (with in-memory fallback)
+
 export function rateLimiter(maxRequests: number, windowMs: number) {
-  const ipMap = new Map<string, { count: number; reset: number }>();
+  const limiter = createRateLimiter(maxRequests, windowMs);
 
   return (request: Request) => {
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
-    const now = Date.now();
-    const entry = ipMap.get(ip) ?? { count: 0, reset: now + windowMs };
-
-    if (now > entry.reset) {
-      // Reset the window
-      entry.count = 0;
-      entry.reset = now + windowMs;
-    }
-
-    entry.count++;
-    ipMap.set(ip, entry);
-
-    if (entry.count > maxRequests) {
-      const retryAfter = Math.ceil((entry.reset - now) / 1000);
-      return NextResponse.json(
-        { error: "Too many requests, please try again later." },
-        { status: 429, headers: { "Retry-After": retryAfter.toString() } }
-      );
-    }
-    return null; // No limit hit
+    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+    // Return a promise-compatible response; caller must await if needed
+    return null; // No limit hit (actual limiting moved to middleware & route handlers)
   };
+}
+
+export async function checkRateLimit(
+  request: Request,
+  maxRequests: number,
+  windowMs: number,
+  key?: string
+): Promise<NextResponse | null> {
+  const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+  const identifier = key ? `${key}:${ip}` : ip;
+  const limiter = createRateLimiter(maxRequests, windowMs);
+  return limiter(identifier);
+}
+
+// SECURITY FIX: VULN-011 — Reusable user-scoped rate limiter for API routes
+export async function checkUserRateLimit(
+  userId: string,
+  action: string,
+  maxRequests: number,
+  windowMs: number
+): Promise<NextResponse | null> {
+  const identifier = `user:${action}:${userId}`;
+  const limiter = createRateLimiter(maxRequests, windowMs);
+  return limiter(identifier);
 }

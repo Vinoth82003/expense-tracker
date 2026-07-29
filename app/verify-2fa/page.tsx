@@ -10,7 +10,12 @@ function Verify2FAContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  // SECURITY FIX: VULN-007 — Validate callbackUrl against allow-list to prevent open redirect
+  const rawCallback = searchParams.get("callbackUrl");
+  const ALLOWED_REDIRECTS = ["/dashboard", "/settings", "/profile", "/expenses", "/income", "/groups", "/reports", "/analyze"];
+  const callbackUrl = rawCallback && rawCallback.startsWith("/") && ALLOWED_REDIRECTS.some(p => rawCallback === p || rawCallback.startsWith(p + "/"))
+    ? rawCallback
+    : "/dashboard";
 
   const [code, setCode] = useState<string[]>(["", "", "", "", "", ""]);
   const [isVerifying, setIsVerifying] = useState(false);

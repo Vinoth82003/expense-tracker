@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { checkUserRateLimit } from "@/lib/rateLimit";
+import { validateOrigin } from "@/lib/csrf";
 
 // DELETE - Delete an income entry
 export async function DELETE(
@@ -13,6 +15,10 @@ export async function DELETE(
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // SECURITY FIX: VULN-023 — Rate limit income deletion per user
+  const rateLimitResult = await checkUserRateLimit(session.user.email, "income-delete", 20, 60000);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
     const user = await prisma.user.findUnique({
@@ -57,6 +63,10 @@ export async function PATCH(
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // SECURITY FIX: VULN-023 — Rate limit income update per user
+  const rateLimitResult = await checkUserRateLimit(session.user.email, "income-update", 20, 60000);
+  if (rateLimitResult) return rateLimitResult;
 
   try {
     const body = await request.json();

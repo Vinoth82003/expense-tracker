@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import DOMPurify from "isomorphic-dompurify";
+// SECURITY FIX: VULN-005 — Added DOMPurify import for HTML sanitization
 import { 
   Plus, 
   Trash2, 
@@ -403,7 +405,8 @@ export default function AdminDocs() {
                   ) : (
                     <div 
                       className="prose-none"
-                      dangerouslySetInnerHTML={{ __html: formData.content }} 
+                      // SECURITY FIX: VULN-005 — DOMPurify sanitizes HTML before rendering
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formData.content, { ADD_TAGS: ["iframe"], ADD_ATTR: ["allowfullscreen", "frameborder", "allow"] }) }} 
                     />
                   )}
                 </div>

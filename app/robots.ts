@@ -20,6 +20,7 @@ export default function robots(): MetadataRoute.Robots {
           "/status",
           "/download",
           "/sitemap",
+          "/reviews",
           "/llms.txt",
           "/compare/",
           "/tools/"
@@ -66,6 +67,7 @@ export default function robots(): MetadataRoute.Robots {
           "/status",
           "/download",
           "/sitemap",
+          "/reviews",
           "/llms.txt",
           "/compare/",
           "/tools/"

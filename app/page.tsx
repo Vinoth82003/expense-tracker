@@ -1,4 +1,5 @@
 import { HomeClient } from "@/components/landing/HomeClient";
+import type { PublicStatsData } from "@/components/landing/sections/CounterStats";
 import { prisma } from "@/lib/prisma";
 
 const defaultFaqs = [
@@ -37,6 +38,30 @@ const defaultFaqs = [
 export default async function Home() {
   const dbFaqs = await prisma.fAQ.findMany({ orderBy: { order: 'asc' } });
   const faqs = dbFaqs.length > 0 ? dbFaqs : defaultFaqs;
+
+  const stats: PublicStatsData = await (async () => {
+    try {
+      const [totalUsers, totalExpenses, reviewAgg] = await Promise.all([
+        prisma.user.count(),
+        prisma.expense.count(),
+        prisma.review.aggregate({
+          where: { status: "APPROVED" },
+          _avg: { rating: true },
+          _count: { rating: true },
+        }),
+      ]);
+      return {
+        totalUsers,
+        totalExpenses,
+        avgRating: reviewAgg._avg.rating
+          ? Number(reviewAgg._avg.rating.toFixed(1))
+          : null,
+        ratingCount: reviewAgg._count.rating,
+      };
+    } catch {
+      return { totalUsers: 0, totalExpenses: 0, avgRating: null, ratingCount: 0 };
+    }
+  })();
 
   const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
 
@@ -110,7 +135,7 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
       />
-      <HomeClient />
+      <HomeClient stats={stats} />
     </>
   );
 }

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { prisma } from "@/lib/prisma";
+import type { PublicStatsData } from "@/components/landing/sections/CounterStats";
 import { FeaturesClient } from "./FeaturesClient";
 
 export const metadata: Metadata = {
@@ -150,7 +152,31 @@ const faqStructuredData = {
   ],
 };
 
-export default function FeaturesPage() {
+export default async function FeaturesPage() {
+  const stats: PublicStatsData = await (async () => {
+    try {
+      const [totalUsers, totalExpenses, reviewAgg] = await Promise.all([
+        prisma.user.count(),
+        prisma.expense.count(),
+        prisma.review.aggregate({
+          where: { status: "APPROVED" },
+          _avg: { rating: true },
+          _count: { rating: true },
+        }),
+      ]);
+      return {
+        totalUsers,
+        totalExpenses,
+        avgRating: reviewAgg._avg.rating
+          ? Number(reviewAgg._avg.rating.toFixed(1))
+          : null,
+        ratingCount: reviewAgg._count.rating,
+      };
+    } catch {
+      return { totalUsers: 0, totalExpenses: 0, avgRating: null, ratingCount: 0 };
+    }
+  })();
+
   return (
     <>
       <script
@@ -165,7 +191,7 @@ export default function FeaturesPage() {
           __html: JSON.stringify(faqStructuredData),
         }}
       />
-      <FeaturesClient />
+      <FeaturesClient stats={stats} />
     </>
   );
 }

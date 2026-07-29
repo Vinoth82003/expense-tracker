@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUserId } from "@/lib/internal-api-auth";
 import { withErrorNotification } from "@/lib/api-error-handler";
+import { checkUserRateLimit } from "@/lib/rateLimit";
+import { validateOrigin } from "@/lib/csrf";
 
 // GET - Fetch all income for the logged-in user
 export const GET = withErrorNotification(async (request: Request) => {
@@ -46,6 +48,14 @@ export const POST = withErrorNotification(async (request: Request) => {
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // SECURITY FIX: VULN-020 — CSRF origin validation
+  const csrfCheck = validateOrigin(request);
+  if (csrfCheck) return csrfCheck;
+
+  // SECURITY FIX: VULN-023 — Rate limit income creation per user
+  const rateLimitResult = await checkUserRateLimit(userId, "income-create", 30, 60000);
+  if (rateLimitResult) return rateLimitResult;
 
   const body = await request.json();
   const { amount, source, note, date } = body;

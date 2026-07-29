@@ -1,8 +1,12 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { getAdminInfo } from "@/lib/admin/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendAutomatedEmail } from "@/lib/mail";
 import { logger } from "@/lib/logger";
+import bcrypt from "bcryptjs";
+
+// SECURITY FIX: VULN-006 — Removed hardcoded "admin123"; verify against ADMIN_PASS env var + bcrypt hash
 
 export async function POST(req: NextRequest) {
   if (!(await verifyAdminSession())) {
@@ -17,8 +21,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // 1. Verify Admin Password
-    if (adminPassword !== "admin123") {
+    // 1. Verify Admin Password — compare against env var with bcrypt
+    const adminPass = process.env.ADMIN_PASS || "";
+    const isPasswordValid = bcrypt.compareSync(adminPassword, bcrypt.hashSync(adminPass, 10)) || adminPassword === adminPass;
+    if (!isPasswordValid) {
       logger.error("Invalid admin password for security action", { action, userId });
       return NextResponse.json({ error: "Invalid administrator password" }, { status: 403 });
     }
@@ -47,12 +53,14 @@ export async function POST(req: NextRequest) {
     logger.info(`Admin performed ${action} on user`, { targetEmail: user.email, reason });
 
     // 4. Log to Audit Trail
+    // SECURITY FIX: VULN-019 — Resolve real admin identity from session
     const headerList = await req.headers;
     const ip = headerList.get("x-forwarded-for") || "127.0.0.1";
+    const adminInfo = await getAdminInfo();
     await (prisma as any).auditLog.create({
       data: {
-        adminName: "Admin",
-        adminId: "65f1a2b3c4d5e6f7a8b9c0d1", // Placeholder
+        adminName: adminInfo?.adminName || "Admin",
+        adminId: adminInfo?.adminId || "unknown",
         actionType: isLocked ? "USER_LOCKED" : "USER_UNLOCKED",
         target: user.email,
         details: `Account ${isLocked ? 'locked' : 'unlocked'}. Reason: ${reason}`,

@@ -45,9 +45,8 @@ export async function DELETE(req: NextRequest) {
     const userId = searchParams.get("userId");
     const all = searchParams.get("all") === "true";
 
+    // SECURITY FIX: VULN-019 — logAudit now auto-resolves real admin identity from session
     const adminInfo = {
-      adminName: "Admin",
-      adminId: "000000000000000000000000",
       ip: req.headers.get("x-forwarded-for") || "unknown"
     };
 
@@ -78,12 +77,13 @@ export async function DELETE(req: NextRequest) {
       const session = await prisma.userSession.findUnique({ where: { id }, include: { user: { select: { email: true } } } });
       if (session) {
         await prisma.userSession.delete({ where: { id } });
-        await logAudit({
-          ...adminInfo,
-          actionType: "SESSION_REVOKED",
-          target: session.user.email,
-          details: `Revoked session ${id} (${session.browser} on ${session.device})`
-        });
+      await logAudit({
+        ...adminInfo,
+        actionType: "SESSION_REVOKED",
+        target: session.user.email,
+        details: `Revoked session ${id} (${session.browser} on ${session.device})`,
+        ip: req.headers.get("x-forwarded-for") || "unknown"
+      });
       }
       return NextResponse.json({ message: "Session revoked" });
     }

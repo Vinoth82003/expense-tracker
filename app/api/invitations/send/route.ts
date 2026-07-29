@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendGroupInvitationEmail } from "@/lib/mail";
 import crypto from "crypto";
+import { checkUserRateLimit } from "@/lib/rateLimit";
+import { validateOrigin } from "@/lib/csrf";
 
 export async function POST(req: Request) {
   try {
@@ -11,6 +13,10 @@ export async function POST(req: Request) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // SECURITY FIX: VULN-020 — CSRF origin validation
+    const csrfCheck = validateOrigin(req);
+    if (csrfCheck) return csrfCheck;
 
     const { groupId, emails } = await req.json();
 
@@ -26,6 +32,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Requester not found" }, { status: 404 });
     }
 
+    // SECURITY FIX: VULN-023 — Rate limit invitation sending
+    const rateLimitResult = await checkUserRateLimit(requester.id, "invite-send", 20, 60000);
+    if (rateLimitResult) return rateLimitResult;
+
     const group = await (prisma as any).group.findUnique({
       where: { id: groupId },
     });
@@ -37,8 +47,16 @@ export async function POST(req: Request) {
     let sentCount = 0;
     let failedCount = 0;
 
+    // SECURITY FIX: VULN-026 — Validate email format server-side
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     for (const email of emails) {
       try {
+        if (!emailRegex.test(email)) {
+          failedCount++;
+          continue;
+        }
+
         const token = crypto.randomUUID();
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry

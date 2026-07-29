@@ -1,8 +1,8 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
+// SECURITY FIX: VULN-013 — Replaced new PrismaClient() with shared singleton
 
 export async function GET() {
   if (!(await verifyAdminSession())) {
@@ -69,7 +69,5 @@ export async function GET() {
       { message: "Failed to fetch top users" },
       { status: 500 },
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

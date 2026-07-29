@@ -1,4 +1,5 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { getAdminInfo } from "@/lib/admin/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -51,12 +52,14 @@ export async function PATCH(
     });
 
     // Log to audit trail
+    // SECURITY FIX: VULN-019 — Resolve real admin identity from session
     const headerList = await req.headers;
     const ip = headerList.get("x-forwarded-for") || "127.0.0.1";
+    const adminInfo = await getAdminInfo();
     await (prisma as any).auditLog.create({
       data: {
-        adminName: "Admin",
-        adminId: "65f1a2b3c4d5e6f7a8b9c0d1", // Placeholder
+        adminName: adminInfo?.adminName || "Admin",
+        adminId: adminInfo?.adminId || "unknown",
         actionType: "SETTING_CHANGED",
         target: "featureFlags",
         details: `Feature flag '${key}' set to ${enabled}`,

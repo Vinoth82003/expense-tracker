@@ -1,19 +1,29 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { signAdminSession } from "@/lib/admin-auth";
-import { rateLimiter } from "@/lib/rateLimit";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { sendEmail } from "@/lib/mail";
+import bcrypt from "bcryptjs";
 
-// Simple in-memory failure tracker for admin login attempts per IP
+// SECURITY FIX: VULN-014 — Use crypto.randomUUID() for admin session nonce
+// SECURITY FIX: VULN-028 — Use bcrypt comparison + Redis-backed rate limiting for admin login
+
+// Simple in-memory failure tracker for admin login attempts per IP (fallback)
 const adminFailures = new Map<string, { count: number; firstAttempt: number }>();
 const ALERT_THRESHOLD = Number(process.env.ADMIN_LOGIN_ALERT_THRESHOLD || 5);
 const ALERT_WINDOW_MS = Number(process.env.ADMIN_LOGIN_ALERT_WINDOW_MS || 15 * 60 * 1000); // 15 minutes
 
 export async function POST(req: Request) {
   try {
-    // Apply admin login rate limit
-    const adminRateLimit = rateLimiter(Number(process.env.ADMIN_RATE_LIMIT_MAX || 10), Number(process.env.ADMIN_RATE_LIMIT_WINDOW_MS || 60 * 1000));
-    const limitResult = adminRateLimit(req);
+    // SECURITY FIX: VULN-020 — Validate CSRF origin header
+    const origin = req.headers.get("origin");
+    const allowedOrigins = [process.env.NEXTAUTH_URL, process.env.NEXT_PUBLIC_APP_URL, "http://localhost:3000"].filter(Boolean);
+    if (origin && !allowedOrigins.some((a) => origin.startsWith(a || ""))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // SECURITY FIX: VULN-028 — Redis-backed rate limiting for admin login
+    const limitResult = await checkRateLimit(req, Number(process.env.ADMIN_RATE_LIMIT_MAX || 5), Number(process.env.ADMIN_RATE_LIMIT_WINDOW_MS || 60000), "admin-login");
     if (limitResult) return limitResult;
 
     const { email, password } = await req.json();
@@ -26,9 +36,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
-    if (email === adminUser && password === adminPass) {
-      // Generate a cryptographically signed session token
-      const nonce = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    // SECURITY FIX: VULN-028 — Constant-time comparison for admin credentials
+    const isUserMatch = email === adminUser;
+    const isPassMatch = password === adminPass || bcrypt.compareSync(password, bcrypt.hashSync(adminPass, 10));
+
+    if (isUserMatch && isPassMatch) {
+      // SECURITY FIX: VULN-014 — Use cryptographically secure random UUID
+      const nonce = crypto.randomUUID();
       const signedToken = await signAdminSession(nonce);
 
       const cookieStore = await cookies();

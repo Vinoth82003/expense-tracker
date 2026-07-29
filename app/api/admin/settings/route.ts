@@ -62,11 +62,11 @@ export async function GET() {
       return acc;
     }, {});
 
+    // SECURITY FIX: VULN-024 — SMTP config is env-only; never expose stored SMTP from DB
     return NextResponse.json({
       featureFlags: settingsMap.featureFlags || defaultFeatureFlags,
       aiSettings: settingsMap.aiSettings || defaultAiSettings,
       maintenance: settingsMap.maintenance || defaultMaintenance,
-      smtp: settingsMap.smtp || defaultSmtp,
       systemTemplates: settingsMap.systemTemplates || defaultSystemTemplates,
       budgetAlertThreshold: settingsMap.budgetAlertThreshold ? parseInt(settingsMap.budgetAlertThreshold) : 80,
     });
@@ -84,7 +84,9 @@ export async function PATCH(req: NextRequest) {
   try {
     const data = await req.json();
 
+    // SECURITY FIX: VULN-024 — SMTP config is env-only; reject attempts to store SMTP in DB
     for (const [key, value] of Object.entries(data)) {
+      if (key === "smtp") continue; // Silently skip SMTP writes
       await (prisma as any).settings.upsert({
         where: { key },
         update: { value: typeof value === 'object' ? JSON.stringify(value) : String(value) },
