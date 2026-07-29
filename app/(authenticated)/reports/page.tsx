@@ -551,215 +551,161 @@ export default function ReportsPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12 animate-in fade-in duration-700">
-
-      {/* ═══════════ FILTER BAR ═══════════ */}
-      <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-4 sm:p-6 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex p-1 bg-surface-variant rounded-xl gap-1 overflow-x-auto no-scrollbar self-start md:self-auto max-w-full">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+      {/* ═══ FILTER BAR ═══ */}
+      <section className="bg-surface border border-border-subtle rounded-xl p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex gap-1 bg-surface-variant rounded-lg p-0.5 overflow-x-auto no-scrollbar">
             {modes.map((mode, index) => (
               <button
                 key={mode}
                 ref={el => { modeRefs.current[index] = el; }}
                 onClick={() => { setViewMode(mode); setSelectedPieSlice(null); }}
-                className={`px-5 py-2 rounded-lg font-black text-xs uppercase tracking-widest transition-all ${
+                className={`px-3.5 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
                   viewMode === mode
-                    ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
+                    ? "bg-primary-500 text-white shadow-sm"
                     : "text-secondary hover:text-foreground"
                 }`}
               >
                 {mode === "range" ? "Range" : 
-                 mode === "all" ? "All Time" :
+                 mode === "all" ? "All" :
                  ["3M", "6M", "1Y", "3Y", "5Y"].includes(mode) ? mode :
-                 `By ${mode.charAt(0).toUpperCase() + mode.slice(1)}`}
+                 mode.charAt(0).toUpperCase() + mode.slice(1)}
               </button>
             ))}
           </div>
 
-          <div className="relative self-start md:self-auto">
-            <button
-              onClick={() => setShowCategoryMenu(!showCategoryMenu)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all border ${
-                activeFiltersCount > 0
-                  ? "bg-primary-500/10 border-primary-500/30 text-primary-500"
-                  : "bg-surface-variant border-transparent text-secondary hover:text-foreground"
-              }`}
-            >
-              <Filter size={14} />
-              Filters
-              {activeFiltersCount > 0 && (
-                <span className="bg-primary-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
-                  {activeFiltersCount}
-                </span>
-              )}
-            </button>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowCategoryMenu(!showCategoryMenu)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                  activeFiltersCount > 0
+                    ? "bg-primary-500/10 border-primary-500/30 text-primary-500"
+                    : "bg-surface-variant border-border-subtle text-secondary hover:text-foreground"
+                }`}
+              >
+                <Filter size={13} />
+                Filter
+                {activeFiltersCount > 0 && (
+                  <span className="bg-primary-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
 
-            <AnimatePresence>
-              {showCategoryMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowCategoryMenu(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.92, y: -8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.92, y: -8 }}
-                    className="absolute left-0 md:left-auto md:right-0 top-full mt-2 w-72 bg-surface border border-border-subtle rounded-2xl shadow-2xl z-20 p-5 origin-top-left md:origin-top-right"
-                  >
-                    <h4 className="font-black text-xs uppercase tracking-widest text-muted mb-3">Category Type</h4>
-                    <div className="flex flex-wrap gap-2 mb-5">
-                      {CATEGORY_FILTERS.map(f => (
+              <AnimatePresence>
+                {showCategoryMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowCategoryMenu(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                      className="absolute right-0 top-full mt-1.5 w-64 bg-surface border border-border-subtle rounded-xl shadow-lg z-20 p-4"
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-2">Category</p>
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {CATEGORY_FILTERS.map(f => (
+                          <button
+                            key={f}
+                            onClick={() => setCategoryFilter(f as any)}
+                            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                              categoryFilter === f
+                                ? "bg-primary-500 text-white"
+                                : "bg-surface-variant text-secondary hover:text-foreground"
+                            }`}
+                          >
+                            {f}
+                          </button>
+                        ))}
+                      </div>
+
+                      {allSubcategories.length > 0 && (
+                        <>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-2">Subcategory</p>
+                          <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                            {allSubcategories.map(sub => (
+                              <button
+                                key={sub}
+                                onClick={() => setSelectedPieSlice(selectedPieSlice === sub ? null : sub)}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                                  selectedPieSlice === sub
+                                    ? "bg-primary-500 text-white"
+                                    : "bg-surface-variant text-secondary hover:text-foreground"
+                                }`}
+                              >
+                                {sub}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      {activeFiltersCount > 0 && (
                         <button
-                          key={f}
-                          onClick={() => setCategoryFilter(f as any)}
-                          className={`px-3.5 py-1.5 rounded-lg font-bold text-xs transition-all ${
-                            categoryFilter === f
-                              ? "bg-primary-500 text-white shadow-md"
-                              : "bg-surface-variant text-secondary hover:text-foreground"
-                          }`}
+                          onClick={() => { setCategoryFilter("All"); setSelectedPieSlice(null); setShowCategoryMenu(false); }}
+                          className="w-full mt-3 py-1.5 rounded-md bg-error/10 text-error text-xs font-medium hover:bg-error/20 transition-colors"
                         >
-                          {f}
+                          Clear Filters
                         </button>
-                      ))}
-                    </div>
+                      )}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
 
-                    {allSubcategories.length > 0 && (
-                      <>
-                        <h4 className="font-black text-xs uppercase tracking-widest text-muted mb-3">Subcategory</h4>
-                        <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto custom-scrollbar">
-                          {allSubcategories.map(sub => (
-                            <button
-                              key={sub}
-                              onClick={() => setSelectedPieSlice(selectedPieSlice === sub ? null : sub)}
-                              className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
-                                selectedPieSlice === sub
-                                  ? "bg-tertiary-500 text-white"
-                                  : "bg-surface-variant text-secondary hover:text-foreground"
-                              }`}
-                            >
-                              {sub}
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
-
-                    {activeFiltersCount > 0 && (
-                      <button
-                        onClick={() => {
-                          setCategoryFilter("All");
-                          setSelectedPieSlice(null);
-                          setShowCategoryMenu(false);
-                        }}
-                        className="w-full mt-4 py-2.5 rounded-xl bg-error/10 text-error font-bold text-xs hover:bg-error/20 transition-colors"
-                      >
-                        Clear All Filters
-                      </button>
-                    )}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
+            {/* Date nav */}
+            <div className="flex items-center gap-1 bg-surface-variant rounded-lg px-3 py-1.5">
+              <button onClick={() => viewMode === "month" ? changeMonth(-1) : viewMode === "day" ? changeDay(-1) : changeWeek(-1)} className="p-0.5 text-secondary hover:text-foreground">
+                <ChevronLeft size={15} />
+              </button>
+              <span className="text-xs font-semibold text-foreground px-2 whitespace-nowrap">
+                {viewMode === "month" ? monthName : viewMode === "day" ? dayName : viewMode === "week" ? getWeekName() : getRangeName()}
+              </span>
+              <button onClick={() => viewMode === "month" ? changeMonth(1) : viewMode === "day" ? changeDay(1) : changeWeek(1)} className="p-0.5 text-secondary hover:text-foreground">
+                <ChevronRight size={15} />
+              </button>
+            </div>
           </div>
         </div>
 
-        {viewMode === "month" ? (
-          <div className="flex items-center justify-between bg-surface-variant/30 border border-border-subtle p-1.5 rounded-2xl">
-            <button onClick={() => changeMonth(-1)} className="p-3 text-secondary hover:text-foreground transition-colors">
-              <ChevronLeft size={20} />
-            </button>
-            <span className="font-black tracking-tight text-lg">{monthName}</span>
-            <button onClick={() => changeMonth(1)} className="p-3 text-secondary hover:text-foreground transition-colors">
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        ) : viewMode === "day" ? (
-          <div className="flex items-center justify-between bg-surface-variant/30 border border-border-subtle p-1.5 rounded-2xl">
-            <button onClick={() => changeDay(-1)} className="p-3 text-secondary hover:text-foreground transition-colors">
-              <ChevronLeft size={20} />
-            </button>
-            <span className="font-black tracking-tight text-lg">{dayName}</span>
-            <button onClick={() => changeDay(1)} className="p-3 text-secondary hover:text-foreground transition-colors">
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        ) : viewMode === "week" ? (
-          <div className="flex items-center justify-between bg-surface-variant/30 border border-border-subtle p-1.5 rounded-2xl">
-            <button onClick={() => changeWeek(-1)} className="p-3 text-secondary hover:text-foreground transition-colors">
-              <ChevronLeft size={20} />
-            </button>
-            <span className="font-black tracking-tight text-lg">{getWeekName()}</span>
-            <button onClick={() => changeWeek(1)} className="p-3 text-secondary hover:text-foreground transition-colors">
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        ) : viewMode === "range" ? (
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <CalendarDays size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" />
-              <input
-                type="date"
-                value={dateRange.from}
-                onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
-                className="w-full bg-surface-variant/30 border border-border-subtle rounded-2xl py-3.5 pl-11 pr-4 font-black text-xs focus:outline-none focus:border-primary-500 transition-all"
-              />
-            </div>
-            <div className="w-4 h-0.5 bg-border-subtle shrink-0" />
-            <div className="relative flex-1">
-              <input
-                type="date"
-                value={dateRange.to}
-                onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
-                className="w-full bg-surface-variant/30 border border-border-subtle rounded-2xl py-3.5 px-4 font-black text-xs focus:outline-none focus:border-primary-500 transition-all"
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center bg-surface-variant/30 border border-border-subtle p-4 rounded-2xl">
-            <span className="font-black tracking-tight text-lg text-primary-500">{getRangeName()}</span>
+        {activeFiltersCount > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {categoryFilter !== "All" && (
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-primary-500/10 text-primary-500 rounded text-[10px] font-medium">
+                {categoryFilter}
+                <button onClick={() => setCategoryFilter("All")}><X size={11} /></button>
+              </span>
+            )}
+            {selectedPieSlice && (
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-primary-500/10 text-primary-500 rounded text-[10px] font-medium">
+                {selectedPieSlice}
+                <button onClick={() => setSelectedPieSlice(null)}><X size={11} /></button>
+              </span>
+            )}
           </div>
         )}
-
-        <AnimatePresence>
-          {activeFiltersCount > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="flex flex-wrap gap-2 pt-1"
-            >
-              {categoryFilter !== "All" && (
-                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-500/10 text-primary-500 rounded-full text-xs font-black border border-primary-500/20">
-                  {categoryFilter}
-                  <button onClick={() => setCategoryFilter("All")}><X size={12} /></button>
-                </span>
-              )}
-              {selectedPieSlice && (
-                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-tertiary-500/10 text-tertiary-500 rounded-full text-xs font-black border border-tertiary-500/20">
-                  {selectedPieSlice}
-                  <button onClick={() => setSelectedPieSlice(null)}><X size={12} /></button>
-                </span>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </section>
 
-      {/* ═══════════ KPI CARDS ═══════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* ═══ KPI CARDS ═══ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpiCards.map((card, i) => (
           <motion.div
             key={card.label}
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07 }}
-            className="bg-surface border border-border-subtle rounded-[2rem] p-4 sm:p-6 shadow-sm min-w-0"
+            transition={{ delay: i * 0.06 }}
+            className="bg-surface border border-border-subtle rounded-xl p-4"
           >
-            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl ${card.bg} ${card.color} flex items-center justify-center mb-3 sm:mb-4`}>
-              <card.icon size={18} className="sm:w-5 sm:h-5" />
+            <div className={`w-8 h-8 rounded-lg ${card.bg} ${card.color} flex items-center justify-center mb-2.5`}>
+              <card.icon size={16} />
             </div>
-            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted mb-1 truncate">{card.label}</p>
-            <p className="text-base sm:text-xl md:text-2xl font-black tracking-tight leading-tight truncate">{card.value}</p>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted mb-0.5 truncate">{card.label}</p>
+            <p className="text-lg font-bold tracking-tight truncate">{card.value}</p>
             {"sub" in card && card.sub && (
-              <p className="text-[10px] sm:text-xs text-secondary font-bold mt-1 truncate">{card.sub}</p>
+              <p className="text-[11px] text-secondary mt-0.5 truncate">{card.sub}</p>
             )}
           </motion.div>
         ))}
@@ -767,324 +713,271 @@ export default function ReportsPage() {
 
       {loading ? (
         <div className="flex flex-col items-center gap-4 py-24">
-          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted font-black text-xs uppercase tracking-widest">Crunching your data…</p>
+          <div className="w-10 h-10 border-3 border-primary-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-muted font-medium">Crunching your data...</p>
         </div>
       ) : (
         <>
-          {/* ═══════════ ROW 1: TREND CHARTS ═══════════ */}
-          <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-              <h3 className="text-xl font-black flex items-center gap-3">
-                <TrendingUp size={22} className="text-primary-500" />
-                {trendMode === "daily" ? "Daily Trend" : trendMode === "cumulative" ? "Budget Burn" : "Category Stacked"}
-              </h3>
-              <div className="flex w-full sm:w-auto p-1 bg-surface-variant rounded-xl gap-1 overflow-x-auto scrollbar-hide flex-nowrap">
-                {trendModes.map((mode, index) => (
-                  <button
-                    key={mode}
-                    ref={el => { trendRefs.current[index] = el; }}
-                    onClick={() => setTrendMode(mode as any)}
-                    className={`px-4 py-1.5 rounded-lg font-black text-xs uppercase tracking-widest transition-all whitespace-nowrap ${
-                      trendMode === (mode as any)
-                        ? "bg-primary-500 text-white shadow-md"
-                        : "text-secondary hover:text-foreground"
-                    }`}
-                  >
-                    {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                  </button>
+          {/* ═══ TREND + 50/30/20 ═══ */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Spend Trend */}
+            <div className="lg:col-span-2 bg-surface border border-border-subtle rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-foreground">Spend Trend</h3>
+                <div className="flex gap-1 bg-surface-variant rounded-md p-0.5">
+                  {(["daily", "cumulative"] as const).map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => setTrendMode(mode)}
+                      className={`px-3 py-1 rounded text-[10px] font-medium transition-all ${
+                        trendMode === mode
+                          ? "bg-primary-500 text-white"
+                          : "text-secondary hover:text-foreground"
+                      }`}
+                    >
+                      {mode === "daily" ? "Daily" : "Cumulative"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="h-[240px] w-full relative">
+                <AreaChart
+                  data={trendData}
+                  width={600}
+                  height={220}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
+                >
+                  <defs>
+                    <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 500 }} dy={8} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 500 }} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} dx={-4} />
+                  <Tooltip content={<CustomAreaTooltip />} cursor={{ stroke: "#6366f1", strokeWidth: 1, strokeDasharray: "3 3" }} />
+                  <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorTrend)" activeDot={{ r: 4, fill: "#6366f1" }} />
+                </AreaChart>
+              </div>
+            </div>
+
+            {/* 50/30/20 */}
+            <div className="bg-surface border border-border-subtle rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-1">50/30/20 Rule</h3>
+              <p className="text-[10px] text-muted mb-4">How your spending compares to the ideal budget</p>
+              <div className="space-y-4">
+                {[
+                  { label: "Needs", pct: needsPercentage, target: 50, color: "bg-primary-500", textColor: "text-primary-500" },
+                  { label: "Wants", pct: wantsPercentage, target: 30, color: "bg-tertiary-500", textColor: "text-tertiary-500" },
+                  { label: "Savings", pct: Math.max(0, savingsPercentage), target: 20, color: "bg-success", textColor: "text-success" },
+                ].map(item => (
+                  <div key={item.label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-foreground">{item.label}</span>
+                      <span className="text-xs font-semibold tabular-nums">
+                        <span className={item.pct > item.target ? "text-error" : item.textColor}>{item.pct.toFixed(1)}%</span>
+                        <span className="text-muted font-normal"> / {item.target}%</span>
+                      </span>
+                    </div>
+                    <div className="h-2 bg-surface-variant rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, item.pct)}%` }}
+                        transition={{ duration: 0.6, delay: 0.1 }}
+                        className={`h-full rounded-full ${item.pct > item.target ? "bg-error" : item.color}`}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
-            <div className="h-72 w-full">
-              {mounted && isReady && !loading && trendData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                  <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="colorWants" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#6366f110" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600 }} dy={10} />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 11, fontWeight: 600 }}
-                      tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
-                      dx={-8}
-                    />
-                    <Tooltip content={<CustomAreaTooltip />} cursor={{ stroke: "#6366f1", strokeWidth: 2, strokeDasharray: "4 4" }} />
-                    {trendMode === "cumulative" && monthlyLimit > 0 && (
-                      <ReferenceLine
-                        y={monthlyLimit}
-                        stroke="#ef4444"
-                        strokeDasharray="6 6"
-                        strokeWidth={2}
-                        label={{ value: "Budget", fill: "#ef4444", fontSize: 11, fontWeight: 700, position: 'insideTopRight' }}
-                      />
-                    )}
-                    {(trendMode as any) === "stacked" ? (
-                      <>
-                        <Area type="monotone" dataKey="Needs" stackId="1" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
-                        <Area type="monotone" dataKey="Wants" stackId="1" stroke="#06b6d4" strokeWidth={3} fillOpacity={1} fill="url(#colorWants)" />
-                      </>
-                    ) : (trendMode as any) === "cashflow" ? (
-                      <>
-                        <Area type="monotone" dataKey="Income" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorIncome)" />
-                        <Area type="monotone" dataKey="amount" name="Expenses" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
-                      </>
-                    ) : (
-                      <Area
-                        type="monotone"
-                        dataKey="amount"
-                        name={selectedPieSlice ? `${selectedPieSlice} Spent` : "Spent"}
-                        stroke="#6366f1"
-                        strokeWidth={3}
-                        fillOpacity={1}
-                        fill="url(#colorTrend)"
-                        activeDot={{ r: 6, strokeWidth: 0, fill: "#6366f1" }}
-                      />
-                    )}
-                  </AreaChart>
-                </ResponsiveContainer>
+          </div>
+
+          {/* ═══ CATEGORY BARS + COMPARISON ═══ */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Top Spending Categories */}
+            <div className="bg-surface border border-border-subtle rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-1">Top Spending Categories</h3>
+              <p className="text-[10px] text-muted mb-4">Where your money goes — highest to lowest</p>
+              {topSubcategories.length > 0 ? (
+                <div className="space-y-3">
+                  {topSubcategories.map((entry, idx) => {
+                    const pct = (entry.value / stats.total) * 100;
+                    return (
+                      <div key={entry.name}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                            <span className="text-xs font-medium text-foreground truncate">{entry.name}</span>
+                          </div>
+                          <span className="text-xs font-semibold text-foreground tabular-nums ml-2 shrink-0">
+                            ₹{entry.value.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-surface-variant rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.6, delay: idx * 0.05 }}
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted font-bold italic">
-                  {!isReady ? "Initializing..." : "No data available."}
+                <div className="flex items-center justify-center h-40 text-xs text-muted">No data.</div>
+              )}
+            </div>
+
+            {/* Period Comparison */}
+            <div className="bg-surface border border-border-subtle rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-foreground mb-1">Period Comparison</h3>
+              <p className="text-[10px] text-muted mb-4">Current vs previous period</p>
+              <div className="h-52 w-full relative">
+                {mounted && isReady ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={comparisonData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }} barGap={6} barCategoryGap="30%">
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600 }} dy={8} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 500 }} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} dx={-4} />
+                      <Tooltip content={<CustomBarTooltip />} cursor={{ fill: "#6366f108" }} />
+                      <Bar dataKey="amount" radius={[4, 4, 0, 0]} maxBarSize={50} name="Total Spent">
+                        {comparisonData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill === "#cbd5e1" ? "#94a3b8" : "#6366f1"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={[]} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 600 }} dy={8} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 500 }} dx={-4} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+                {(!mounted || !isReady) && (
+                  <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">Not enough data.</div>
+                )}
+              </div>
+              {comparisonData.length === 2 && comparisonData[1].amount > 0 && (
+                <div className="mt-3 text-xs text-center">
+                  {(() => {
+                    const change = comparisonData[0].amount > 0
+                      ? ((comparisonData[1].amount - comparisonData[0].amount) / comparisonData[0].amount) * 100
+                      : 0;
+                    return (
+                      <span className={change <= 0 ? "text-success" : "text-error"}>
+                        {change <= 0 ? "Down" : "Up"} {Math.abs(change).toFixed(1)}% vs previous period
+                      </span>
+                    );
+                  })()}
                 </div>
               )}
             </div>
           </div>
 
-          {/* ═══════════ ROW 2: COMPARISON + RADAR (NEW) ═══════════ */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Comparison Chart */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
-              <h3 className="text-xl font-black mb-6 flex items-center gap-3">
-                <BarChart2 size={22} className="text-tertiary-500" />
-                Period Comparison
-              </h3>
-              <div className="h-64 w-full">
-                {mounted && isReady && !loading ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                    <BarChart data={comparisonData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }} barGap={4} barCategoryGap="40%">
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#6366f110" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700 }} dy={10} />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 11, fontWeight: 600 }}
-                        tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
-                        dx={-8}
-                      />
-                      <Tooltip content={<CustomBarTooltip />} cursor={{ fill: "#6366f108" }} />
-                      <Bar dataKey="amount" radius={[6, 6, 0, 0]} maxBarSize={60} name="Total Spent">
-                        {comparisonData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted font-bold italic">
-                    Not enough data.
-                  </div>
-                )}
+          {/* ═══ ACTIONABLE INSIGHTS ═══ */}
+          <section className="bg-surface border border-border-subtle rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Actionable Insights</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Health Score */}
+              <div className="bg-surface-variant/50 rounded-lg p-4 border border-border-subtle">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap size={15} className="text-primary-500" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Financial Health</span>
+                </div>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{Math.max(0, Math.round(100 - Math.abs(50 - needsPercentage) - Math.abs(30 - wantsPercentage)))}%</p>
+                <p className="text-[11px] text-secondary mt-1">
+                  {needsPercentage > 70
+                    ? "Needs are too high — review fixed costs"
+                    : wantsPercentage > 30
+                    ? "Wants are above target — trim discretionary"
+                    : "You're on track with the 50/30/20 rule"}
+                </p>
               </div>
-            </div>
 
-            {/* Radar Chart (Budget Profile) */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm flex flex-col">
-              <h3 className="text-lg sm:text-xl font-black mb-1 flex items-center gap-3">
-                <Target size={22} className="text-primary-500" />
-                50/30/20 Alignment
-              </h3>
-              <p className="text-muted text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-4">Actual vs Recommended Profile</p>
-              <div className="flex-1 flex items-center justify-center min-h-[250px] w-full">
-                {mounted && isReady && !loading && stats.total > 0 ? (
-                  <ResponsiveContainer width="100%" height={250} minWidth={100} minHeight={100}>
-                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                      <PolarGrid stroke="#6366f120" />
-                      <PolarAngleAxis dataKey="subject" tick={{ fill: "currentColor", fontSize: 10, fontWeight: 800 }} className="text-secondary" />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} axisLine={false} tick={false} />
-                      <Radar
-                        name="Actual"
-                        dataKey="A"
-                        stroke="#6366f1"
-                        fill="#6366f1"
-                        fillOpacity={0.6}
-                      />
-                      <Radar
-                        name="Suggested"
-                        dataKey="B"
-                        stroke="#06b6d4"
-                        fill="#06b6d4"
-                        fillOpacity={0.3}
-                        strokeDasharray="4 4"
-                      />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border-subtle)', borderRadius: '1rem', fontWeight: 'bold' }}
-                        itemStyle={{ color: 'var(--foreground)' }}
-                      />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="text-muted font-bold italic text-sm">No data to compare.</div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* ═══════════ ROW 3: BARS + PIE ═══════════ */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top Spending Bar Chart */}
-            <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
-               <h3 className="text-xl font-black mb-6 flex items-center gap-3">
-                <Eye size={22} className="text-primary-500" />
-                Top Expenditure
-              </h3>
-              <div className="h-64 w-full">
-                {mounted && isReady && !loading && topSubcategories.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                    <BarChart data={topSubcategories} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#6366f110" />
-                      <XAxis type="number" hide />
-                      <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 700 }} width={88} />
-                      <Tooltip content={<CustomBarTooltip />} />
-                      <Bar dataKey="value" name="Spent" radius={[0, 6, 6, 0]} maxBarSize={28}>
-                        {topSubcategories.map((_, idx) => (
-                          <Cell key={`hcell-${idx}`} fill={COLORS[idx % COLORS.length]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted font-bold italic">No data.</div>
-                )}
-              </div>
-            </div>
-
-             {/* Interactive Donut Chart */}
-             <div className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-8 shadow-sm flex flex-col">
-              <h3 className="text-xl font-black mb-1 flex items-center gap-3">
-                <ChartIcon size={22} className="text-tertiary-500" />
-                Distribution
-              </h3>
-              <p className="text-muted text-xs font-bold uppercase tracking-widest mb-4">Tap slice to cross-filter</p>
-              <div className="flex-1 flex flex-col items-center">
-                {mounted && isReady && !loading && subcategoryData.length > 0 ? (
+              {/* Biggest Saver Opportunity */}
+              <div className="bg-surface-variant/50 rounded-lg p-4 border border-border-subtle">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target size={15} className="text-primary-500" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Biggest Opportunity</span>
+                </div>
+                {stats.topCat ? (
                   <>
-                    <div className="h-52 w-full shrink-0">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={100}>
-                        <RePieChart>
-                          <Pie
-                            data={subcategoryData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={50}
-                            outerRadius={75}
-                            paddingAngle={4}
-                            dataKey="value"
-                            stroke="none"
-                            onClick={entry => {
-                              const name = entry?.name as string | undefined;
-                              if (name) setSelectedPieSlice(selectedPieSlice === name ? null : name);
-                            }}
-                            style={{ cursor: "pointer" }}
-                          >
-                            {subcategoryData.map((entry, idx) => (
-                              <Cell
-                                key={`cell-${idx}`}
-                                fill={COLORS[idx % COLORS.length]}
-                                opacity={selectedPieSlice && selectedPieSlice !== entry.name ? 0.25 : 1}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<CustomPieTooltip />} />
-                        </RePieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 max-h-32 overflow-y-auto custom-scrollbar pr-1">
-                      {subcategoryData.map((entry, idx) => (
-                        <button
-                          key={entry.name}
-                          onClick={() => setSelectedPieSlice(selectedPieSlice === entry.name ? null : entry.name)}
-                          className={`flex items-center justify-between text-[10px] rounded-lg px-2 py-1.5 transition-all truncate border ${
-                            selectedPieSlice === entry.name
-                              ? "bg-surface-variant border-primary-500/30"
-                              : "border-transparent hover:bg-surface-variant/50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                            <span className="font-bold text-secondary truncate">{entry.name}</span>
-                          </div>
-                          <span className="font-black shrink-0 ml-1">₹{entry.value.toLocaleString("en-IN")}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <p className="text-sm font-semibold text-foreground truncate mb-1">{stats.topCat}</p>
+                    <p className="text-[11px] text-secondary">
+                      Cutting <span className="font-semibold text-foreground">10%</span> saves you <span className="font-semibold text-success">₹{(stats.topCatAmt * 0.1).toLocaleString("en-IN")}</span> next month
+                    </p>
                   </>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-muted font-bold italic text-sm">No data.</div>
+                  <p className="text-xs text-secondary">Add expenses to see opportunities</p>
                 )}
               </div>
-            </div>
-          </div>
 
-          {/* ═══════════ ROW 4: SMART INSIGHT ═══════════ */}
-          <section className="bg-surface border border-border-subtle rounded-[2.5rem] p-6 sm:p-10 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform pointer-events-none hidden sm:block">
-              <Target size={180} />
-            </div>
-            <div className="relative z-10 max-w-2xl text-center sm:text-left">
-              <h3 className="text-2xl sm:text-3xl font-black mb-6">Master Your Money</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-                <div className="space-y-4">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/10 text-primary-500 font-black text-[9px] sm:text-[10px] uppercase tracking-widest border border-primary-500/20">
-                    Strategy Insight
-                  </div>
-                  <p className="text-secondary font-bold text-base sm:text-lg leading-snug">
-                    {needsPercentage > 70
-                      ? "Your 'Needs' are consuming over 70% of your budget. This is often due to high fixed costs like rent or EMIs. Aim to lower this to 50% for financial freedom."
-                      : needsPercentage > 50
-                      ? "You're slightly above the ideal 50% for Needs. Look for small subscriptions or utility optimizations."
-                      : "Outstanding! Your essential costs are well under control, giving you massive leverage for lifestyle or savings."}
-                  </p>
+              {/* Daily Budget */}
+              <div className="bg-surface-variant/50 rounded-lg p-4 border border-border-subtle">
+                <div className="flex items-center gap-2 mb-2">
+                  <CalendarDays size={15} className="text-primary-500" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Daily Average</span>
                 </div>
-                <div className="space-y-4">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-tertiary-500/10 text-tertiary-500 font-black text-[9px] sm:text-[10px] uppercase tracking-widest border border-tertiary-500/20">
-                    Optimization Tip
+                <p className="text-2xl font-bold text-foreground tabular-nums">₹{Math.round(stats.avgDaily).toLocaleString("en-IN")}</p>
+                <p className="text-[11px] text-secondary mt-1">
+                  {monthlyLimit > 0
+                    ? `Target: ₹${Math.round(monthlyLimit / 30).toLocaleString("en-IN")}/day`
+                    : `${stats.total > 0 ? `${filteredExpenses.length} transactions` : "No spending yet"}`}
+                </p>
+              </div>
+            </div>
+
+            {/* Needs vs Wants Breakdown */}
+            <div className="mt-4 bg-surface-variant/30 rounded-lg p-4 border border-border-subtle">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart2 size={15} className="text-primary-500" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Needs vs Wants</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="font-medium text-foreground">Needs <span className="text-muted font-normal">(target 50%)</span></span>
+                    <span className={`font-semibold ${needsPercentage > 50 ? "text-error" : "text-success"}`}>{needsPercentage.toFixed(1)}%</span>
                   </div>
-                  <p className="text-secondary font-bold text-base sm:text-lg leading-snug">
-                    {stats.topCat ? (
-                      <>Your biggest spend is <span className="text-foreground">{stats.topCat}</span>. If you could reduce this by just 10% next month, you&apos;d save <span className="text-primary-500 font-black">₹{(stats.topCatAmt * 0.1).toLocaleString("en-IN")}</span>.</>
-                    ) : (
-                      "Start tracking categories to get personalized optimization tips!"
-                    )}
-                  </p>
+                  <div className="h-2.5 bg-surface-variant rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, needsPercentage)}%` }}
+                      className={`h-full rounded-full ${needsPercentage > 50 ? "bg-error" : "bg-primary-500"}`}
+                    />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="font-medium text-foreground">Wants <span className="text-muted font-normal">(target 30%)</span></span>
+                    <span className={`font-semibold ${wantsPercentage > 30 ? "text-error" : "text-success"}`}>{wantsPercentage.toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2.5 bg-surface-variant rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, wantsPercentage)}%` }}
+                      className={`h-full rounded-full ${wantsPercentage > 30 ? "bg-error" : "bg-tertiary-500"}`}
+                    />
+                  </div>
                 </div>
               </div>
-
-              <div className="mt-12 flex flex-wrap gap-4">
-                 <div className="flex items-center gap-3 bg-surface-variant/50 px-5 py-3 rounded-2xl border border-border-subtle">
-                   <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
-                     <Zap size={20} />
-                   </div>
-                   <div>
-                     <p className="text-[10px] font-black uppercase text-secondary">Total Health Score</p>
-                     <p className="text-xl font-black">{Math.round(100 - Math.abs(50 - needsPercentage) - Math.abs(30 - wantsPercentage))}%</p>
-                   </div>
-                 </div>
-              </div>
+              <p className="text-[11px] text-secondary mt-3">
+                {needsPercentage > 70
+                  ? "Your essentials are high. Review rent, EMIs, and subscriptions to free up cash."
+                  : needsPercentage > 50
+                  ? "Needs are slightly above target. Small cuts in utilities or subscriptions can help."
+                  : wantsPercentage > 30
+                  ? "Wants are above target. Consider trimming dining, shopping, or entertainment."
+                  : "Your needs/wants balance is healthy. Great job maintaining discipline!"}
+              </p>
             </div>
           </section>
         </>
