@@ -1,24 +1,20 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Bell, 
-  MailOpen, 
-  Calendar, 
-  Info, 
-  Trash2, 
-  CheckCircle, 
-  Clock, 
-  CheckCircle2,
-  Inbox,
-  Sparkles,
-  ChevronDown,
+import {
+  Bell,
   Mail,
+  MailOpen,
+  Trash2,
+  Clock,
   User,
-  Trash
+  X,
+  CheckCheck,
+  Inbox,
+  ChevronRight,
+  Loader2,
 } from "lucide-react";
-import { PageLoader } from "@/components/ui/PageLoader";
 import { toast } from "react-hot-toast";
 
 interface Notification {
@@ -30,11 +26,41 @@ interface Notification {
   isRead: boolean;
 }
 
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatFullDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return formatTime(iso);
+}
+
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const fetchNotifications = async () => {
     try {
@@ -44,8 +70,8 @@ export default function NotificationsPage() {
         setNotifications(data.notifications);
         setUnreadCount(data.unreadCount);
       }
-    } catch (error) {
-      console.error("Failed to fetch notifications:", error);
+    } catch {
+      toast.error("Failed to load notifications");
     } finally {
       setLoading(false);
     }
@@ -56,282 +82,369 @@ export default function NotificationsPage() {
   }, []);
 
   const markAllAsRead = async () => {
-    const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+    const unreadIds = notifications.filter((n) => !n.isRead).map((n) => n.id);
     if (unreadIds.length === 0) return;
 
     try {
       const res = await fetch("/api/user/notifications/mark-read", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ allIds: unreadIds })
+        body: JSON.stringify({ allIds: unreadIds }),
       });
-
       if (res.ok) {
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
         setUnreadCount(0);
-        toast.success("All marked as read");
+        toast.success("Marked all as read");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to update notifications");
     }
   };
 
-  const toggleReadStatus = async (e: React.MouseEvent, id: string, currentStatus: boolean) => {
-    e.stopPropagation();
+  const toggleRead = async (id: string, current: boolean) => {
     try {
-      if (!currentStatus) {
-        // Mark as read
+      if (!current) {
         const res = await fetch("/api/user/notifications/mark-read", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ notificationId: id })
+          body: JSON.stringify({ notificationId: id }),
         });
         if (res.ok) {
-          setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-          setUnreadCount(prev => Math.max(0, prev - 1));
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+          );
+          setUnreadCount((prev) => Math.max(0, prev - 1));
         }
       } else {
-        // Mark as unread
         const res = await fetch(`/api/user/notifications/${id}/unread`, {
           method: "PATCH",
         });
         if (res.ok) {
-          setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: false } : n));
-          setUnreadCount(prev => prev + 1);
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
+          );
+          setUnreadCount((prev) => prev + 1);
         }
       }
-    } catch (error) {
-      console.error("Failed to toggle read status:", error);
+    } catch {
+      toast.error("Failed to update");
     }
   };
 
-  const deleteNotification = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
+  const deleteOne = async (id: string) => {
     try {
       const res = await fetch(`/api/user/notifications/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
       });
-
       if (res.ok) {
-        const wasUnread = notifications.find(n => n.id === id)?.isRead === false;
-        setNotifications(prev => prev.filter(n => n.id !== id));
-        if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
-        if (expandedId === id) setExpandedId(null);
+        const wasUnread =
+          notifications.find((n) => n.id === id)?.isRead === false;
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+        if (wasUnread) setUnreadCount((prev) => Math.max(0, prev - 1));
         toast.success("Notification removed");
       }
-    } catch (error) {
-      toast.error("Failed to delete notification");
+    } catch {
+      toast.error("Failed to delete");
     }
   };
 
-  const groupedNotifications = useMemo(() => {
-    const groups: { [key: string]: Notification[] } = {
+  const grouped = useMemo(() => {
+    const groups: Record<string, Notification[]> = {
       Today: [],
       Yesterday: [],
-      Earlier: []
+      Earlier: [],
     };
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    notifications.forEach(n => {
-      const date = new Date(n.createdAt);
-      date.setHours(0, 0, 0, 0);
-
-      if (date.getTime() === today.getTime()) {
-        groups.Today.push(n);
-      } else if (date.getTime() === yesterday.getTime()) {
-        groups.Yesterday.push(n);
-      } else {
-        groups.Earlier.push(n);
-      }
+    notifications.forEach((n) => {
+      const d = new Date(n.createdAt);
+      d.setHours(0, 0, 0, 0);
+      if (d.getTime() === today.getTime()) groups.Today.push(n);
+      else if (d.getTime() === yesterday.getTime()) groups.Yesterday.push(n);
+      else groups.Earlier.push(n);
     });
-
     return groups;
   }, [notifications]);
 
-  if (loading) {
-    return <PageLoader />;
-  }
+  const totalCount = notifications.length;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-32 px-4 sm:px-0">
+    <div className="mx-auto space-y-4 pb-24 px-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
-          <div className="relative">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-[1.5rem] bg-indigo-500/10 text-indigo-600 flex items-center justify-center shadow-sm border border-indigo-500/20">
-              <Bell size={28} className="sm:w-8 sm:h-8" />
+      <div className="-mx-4 px-4 pt-2 pb-3">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-11 h-11 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
+                <Bell size={20} />
+              </div>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-error text-white text-[9px] font-bold flex items-center justify-center rounded-full border-2 border-background shadow-sm">
+                  {unreadCount}
+                </span>
+              )}
             </div>
-            {unreadCount > 0 && (
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 w-6 h-6 bg-primary-600 text-white text-[10px] font-black flex items-center justify-center rounded-full border-2 border-background shadow-lg"
-              >
-                {unreadCount}
-              </motion.div>
-            )}
+            <div>
+              <h1 className="text-xl font-bold text-foreground">
+                Announcements
+              </h1>
+              <p className="text-[11px] text-muted">
+                {totalCount} notification{totalCount !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-black text-foreground tracking-tighter">Announcements</h1>
-            <p className="text-secondary font-medium text-sm sm:text-base mt-0.5">Manage your system updates</p>
-          </div>
-        </div>
 
-        {unreadCount > 0 && (
-          <button 
-            onClick={markAllAsRead}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-surface border border-border-subtle hover:bg-surface-variant rounded-2xl text-xs font-black uppercase tracking-widest transition-all text-secondary hover:text-foreground w-full sm:w-auto"
-          >
-            <CheckCircle2 size={16} />
-            Mark all as read
-          </button>
-        )}
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="flex items-center gap-1.5 px-4 py-2 bg-surface border border-border-subtle rounded-xl text-xs font-semibold text-secondary hover:text-foreground hover:border-border-hover transition-all active:scale-95"
+            >
+              <CheckCheck size={14} />
+              <span className="hidden sm:inline">Mark all read</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Main List */}
-      <div className="space-y-12">
-        {notifications.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-surface border border-border-subtle rounded-[3rem] p-16 sm:p-24 flex flex-col items-center text-center shadow-sm"
-          >
-            <div className="w-20 h-20 rounded-full bg-surface-variant/50 flex items-center justify-center mb-8 relative">
-              <Inbox size={32} className="text-muted" />
-              <motion.div 
-                animate={{ 
-                  scale: [1, 1.2, 1],
-                  opacity: [0.3, 0.6, 0.3]
-                }}
-                transition={{ duration: 3, repeat: Infinity }}
-                className="absolute inset-0 bg-primary-500/10 rounded-full"
-              />
-            </div>
-            <h3 className="text-2xl font-black text-foreground mb-3">All Clear!</h3>
-            <p className="text-secondary font-medium max-w-sm">
-              No announcements for you right now. Check back later for updates.
-            </p>
-          </motion.div>
-        ) : (
-          Object.entries(groupedNotifications).map(([groupName, items]) => (
-            items.length > 0 && (
-              <div key={groupName} className="space-y-4">
-                <div className="flex items-center gap-4 px-2">
-                  <h3 className="text-[10px] font-black text-muted uppercase tracking-[0.2em]">{groupName}</h3>
-                  <div className="h-px flex-1 bg-border-subtle/50" />
-                </div>
-
-                <div className="bg-surface border border-border-subtle rounded-[2rem] overflow-hidden divide-y divide-border-subtle/50">
-                  {items.map((notif) => (
-                    <div key={notif.id} className="group flex flex-col">
-                      <div 
-                        onClick={() => setExpandedId(expandedId === notif.id ? null : notif.id)}
-                        className={`flex items-center gap-4 p-4 sm:p-6 cursor-pointer hover:bg-surface-variant/30 transition-all ${!notif.isRead ? "bg-primary-500/5" : ""}`}
+      {/* List */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-muted">
+          <Loader2 className="animate-spin mb-3" size={24} />
+          <span className="text-xs font-medium">Loading...</span>
+        </div>
+      ) : totalCount === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-20 text-center"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-surface-variant flex items-center justify-center mb-5">
+            <Inbox size={28} className="text-muted" />
+          </div>
+          <h3 className="text-lg font-bold text-foreground mb-1.5">
+            All Clear!
+          </h3>
+          <p className="text-sm text-muted max-w-[240px]">
+            No announcements for you right now.
+          </p>
+        </motion.div>
+      ) : (
+        <div className="space-y-2">
+          {(["Today", "Yesterday", "Earlier"] as const).map(
+            (groupName) =>
+              grouped[groupName].length > 0 && (
+                <div key={groupName}>
+                  <div className="flex items-center gap-3 px-1 py-2">
+                    <span className="text-[10px] font-semibold text-muted uppercase tracking-[0.15em]">
+                      {groupName}
+                    </span>
+                    <div className="h-px flex-1 bg-border-subtle/50" />
+                    <span className="text-[10px] font-medium text-muted">
+                      {grouped[groupName].length}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {grouped[groupName].map((notif) => (
+                      <motion.button
+                        key={notif.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onClick={() => {
+                          setSelectedNotif(notif);
+                          setShowDetail(true);
+                        }}
+                        className={`w-full flex items-center gap-3 p-3.5 rounded-xl border transition-all text-left active:scale-[0.98] ${
+                          !notif.isRead
+                            ? "bg-primary-500/[0.04] border-primary-500/10"
+                            : "bg-surface border-border-subtle hover:border-border-hover hover:bg-surface-variant/30"
+                        }`}
                       >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                          notif.isRead ? "bg-surface-variant text-muted" : "bg-primary-500 text-white"
-                        }`}>
-                          {notif.isRead ? <MailOpen size={18} /> : <Mail size={18} />}
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            notif.isRead
+                              ? "bg-surface-variant text-muted"
+                              : "bg-primary-500/10 text-primary-500"
+                          }`}
+                        >
+                          {notif.isRead ? (
+                            <MailOpen size={16} />
+                          ) : (
+                            <Mail size={16} />
+                          )}
                         </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <h4 className={`text-sm sm:text-base truncate transition-colors ${
-                            !notif.isRead ? "font-black text-foreground" : "font-bold text-secondary group-hover:text-foreground"
-                          }`}>
-                            {notif.subject}
-                          </h4>
-                          <p className="text-[10px] font-black text-muted uppercase tracking-wider mt-0.5">
-                            {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {notif.adminName}
+
+                        <div className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center gap-2">
+                            {!notif.isRead && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
+                            )}
+                            <span
+                              className={`text-sm truncate ${
+                                !notif.isRead
+                                  ? "font-bold text-foreground"
+                                  : "font-semibold text-secondary"
+                              }`}
+                            >
+                              {notif.subject}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-medium text-muted mt-0.5">
+                            {timeAgo(notif.createdAt)} &middot;{" "}
+                            {notif.adminName}
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-1 sm:gap-2">
-                          <button
-                            onClick={(e) => toggleReadStatus(e, notif.id, notif.isRead)}
-                            className={`p-2 rounded-lg transition-all ${
-                              notif.isRead 
-                                ? "text-muted hover:text-primary-500 hover:bg-primary-500/10" 
-                                : "text-primary-500 hover:bg-primary-500/10"
-                            }`}
-                            title={notif.isRead ? "Mark as unread" : "Mark as read"}
-                          >
-                            {notif.isRead ? <Mail size={16} /> : <CheckCircle size={16} />}
-                          </button>
-                          <button
-                            onClick={(e) => deleteNotification(e, notif.id)}
-                            className="p-2 rounded-lg text-muted hover:text-error hover:bg-error/10 transition-all"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                          <div className={`p-1.5 transition-transform duration-300 ${expandedId === notif.id ? "rotate-180" : ""}`}>
-                            <ChevronDown size={16} className="text-muted" />
-                          </div>
-                        </div>
-                      </div>
+                        <ChevronRight
+                          size={14}
+                          className="text-muted flex-shrink-0"
+                        />
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              )
+          )}
+        </div>
+      )}
 
-                      <AnimatePresence>
-                        {expandedId === notif.id && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden bg-surface-variant/20"
-                          >
-                            <div className="p-6 sm:p-8 sm:pl-20 space-y-4">
-                              <div className="prose prose-slate dark:prose-invert max-w-none">
-                                <p className="text-secondary font-bold leading-relaxed whitespace-pre-wrap text-sm sm:text-base">
-                                  {notif.body}
-                                </p>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-border-subtle/30">
-                                <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
-                                  <User size={12} />
-                                  From: {notif.adminName}
-                                </div>
-                                <div className="flex items-center gap-2 text-[10px] font-black text-muted uppercase tracking-widest">
-                                  <Clock size={12} />
-                                  Sent: {new Date(notif.createdAt).toLocaleString("en-IN", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+      {/* Detail Bottom Sheet */}
+      <AnimatePresence>
+        {showDetail && selectedNotif && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDetail(false)}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="relative w-full sm:max-w-md bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border-subtle max-h-[85vh] overflow-y-auto"
+            >
+              <div className="sm:hidden flex justify-center pt-3 pb-1 sticky top-0 bg-surface z-10">
+                <div className="w-10 h-1 rounded-full bg-border-subtle" />
+              </div>
+
+              <div className="px-5 pt-2 pb-8 sm:p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        selectedNotif.isRead
+                          ? "bg-surface-variant text-muted"
+                          : "bg-primary-500/10 text-primary-500"
+                      }`}
+                    >
+                      {selectedNotif.isRead ? (
+                        <MailOpen size={18} />
+                      ) : (
+                        <Mail size={18} />
+                      )}
                     </div>
-                  ))}
+                    <h2 className="text-lg font-bold text-foreground leading-snug">
+                      {selectedNotif.subject}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setShowDetail(false)}
+                    className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Meta */}
+                <div className="flex flex-wrap items-center gap-4 mb-6 pb-4 border-b border-border-subtle">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted">
+                    <User size={12} />
+                    {selectedNotif.adminName}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted">
+                    <Clock size={12} />
+                    {formatFullDate(selectedNotif.createdAt)}
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="mb-8">
+                  <p className="text-sm text-secondary leading-relaxed whitespace-pre-wrap">
+                    {selectedNotif.body}
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-2">
+                  <button
+                    onClick={async () => {
+                      setSaving(true);
+                      await toggleRead(
+                        selectedNotif.id,
+                        selectedNotif.isRead
+                      );
+                      setSaving(false);
+                      setSelectedNotif((prev) =>
+                        prev
+                          ? { ...prev, isRead: !prev.isRead }
+                          : prev
+                      );
+                    }}
+                    disabled={saving}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-foreground text-background font-semibold text-sm hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {selectedNotif.isRead ? (
+                      <>
+                        <Mail size={16} />
+                        Mark as Unread
+                      </>
+                    ) : (
+                      <>
+                        <CheckCheck size={16} />
+                        Mark as Read
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setSaving(true);
+                      await deleteOne(selectedNotif.id);
+                      setSaving(false);
+                      setShowDetail(false);
+                    }}
+                    disabled={saving}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-error font-medium text-sm hover:bg-error/5 active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    <Trash2 size={16} />
+                    Delete Notification
+                  </button>
                 </div>
               </div>
-            )
-          ))
+            </motion.div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
-      {/* Footer Info */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-16">
-        <div className="p-6 bg-surface-variant/30 rounded-3xl border border-border-subtle flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-600 flex items-center justify-center shrink-0">
-            <Info size={18} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-foreground mb-1">Intelligence Alerts</p>
-            <p className="text-[10px] font-medium text-secondary">Get real-time insights on your spending habits and system updates.</p>
-          </div>
-        </div>
-        <div className="p-6 bg-surface-variant/30 rounded-3xl border border-border-subtle flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center shrink-0">
-            <CheckCircle size={18} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-foreground mb-1">Stay Organized</p>
-            <p className="text-[10px] font-medium text-secondary">Archive old announcements to keep your financial pulse clean.</p>
-          </div>
-        </div>
-      </div>
+      {/* FAB for mobile — Mark all read */}
+      {unreadCount > 0 && (
+        <button
+          onClick={markAllAsRead}
+          className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white shadow-xl shadow-primary-500/30 flex items-center justify-center active:scale-90 transition-transform z-20"
+        >
+          <CheckCheck size={24} />
+        </button>
+      )}
     </div>
   );
 }
