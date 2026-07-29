@@ -193,7 +193,7 @@ export default function ProfilePage() {
 
           <div className="flex-1 min-w-0">
             {isEditingName ? (
-              <div className="flex items-center gap-2 max-w-sm">
+              <div className="flex items-center gap-2 min-w-0">
                 <input
                   autoFocus
                   value={nameValue}
@@ -205,7 +205,7 @@ export default function ProfilePage() {
                     if (e.key === "Enter") handleSaveName();
                     if (e.key === "Escape") handleCancelEdit();
                   }}
-                  className="flex-1 text-lg font-bold bg-background border border-border-subtle rounded-lg px-3 py-1.5 outline-none focus:border-primary-500 text-foreground transition-colors"
+                  className="min-w-0 flex-1 text-lg font-bold bg-background border border-border-subtle rounded-lg px-3 py-1.5 outline-none focus:border-primary-500 text-foreground transition-colors"
                 />
                 <button
                   onClick={handleSaveName}

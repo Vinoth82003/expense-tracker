@@ -252,7 +252,7 @@ type CategoryData = { id: string; name: string; type: string }[];
 
 export function useExpenses(month: string) {
   const { fetchCached, invalidate, subscribe } = useData();
-  const key = cacheKey("expenses", month);
+  const key = cacheKey("expenses", "list", month);
 
   useEffect(() => {
     const unsub = subscribe(() => {});
@@ -271,7 +271,7 @@ export function useExpenses(month: string) {
 
     fetchCached<CurrencyData>(
       key,
-      () => fetch(`/api/expenses?month=${month}`).then(handleResponse),
+      () => fetch(`/api/expenses?month=${month}`).then(handleResponse).then(r => r.expenses),
       TTL.DEFAULT
     )
       .then((d) => {
@@ -290,7 +290,7 @@ export function useExpenses(month: string) {
     invalidate(key);
     return fetchCached<CurrencyData>(
       key,
-      () => fetch(`/api/expenses?month=${month}`).then(handleResponse),
+      () => fetch(`/api/expenses?month=${month}`).then(handleResponse).then(r => r.expenses),
       0
     );
   }, [key, month, invalidate, fetchCached]);
@@ -300,7 +300,7 @@ export function useExpenses(month: string) {
 
 export function useIncome(month: string) {
   const { fetchCached, invalidate, subscribe } = useData();
-  const key = cacheKey("income", month);
+  const key = cacheKey("income", "list", month);
 
   useEffect(() => {
     const unsub = subscribe(() => {});
@@ -319,7 +319,7 @@ export function useIncome(month: string) {
 
     fetchCached<CurrencyData>(
       key,
-      () => fetch(`/api/income?month=${month}`).then(handleResponse),
+      () => fetch(`/api/income?month=${month}`).then(handleResponse).then(r => r.incomes),
       TTL.DEFAULT
     )
       .then((d) => {
@@ -338,7 +338,7 @@ export function useIncome(month: string) {
     invalidate(key);
     return fetchCached<CurrencyData>(
       key,
-      () => fetch(`/api/income?month=${month}`).then(handleResponse),
+      () => fetch(`/api/income?month=${month}`).then(handleResponse).then(r => r.incomes),
       0
     );
   }, [key, month, invalidate, fetchCached]);

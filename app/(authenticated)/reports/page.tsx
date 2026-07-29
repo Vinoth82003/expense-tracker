@@ -722,43 +722,54 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Spend Trend */}
             <div className="lg:col-span-2 bg-surface border border-border-subtle rounded-xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-foreground">Spend Trend</h3>
-                <div className="flex gap-1 bg-surface-variant rounded-md p-0.5">
-                  {(["daily", "cumulative"] as const).map(mode => (
+                <div className="flex items-center justify-between mb-4 gap-3">
+                <h3 className="text-sm font-semibold text-foreground shrink-0">Spend Trend</h3>
+                <div className="flex gap-1 bg-surface-variant rounded-md p-0.5 overflow-x-auto no-scrollbar">
+                  {(["daily", "cumulative", "cashflow"] as const).map(mode => (
                     <button
                       key={mode}
                       onClick={() => setTrendMode(mode)}
-                      className={`px-3 py-1 rounded text-[10px] font-medium transition-all ${
+                      className={`px-3 py-1 rounded text-[10px] font-medium whitespace-nowrap transition-all ${
                         trendMode === mode
                           ? "bg-primary-500 text-white"
                           : "text-secondary hover:text-foreground"
                       }`}
                     >
-                      {mode === "daily" ? "Daily" : "Cumulative"}
+                      {mode === "daily" ? "Daily" : mode === "cumulative" ? "Cumulative" : "Cashflow"}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="h-[240px] w-full relative">
-                <AreaChart
-                  data={trendData}
-                  width={600}
-                  height={220}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
-                >
-                  <defs>
-                    <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
-                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 500 }} dy={8} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 500 }} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} dx={-4} />
-                  <Tooltip content={<CustomAreaTooltip />} cursor={{ stroke: "#6366f1", strokeWidth: 1, strokeDasharray: "3 3" }} />
-                  <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorTrend)" activeDot={{ r: 4, fill: "#6366f1" }} />
-                </AreaChart>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={trendData}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 5 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.4} />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 500 }} dy={8} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 500 }} tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} dx={-4} />
+                    <Tooltip content={<CustomAreaTooltip />} cursor={{ stroke: "#6366f1", strokeWidth: 1, strokeDasharray: "3 3" }} />
+                    {trendMode === "cashflow" ? (
+                      <>
+                        <Area type="monotone" dataKey="Income" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorIncome)" activeDot={{ r: 4, fill: "#10b981" }} name="Income" />
+                        <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorTrend)" activeDot={{ r: 4, fill: "#6366f1" }} name="Expenses" />
+                      </>
+                    ) : (
+                      <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorTrend)" activeDot={{ r: 4, fill: "#6366f1" }} name="Amount" />
+                    )}
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
