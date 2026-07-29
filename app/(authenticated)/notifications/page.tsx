@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { useNotifications, useMutations } from "@/context/DataContext";
+import { useUI } from "@/context/UIContext";
 
 interface Notification {
   id: string;
@@ -55,96 +56,52 @@ function timeAgo(iso: string) {
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { data: notifData, loading, error, refetch } = useNotifications();
+  const { toast } = useUI();
+  const mutations = useMutations();
+
+  const notifications = ((notifData as unknown as { notifications: Notification[]; unreadCount: number } | undefined)?.notifications || []) as Notification[];
+  const unreadCount = (notifData as unknown as { notifications: Notification[]; unreadCount: number } | undefined)?.unreadCount || 0;
+
   const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  const fetchNotifications = async () => {
-    try {
-      const res = await fetch("/api/user/notifications");
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
-      }
-    } catch {
-      toast.error("Failed to load notifications");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
 
   const markAllAsRead = async () => {
     const unreadIds = notifications.filter((n) => !n.isRead).map((n) => n.id);
     if (unreadIds.length === 0) return;
 
     try {
-      const res = await fetch("/api/user/notifications/mark-read", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ allIds: unreadIds }),
-      });
-      if (res.ok) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-        setUnreadCount(0);
-        toast.success("Marked all as read");
-      }
-    } catch {
-      toast.error("Failed to update notifications");
+      await mutations.markAllNotificationsRead(unreadIds);
+      toast.success("Marked all as read");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update");
     }
   };
 
   const toggleRead = async (id: string, current: boolean) => {
     try {
       if (!current) {
-        const res = await fetch("/api/user/notifications/mark-read", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ notificationId: id }),
-        });
-        if (res.ok) {
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-          );
-          setUnreadCount((prev) => Math.max(0, prev - 1));
-        }
+        await mutations.markNotificationRead(id);
       } else {
+        // Mark as unread — direct fetch since no mutation helper exists
         const res = await fetch(`/api/user/notifications/${id}/unread`, {
           method: "PATCH",
         });
-        if (res.ok) {
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, isRead: false } : n))
-          );
-          setUnreadCount((prev) => prev + 1);
-        }
+        if (!res.ok) throw new Error("Failed to mark as unread");
       }
-    } catch {
-      toast.error("Failed to update");
+      refetch();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update");
     }
   };
 
   const deleteOne = async (id: string) => {
     try {
-      const res = await fetch(`/api/user/notifications/${id}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        const wasUnread =
-          notifications.find((n) => n.id === id)?.isRead === false;
-        setNotifications((prev) => prev.filter((n) => n.id !== id));
-        if (wasUnread) setUnreadCount((prev) => Math.max(0, prev - 1));
-        toast.success("Notification removed");
-      }
-    } catch {
-      toast.error("Failed to delete");
+      await mutations.deleteNotification(id);
+      toast.success("Notification removed");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete");
     }
   };
 

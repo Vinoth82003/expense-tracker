@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, use, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Users, 
-  Plus, 
-  Settings, 
-  ArrowLeft, 
-  Clock, 
+import {
+  Users,
+  Plus,
+  Settings,
+  ArrowLeft,
+  Clock,
   IndianRupee,
   UserPlus,
   Receipt,
@@ -21,46 +21,56 @@ import MemberCard from "@/components/groups/MemberCard";
 import GroupExpenseModal from "@/components/groups/GroupExpenseModal";
 import InviteModal from "@/components/modals/InviteModal";
 import toast from "react-hot-toast";
+import { useGroup } from "@/context/DataContext";
 
 export default function GroupDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const id = resolvedParams.id;
   const router = useRouter();
-  
-  const [group, setGroup] = useState<GroupData | null>(null);
+
+  const { data: groupData, loading: groupLoading, refetch: refetchGroup } = useGroup(id);
+  const group = groupData as GroupData | null;
+
   const [balanceData, setBalanceData] = useState<{ memberBalances: MemberBalance[], totalGroupExpenses: number } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [balanceLoading, setBalanceLoading] = useState(true);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<GroupExpenseData | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, [id]);
-
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchBalance = useCallback(async () => {
     try {
-      const [groupRes, balanceRes] = await Promise.all([
-        fetch(`/api/groups/${id}`),
-        fetch(`/api/groups/${id}/balance`)
-      ]);
-
-      if (groupRes.ok && balanceRes.ok) {
-        const groupData = await groupRes.json();
-        const balanceInfo = await balanceRes.json();
-        setGroup(groupData);
-        setBalanceData(balanceInfo);
-      } else {
-        toast.error("Failed to load group details");
-        router.push("/groups");
+      const res = await fetch(`/api/groups/${id}/balance`);
+      if (res.ok) {
+        const data = await res.json();
+        setBalanceData(data);
       }
     } catch (error) {
-      toast.error("An error occurred");
+      // silent
     } finally {
-      setLoading(false);
+      setBalanceLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      setBalanceLoading(true);
+      fetchBalance();
+    }
+  }, [id, fetchBalance]);
+
+  useEffect(() => {
+    if (!groupLoading && !group) {
+      toast.error("Failed to load group details");
+      router.push("/groups");
+    }
+  }, [group, groupLoading, router]);
+
+  const loading = groupLoading || balanceLoading;
+
+  function handleModalsSuccess() {
+    refetchGroup();
+    fetchBalance();
+  }
 
   if (loading || !group) {
     return (
@@ -80,16 +90,16 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
           Back to Groups
         </Link>
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => setIsInviteModalOpen(true)}
             className="p-3 rounded-xl bg-surface border border-white/5 text-secondary hover:text-primary-500 transition-all active:scale-95 glass"
             title="Invite Members"
           >
             <UserPlus size={20} />
           </button>
-          <Link 
+          <Link
             href={`/groups/${id}/settings`}
-            className="p-3 rounded-xl bg-surface border border-white/5 text-secondary hover:text-foreground transition-all active:scale-95 glass" 
+            className="p-3 rounded-xl bg-surface border border-white/5 text-secondary hover:text-foreground transition-all active:scale-95 glass"
             title="Settings"
           >
             <Settings size={20} />
@@ -107,7 +117,7 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
                  <Users size={32} />
                </div>
                <div className="flex -space-x-4">
-                   {group.members.slice(0, 5).map((m) => (
+                   {group.members.slice(0, 5).map((m: any) => (
                     <div key={m.id} className="w-10 h-10 rounded-full border-4 border-surface bg-surface-variant flex items-center justify-center overflow-hidden shadow-lg">
                        {m.user.avatar ? (
                          <img src={m.user.avatar} alt={m.user.name || "User"} className="w-full h-full object-cover" />
@@ -131,7 +141,7 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
               <p className="text-[10px] font-black uppercase tracking-widest text-secondary mb-1">Total Group Spending</p>
               <p className="text-3xl font-black text-primary-500">₹{balanceData?.totalGroupExpenses.toLocaleString() || "0"}</p>
             </div>
-            <button 
+            <button
               onClick={() => {
                 setSelectedExpense(null);
                 setIsExpenseModalOpen(true);
@@ -168,7 +178,7 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
            </div>
            <div className="space-y-4">
              {group.expenses && group.expenses.length > 0 ? (
-               group.expenses.slice(0, 8).map((expense: GroupExpenseData) => (
+               group.expenses.slice(0, 8).map((expense: any) => (
                  <motion.div
                    key={expense.id}
                    whileHover={{ x: 4 }}
@@ -206,16 +216,16 @@ export default function GroupDetailsPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Modals */}
-      <GroupExpenseModal 
+      <GroupExpenseModal
         isOpen={isExpenseModalOpen}
         onClose={() => setIsExpenseModalOpen(false)}
         groupId={id}
-        members={group.members}
-        onSuccess={fetchData}
+        members={group.members as any}
+        onSuccess={handleModalsSuccess}
         editExpense={selectedExpense}
       />
 
-      <InviteModal 
+      <InviteModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
         groupId={id}

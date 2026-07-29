@@ -1,40 +1,20 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Users, ChevronRight, Search, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { GroupData } from "@/types/group";
 import toast from "react-hot-toast";
 import CreateGroupModal from "@/components/modals/CreateGroupModal";
+import { useGroups } from "@/context/DataContext";
 
 export default function GroupsPage() {
-  const [groups, setGroups] = useState<GroupData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: groups, loading, refetch } = useGroups();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchGroups();
-  }, []);
-
-  const fetchGroups = async () => {
-    try {
-      const res = await fetch("/api/groups");
-      if (res.ok) {
-        const data = await res.json();
-        setGroups(data);
-      } else {
-        toast.error("Failed to fetch groups");
-      }
-    } catch (error) {
-      toast.error("An error occurred while fetching groups");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredGroups = groups.filter(g => 
+  const filteredGroups = (groups || []).filter(g =>
     g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (g.description && g.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -47,7 +27,7 @@ export default function GroupsPage() {
           <h2 className="text-3xl font-black tracking-tight mb-2">Expense Groups</h2>
           <p className="text-secondary font-medium">Manage shared expenses and split bills with friends.</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsCreateModalOpen(true)}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary-500 text-white font-black shadow-lg shadow-primary-500/20 hover:scale-105 transition-all active:scale-95"
         >
@@ -73,7 +53,7 @@ export default function GroupsPage() {
         <div className="bg-surface border border-white/5 rounded-2xl p-4 flex items-center justify-between glass">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-secondary mb-1">Total Groups</p>
-            <p className="text-2xl font-black">{groups.length}</p>
+            <p className="text-2xl font-black">{(groups || []).length}</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
              <Users size={24} />
@@ -119,7 +99,7 @@ export default function GroupsPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   <h3 className="text-xl font-black mb-2 group-hover:text-primary-500 transition-colors">{group.name}</h3>
                   <p className="text-sm text-secondary font-medium line-clamp-2 mb-6 h-10">
                     {group.description || "No description provided."}
@@ -145,22 +125,24 @@ export default function GroupsPage() {
           </div>
           <h3 className="text-2xl font-black mb-2">No groups found</h3>
           <p className="text-secondary font-medium mb-8 max-w-sm mx-auto">
-            You haven't joined any expense groups yet. Create one to start splitting bills!
+            {searchQuery ? "No groups match your search." : "You haven't joined any expense groups yet. Create one to start splitting bills!"}
           </p>
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-primary-500 text-white font-black shadow-lg shadow-primary-500/20 hover:scale-105 transition-all active:scale-95"
-          >
-            <Plus size={20} />
-            Create Your First Group
-          </button>
+          {!searchQuery && (
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-primary-500 text-white font-black shadow-lg shadow-primary-500/20 hover:scale-105 transition-all active:scale-95"
+            >
+              <Plus size={20} />
+              Create Your First Group
+            </button>
+          )}
         </div>
       )}
 
-      <CreateGroupModal 
+      <CreateGroupModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={fetchGroups}
+        onSuccess={refetch}
       />
     </div>
   );

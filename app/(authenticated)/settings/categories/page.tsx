@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -16,12 +16,14 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useModal } from "@/components/providers/ModalProvider";
+import { useCategories, useMutations } from "@/context/DataContext";
+import { useUI } from "@/context/UIContext";
 
 interface Category {
   id: string;
   name: string;
   type: string;
-  isDefault: boolean;
+  isDefault?: boolean;
   userId: string | null;
 }
 
@@ -32,8 +34,15 @@ const TYPE_ICONS: Record<string, typeof ShoppingCart> = {
 
 export default function MyCategoriesPage() {
   const { confirm } = useModal();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { toast } = useUI();
+  const { data: catData, loading, error, refetch } = useCategories();
+  const mutations = useMutations();
+
+  const globalCategories = ((catData as any)?.globalCategories || []) as Category[];
+  const userCategories = ((catData as any)?.userCategories || []) as Category[];
+  const allCategories = [...globalCategories, ...userCategories] as Category[];
+
+  const myCategories = userCategories;
   const [typeFilter, setTypeFilter] = useState<"all" | "Needs" | "Wants">("all");
 
   const [showForm, setShowForm] = useState(false);
@@ -41,22 +50,6 @@ export default function MyCategoriesPage() {
   const [formData, setFormData] = useState({ name: "", type: "Needs" });
   const [saving, setSaving] = useState(false);
   const [errorProp, setErrorProp] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch("/api/categories");
-      const data = await res.json();
-      if (data.categories) setCategories(data.categories);
-    } catch (error) {
-      console.error("Failed to fetch categories:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   function openAdd() {
     setEditingId(null);
@@ -87,24 +80,14 @@ export default function MyCategoriesPage() {
 
     try {
       if (editingId) {
-        const res = await fetch("/api/categories", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editingId, name, type: formData.type }),
-        });
-        if (!res.ok) { const err = await res.json(); setErrorProp(err.error); setSaving(false); return; }
+        await mutations.updateCategory(editingId, { name, type: formData.type });
       } else {
-        const res = await fetch("/api/categories", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, type: formData.type }),
-        });
-        if (!res.ok) { const err = await res.json(); setErrorProp(err.error); setSaving(false); return; }
+        await mutations.createCategory({ name, type: formData.type });
       }
+      toast.success(editingId ? "Category updated" : "Category created");
       closeForm();
-      fetchCategories();
-    } catch {
-      setErrorProp("Failed to save");
+    } catch (e: any) {
+      setErrorProp(e.message || "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -119,19 +102,12 @@ export default function MyCategoriesPage() {
     if (!ok) return;
 
     try {
-      await fetch("/api/categories", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      fetchCategories();
-    } catch {
-      console.error("Failed to delete");
+      await mutations.deleteCategory(id);
+      toast.success("Category deleted");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete");
     }
   }
-
-  const globalCategories = categories.filter((c) => c.isDefault);
-  const myCategories = categories.filter((c) => !c.isDefault);
 
   const filteredMyCategories =
     typeFilter === "all" ? myCategories : myCategories.filter((c) => c.type === typeFilter);

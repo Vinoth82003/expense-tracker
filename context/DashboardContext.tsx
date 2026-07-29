@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { useSession } from "next-auth/react";
+import { useData, cacheKey } from "./DataContext";
 
 interface Expense {
   id: string;
@@ -44,6 +45,7 @@ const DashboardContext = createContext<DashboardContextType | undefined>(undefin
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
+  const { fetchCached } = useData();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [prevExpenses, setPrevExpenses] = useState<Expense[]>([]);
@@ -75,21 +77,30 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       
       const prevDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
       const prevMonthFilter = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-      
-      const [expRes, incRes, budgetRes, prevExpRes, prevIncRes] = await Promise.all([
-        fetch(`/api/expenses?month=${monthFilter}`),
-        fetch(`/api/income?month=${monthFilter}`),
-        fetch(`/api/budget?month=${monthFilter}`),
-        fetch(`/api/expenses?month=${prevMonthFilter}`),
-        fetch(`/api/income?month=${prevMonthFilter}`)
-      ]);
+
+      const handleRes = async (res: Response) => {
+        if (!res.ok) throw new Error("Request failed");
+        return res.json();
+      };
 
       const [expData, incData, budgetData, prevExpData, prevIncData] = await Promise.all([
-        expRes.json(),
-        incRes.json(),
-        budgetRes.json(),
-        prevExpRes.json(),
-        prevIncRes.json()
+        fetchCached<{ expenses: Expense[] }>(
+          cacheKey("expenses", monthFilter),
+          () => fetch(`/api/expenses?month=${monthFilter}`).then(handleRes)
+        ),
+        fetchCached<{ incomes: Income[] }>(
+          cacheKey("income", monthFilter),
+          () => fetch(`/api/income?month=${monthFilter}`).then(handleRes)
+        ),
+        fetch(`/api/budget?month=${monthFilter}`).then(handleRes),
+        fetchCached<{ expenses: Expense[] }>(
+          cacheKey("expenses", prevMonthFilter),
+          () => fetch(`/api/expenses?month=${prevMonthFilter}`).then(handleRes)
+        ),
+        fetchCached<{ incomes: Income[] }>(
+          cacheKey("income", prevMonthFilter),
+          () => fetch(`/api/income?month=${prevMonthFilter}`).then(handleRes)
+        ),
       ]);
 
       setExpenses(expData.expenses || []);
@@ -106,7 +117,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [session]);
+  }, [session, fetchCached]);
 
   useEffect(() => {
     if (session) {

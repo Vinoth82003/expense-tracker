@@ -41,6 +41,7 @@ import { SystemStatusChecker } from "@/components/layout/SystemStatusChecker";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 import { SuspendedOverlay } from "@/components/layout/SuspendedOverlay";
 import { useModal } from "@/components/providers/ModalProvider";
+import { DataProvider } from "@/context/DataContext";
 
 const navGroups = [
   {
@@ -498,10 +499,12 @@ export default function DashboardLayout({
   );
 
   return (
-    <DashboardProvider>
-      <SystemStatusChecker />
-      <ActivityTracker />
-      {(session?.user as any)?.isSuspended ? <SuspendedOverlay /> : content}
-    </DashboardProvider>
+    <DataProvider>
+      <DashboardProvider>
+        <SystemStatusChecker />
+        <ActivityTracker />
+        {(session?.user as any)?.isSuspended ? <SuspendedOverlay /> : content}
+      </DashboardProvider>
+    </DataProvider>
   );
 }

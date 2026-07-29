@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState, use } from "react";
 import { motion } from "framer-motion";
-import { 
-  Users, 
-  ArrowLeft, 
-  Settings, 
-  Trash2, 
-  UserMinus, 
-  Save, 
-  Loader2, 
+import {
+  Users,
+  ArrowLeft,
+  Settings,
+  Trash2,
+  UserMinus,
+  Save,
+  Loader2,
   AlertTriangle,
   Archive
 } from "lucide-react";
@@ -18,60 +18,44 @@ import { useRouter } from "next/navigation";
 import { GroupData, GroupMemberData } from "@/types/group";
 import { useModal } from "@/components/providers/ModalProvider";
 import toast from "react-hot-toast";
+import { useGroup, useMutations } from "@/context/DataContext";
 
 export default function GroupSettingsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const id = resolvedParams.id;
   const router = useRouter();
   const { confirm } = useModal();
-  
-  const [group, setGroup] = useState<GroupData | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const { data: groupData, loading: groupLoading, refetch: refetchGroup } = useGroup(id);
+  const group = groupData as GroupData | null;
+  const mutations = useMutations();
+
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
   useEffect(() => {
-    fetchGroup();
-  }, [id]);
-
-  const fetchGroup = async () => {
-    try {
-      const res = await fetch(`/api/groups/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setGroup(data);
-        setName(data.name);
-        setDescription(data.description || "");
-      } else {
-        router.push("/groups");
-      }
-    } catch (error) {
-      toast.error("Failed to load group");
-    } finally {
-      setLoading(false);
+    if (group) {
+      setName(group.name);
+      setDescription(group.description || "");
     }
-  };
+  }, [group]);
+
+  useEffect(() => {
+    if (!groupLoading && !group) {
+      router.push("/groups");
+    }
+  }, [group, groupLoading, router]);
 
   const handleUpdateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch(`/api/groups/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description }),
-      });
-
-      if (res.ok) {
-        toast.success("Group updated!");
-        fetchGroup();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to update");
-      }
-    } catch (error) {
-      toast.error("An error occurred");
+      await mutations.updateGroup(id, { name, description });
+      toast.success("Group updated!");
+      refetchGroup();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -87,18 +71,11 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
 
     if (isConfirmed) {
       try {
-        const res = await fetch(`/api/groups/${id}/members/${userId}`, {
-          method: "DELETE",
-        });
-        if (res.ok) {
-          toast.success("Member removed");
-          fetchGroup();
-        } else {
-          const data = await res.json();
-          toast.error(data.error || "Failed to remove member");
-        }
-      } catch (error) {
-        toast.error("An error occurred");
+        await mutations.removeGroupMember(id, userId);
+        toast.success("Member removed");
+        refetchGroup();
+      } catch (err: any) {
+        toast.error(err.message || "Failed to remove member");
       }
     }
   };
@@ -113,23 +90,16 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
 
     if (isConfirmed) {
       try {
-        const res = await fetch(`/api/groups/${id}`, {
-          method: "DELETE",
-        });
-        if (res.ok) {
-          toast.success("Group deleted");
-          router.push("/groups");
-        } else {
-          const data = await res.json();
-          toast.error(data.error || "Failed to delete group");
-        }
-      } catch (error) {
-        toast.error("An error occurred");
+        await mutations.deleteGroup(id);
+        toast.success("Group deleted");
+        router.push("/groups");
+      } catch (err: any) {
+        toast.error(err.message || "Failed to delete group");
       }
     }
   };
 
-  if (loading || !group) {
+  if (groupLoading || !group) {
     return (
       <div className="flex flex-col items-center justify-center py-40 space-y-4">
         <Loader2 size={40} className="animate-spin text-primary-500" />
@@ -151,7 +121,7 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
           <p className="text-secondary font-medium">Configure your shared forensic workspace.</p>
         </div>
         <div className="flex items-center gap-2">
-           <button 
+           <button
              onClick={() => toast.success("Archiving logic applied to settled expenses.")}
              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-variant text-secondary font-bold hover:text-foreground transition-all shadow-sm"
            >
@@ -212,14 +182,14 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
                </div>
                <h3 className="text-xl font-black">Danger Zone</h3>
             </div>
-            
+
             <div className="space-y-6">
                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5 gap-4">
                  <div>
                    <h4 className="font-bold">Delete Group</h4>
                    <p className="text-xs text-secondary font-medium">Permanently delete this group and all its forensic records.</p>
                  </div>
-                 <button 
+                 <button
                   onClick={handleDeleteGroup}
                   className="px-6 py-3 bg-red-500/10 text-red-500 rounded-xl font-black text-sm hover:bg-red-500 hover:text-white transition-all active:scale-95 shadow-sm"
                  >
@@ -236,9 +206,9 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
              <h3 className="text-xl font-black tracking-tight">Access Control</h3>
              <p className="text-[10px] font-black uppercase tracking-widest text-secondary">{group.members.length} Members</p>
            </div>
-           
+
            <div className="space-y-3">
-             {group.members.map((member) => (
+             {group.members.map((member: any) => (
                <div key={member.id} className="p-4 bg-surface border border-white/5 rounded-3xl glass flex items-center justify-between group">
                   <div className="flex items-center gap-3">
                      <div className="w-10 h-10 rounded-full bg-surface-variant flex items-center justify-center overflow-hidden border border-white/10 shadow-sm">
@@ -254,7 +224,7 @@ export default function GroupSettingsPage({ params }: { params: Promise<{ id: st
                      </div>
                   </div>
                   {member.userId !== group.createdBy && (
-                    <button 
+                    <button
                       onClick={() => handleRemoveMember(member.userId, member.user.name || "this user")}
                       className="p-2 rounded-lg text-secondary hover:text-red-500 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
                       title="Remove Member"

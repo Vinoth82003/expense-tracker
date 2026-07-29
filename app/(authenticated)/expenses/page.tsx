@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -29,7 +29,7 @@ import {
   Save,
 } from "lucide-react";
 import { useUI } from "@/context/UIContext";
-import { useDashboard } from "@/context/DashboardContext";
+import { useExpenses, useMutations } from "@/context/DataContext";
 
 interface Expense {
   id: string;
@@ -62,16 +62,16 @@ function formatCurrency(n: number) {
 }
 
 export default function ExpensesPage() {
-  const { expenses: contextExpenses, loading: contextLoading, refreshData: refreshContext } = useDashboard();
   const { toast, confirm } = useUI();
 
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
+
+  const { data: expenses, loading, error, refetch } = useExpenses(currentMonth);
+  const mutations = useMutations();
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -93,63 +93,20 @@ export default function ExpensesPage() {
     }
   }, [showMobileSearch]);
 
-  const fetchExpenses = async (month?: string) => {
-    setLoading(true);
-    try {
-      const m = month || currentMonth;
-      const res = await fetch(`/api/expenses?month=${m}`);
-      const data = await res.json();
-      setExpenses(data.expenses || []);
-    } catch {
-      toast.error("Failed to load expenses");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const actualCurrentMonth = (() => {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    })();
-
-    if (currentMonth === actualCurrentMonth) {
-      setExpenses(contextExpenses);
-      setLoading(contextLoading);
-    } else {
-      fetchExpenses();
-    }
-
-    const handleRefresh = () => {
-      if (currentMonth === actualCurrentMonth) {
-        refreshContext();
-      } else {
-        fetchExpenses();
-      }
-    };
-
-    window.addEventListener("expenseAdded", handleRefresh);
-    window.addEventListener("incomeAdded", handleRefresh);
-    return () => {
-      window.removeEventListener("expenseAdded", handleRefresh);
-      window.removeEventListener("incomeAdded", handleRefresh);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMonth, contextExpenses, contextLoading]);
-
   const changeMonth = (offset: number) => {
     const [year, month] = currentMonth.split("-").map(Number);
     const date = new Date(year, month - 1 + offset, 1);
     setCurrentMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
   };
 
+  const expenseList = expenses as Expense[] | undefined;
   const filteredExpenses = useMemo(() => {
-    return expenses.filter(
-      (exp) =>
+    return (expenseList || []).filter(
+      (exp: Expense) =>
         exp.subcategory.toLowerCase().includes(search.toLowerCase()) ||
         (exp.note && exp.note.toLowerCase().includes(search.toLowerCase()))
     );
-  }, [expenses, search]);
+  }, [expenseList, search]);
 
   const monthTotal = useMemo(() => {
     return filteredExpenses.reduce((s, e) => s + e.amount, 0);
@@ -193,27 +150,17 @@ export default function ExpensesPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/expenses/${selectedExpense.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount,
-          category: form.category,
-          subcategory: form.subcategory.trim(),
-          note: form.note,
-          date: form.date,
-        }),
+      await mutations.updateExpense(selectedExpense.id, {
+        amount,
+        category: form.category,
+        subcategory: form.subcategory.trim(),
+        note: form.note,
+        date: form.date,
       });
-      if (res.ok) {
-        toast.success("Expense updated");
-        window.dispatchEvent(new CustomEvent("expenseAdded"));
-        closeDetail();
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Failed to update");
-      }
-    } catch {
-      toast.error("An error occurred");
+      toast.success("Expense updated");
+      closeDetail();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -232,17 +179,11 @@ export default function ExpensesPage() {
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/expenses/${selectedExpense.id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast.success("Transaction deleted");
-        window.dispatchEvent(new CustomEvent("expenseAdded"));
-        closeDetail();
-      } else {
-        toast.error("Failed to delete");
-        setDeleting(false);
-      }
-    } catch {
-      toast.error("An error occurred");
+      await mutations.deleteExpense(selectedExpense.id);
+      toast.success("Transaction deleted");
+      closeDetail();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete");
       setDeleting(false);
     }
   }
@@ -689,27 +630,17 @@ export default function ExpensesPage() {
 
                       setSaving(true);
                       try {
-                        const res = await fetch("/api/expenses", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            amount,
-                            category: form.category,
-                            subcategory: form.subcategory.trim(),
-                            note: form.note,
-                            date: form.date,
-                          }),
+                        await mutations.createExpense({
+                          amount,
+                          category: form.category,
+                          subcategory: form.subcategory.trim(),
+                          note: form.note,
+                          date: form.date,
                         });
-                        if (res.ok) {
-                          toast.success("Expense recorded!");
-                          window.dispatchEvent(new CustomEvent("expenseAdded"));
-                          closeDetail();
-                        } else {
-                          const err = await res.json();
-                          toast.error(err.error || "Failed to save");
-                        }
-                      } catch {
-                        toast.error("An error occurred");
+                        toast.success("Expense recorded!");
+                        closeDetail();
+                      } catch (e: any) {
+                        toast.error(e.message || "Failed to save");
                       } finally {
                         setSaving(false);
                       }

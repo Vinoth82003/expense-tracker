@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useIncome, useMutations } from "@/context/DataContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -22,7 +23,6 @@ import {
   Save,
 } from "lucide-react";
 import { useUI } from "@/context/UIContext";
-import { useDashboard } from "@/context/DashboardContext";
 
 interface Income {
   id: string;
@@ -57,16 +57,16 @@ const INCOME_SOURCES = [
 ];
 
 export default function IncomePage() {
-  const { incomes: contextIncomes, loading: contextLoading, refreshData: refreshContext } = useDashboard();
   const { toast, confirm } = useUI();
 
-  const [incomes, setIncomes] = useState<Income[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
+
+  const { data: incomes, loading, error, refetch } = useIncome(currentMonth);
+  const mutations = useMutations();
 
   const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -87,63 +87,20 @@ export default function IncomePage() {
     }
   }, [showMobileSearch]);
 
-  const fetchIncomes = async (month?: string) => {
-    setLoading(true);
-    try {
-      const m = month || currentMonth;
-      const res = await fetch(`/api/income?month=${m}`);
-      const data = await res.json();
-      setIncomes(data.incomes || []);
-    } catch {
-      toast.error("Failed to load income");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const actualCurrentMonth = (() => {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    })();
-
-    if (currentMonth === actualCurrentMonth) {
-      setIncomes(contextIncomes);
-      setLoading(contextLoading);
-    } else {
-      fetchIncomes();
-    }
-
-    const handleRefresh = () => {
-      if (currentMonth === actualCurrentMonth) {
-        refreshContext();
-      } else {
-        fetchIncomes();
-      }
-    };
-
-    window.addEventListener("incomeAdded", handleRefresh);
-    window.addEventListener("expenseAdded", handleRefresh);
-    return () => {
-      window.removeEventListener("incomeAdded", handleRefresh);
-      window.removeEventListener("expenseAdded", handleRefresh);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMonth, contextIncomes, contextLoading]);
-
   const changeMonth = (offset: number) => {
     const [year, month] = currentMonth.split("-").map(Number);
     const date = new Date(year, month - 1 + offset, 1);
     setCurrentMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
   };
 
+  const incomeList = (incomes as unknown as Income[] | undefined) || [];
   const filteredIncomes = useMemo(() => {
-    return incomes.filter(
+    return incomeList.filter(
       (inc) =>
         inc.source.toLowerCase().includes(search.toLowerCase()) ||
         (inc.note && inc.note.toLowerCase().includes(search.toLowerCase()))
     );
-  }, [incomes, search]);
+  }, [incomeList, search]);
 
   const monthTotal = useMemo(() => {
     return filteredIncomes.reduce((s, i) => s + i.amount, 0);
@@ -177,21 +134,13 @@ export default function IncomePage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`/api/income/${selectedIncome.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, source: form.source, note: form.note, date: form.date }),
+      await mutations.updateIncome(selectedIncome.id, {
+        amount, source: form.source, note: form.note, date: form.date,
       });
-      if (res.ok) {
-        toast.success("Income updated");
-        window.dispatchEvent(new CustomEvent("incomeAdded"));
-        closeDetail();
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Failed to update");
-      }
-    } catch {
-      toast.error("An error occurred");
+      toast.success("Income updated");
+      closeDetail();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -210,17 +159,11 @@ export default function IncomePage() {
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/income/${selectedIncome.id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast.success("Income deleted");
-        window.dispatchEvent(new CustomEvent("incomeAdded"));
-        closeDetail();
-      } else {
-        toast.error("Failed to delete");
-        setDeleting(false);
-      }
-    } catch {
-      toast.error("An error occurred");
+      await mutations.deleteIncome(selectedIncome.id);
+      toast.success("Income deleted");
+      closeDetail();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete");
       setDeleting(false);
     }
   }
@@ -616,21 +559,13 @@ export default function IncomePage() {
 
                       setSaving(true);
                       try {
-                        const res = await fetch("/api/income", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ amount, source: form.source, note: form.note, date: form.date }),
+                        await mutations.createIncome({
+                          amount, source: form.source, note: form.note, date: form.date,
                         });
-                        if (res.ok) {
-                          toast.success("Income recorded!");
-                          window.dispatchEvent(new CustomEvent("incomeAdded"));
-                          closeDetail();
-                        } else {
-                          const err = await res.json();
-                          toast.error(err.error || "Failed to save");
-                        }
-                      } catch {
-                        toast.error("An error occurred");
+                        toast.success("Income recorded!");
+                        closeDetail();
+                      } catch (e: any) {
+                        toast.error(e.message || "Failed to save");
                       } finally {
                         setSaving(false);
                       }
