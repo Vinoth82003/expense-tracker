@@ -9,6 +9,7 @@ export type AIIntentType =
   | "query_comparison"
   | "create_category"
   | "greeting"
+  | "free_form_question"
   | "unknown";
 
 export type AIEntityResult = {

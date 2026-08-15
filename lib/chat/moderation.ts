@@ -3,6 +3,17 @@ const DEFAULT_BLACKLIST = ["kill", "attack", "bomb", "suicide", "hack", "credit 
 function loadBlacklist(): string[] {
   const env = process?.env?.CHAT_MODERATION_BLACKLIST;
   if (!env) return DEFAULT_BLACKLIST;
+  const trimmed = env.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((s) => String(s).trim().toLowerCase()).filter(Boolean);
+      }
+    } catch {
+      // fall through to comma-separated parsing
+    }
+  }
   return env.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 }
 

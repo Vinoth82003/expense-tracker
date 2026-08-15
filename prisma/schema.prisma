@@ -30,6 +30,7 @@ model User {
   categories   Category[]
   incomes      Income[]
   reports      Report[]
+  aiUsageLogs  AiUsageLog[]
   budgets      Budget[]
   pageViews    PageView[]
 
@@ -199,6 +200,22 @@ model Report {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+}
+
+model AiUsageLog {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  callType     String   // "nlu" | "nlg" | "analyze"
+  intent       String?  // classified/handled intent label, not message content
+  promptTokens Int?
+  outputTokens Int?
+  costUsd      Float?
+  latencyMs    Int?
+  fallbackUsed Boolean  @default(false) // true if Groq failed and V3 behavior was used
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Settings {

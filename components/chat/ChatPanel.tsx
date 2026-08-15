@@ -153,6 +153,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [selectedFollowUpItems, setSelectedFollowUpItems] = useState<string[]>(
     [],
   );
+  const [thinkingStage, setThinkingStage] = useState<
+    "understanding" | "analyzing"
+  >("analyzing");
+  const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [shuffledPrompts, setShuffledPrompts] = useState<string[]>(() =>
     pickRandom(ALL_PROMPTS, 5),
@@ -200,6 +204,33 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setMessages((prev) => [...prev, message]);
   };
 
+  // V4 §5.6: client-held conversation digest (topics + last few turns) sent
+  // alongside the round-tripped V2 session context — gives the NLG/NLU layer
+  // continuity without any server-side session store. Same ephemeral lifecycle
+  // as the rest of chat state.
+  const buildChatContext = () => {
+    const conversation = messages.slice(-4).map((message) => ({
+      role: message.role,
+      content: message.text,
+    }));
+    return chatContext ? { ...chatContext, conversation } : { conversation };
+  };
+
+  const startThinking = () => {
+    setThinkingStage("understanding");
+    if (stageTimerRef.current) clearTimeout(stageTimerRef.current);
+    stageTimerRef.current = setTimeout(() => {
+      setThinkingStage("analyzing");
+    }, 650);
+  };
+
+  const stopThinking = () => {
+    if (stageTimerRef.current) {
+      clearTimeout(stageTimerRef.current);
+      stageTimerRef.current = null;
+    }
+  };
+
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -215,13 +246,14 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setInput("");
     setError(null);
     setIsLoading(true);
+    startThinking();
 
     try {
       const response = await sendChatMessage(
         trimmed,
         undefined,
         undefined,
-        chatContext,
+        buildChatContext(),
       );
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
@@ -250,6 +282,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     } catch (err: any) {
       setError(err?.message || "Unable to connect to the assistant.");
     } finally {
+      stopThinking();
       setIsLoading(false);
     }
   };
@@ -258,12 +291,13 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setIsLoading(true);
     setError(null);
     setCustomCategoryInput("");
+    startThinking();
     try {
       const response = await sendChatMessage(
         undefined,
         details,
         intentType,
-        chatContext,
+        buildChatContext(),
       );
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
@@ -291,6 +325,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     } catch (err: any) {
       setError(err?.message || "Unable to connect to the assistant.");
     } finally {
+      stopThinking();
       setIsLoading(false);
     }
   };
@@ -365,7 +400,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                     Ready for production chat
                   </p>
                   <span className="text-[10px] font-black tracking-widest uppercase text-emerald-600 bg-emerald-500/15 text-emerald-500 px-1.5 py-0.5 rounded-md">
-                    v2
+                    v4
                   </span>
                 </div>
               </div>
@@ -439,12 +474,25 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                   </div>
                   <div className="flex items-center gap-2.5 rounded-2xl bg-surface-variant/80 px-4 py-3 border border-border-subtle/50 chat-msg-ai">
                     <span className="text-xs font-semibold text-muted flex items-center gap-1.5">
-                      🤔 Analyzing your data...
-                      <span className="flex items-center gap-0.5">
-                        <span className="chat-dot-1 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
-                        <span className="chat-dot-2 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
-                        <span className="chat-dot-3 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
-                      </span>
+                      {thinkingStage === "understanding" ? (
+                        <>
+                          🧠 Understanding that...
+                          <span className="flex items-center gap-0.5">
+                            <span className="chat-dot-1 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                            <span className="chat-dot-2 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                            <span className="chat-dot-3 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          🤔 Analyzing your data...
+                          <span className="flex items-center gap-0.5">
+                            <span className="chat-dot-1 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                            <span className="chat-dot-2 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                            <span className="chat-dot-3 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                          </span>
+                        </>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -868,7 +916,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 </button>
               </div>
               <span className="text-[10px] text-muted text-center block mt-2 font-bold tracking-tight">
-                Sage v3 — production financial assistant
+                Sage v4 — production financial assistant
               </span>
               <div className="mt-1.5 flex items-center justify-center gap-3">
                 <a

@@ -10,25 +10,30 @@ import {
   getIncomeSummary,
   updateBudget,
 } from "@/lib/chat/server";
-import { rateLimiter } from "@/lib/rateLimit";
+import { checkRateLimit, checkUserRateLimit } from "@/lib/rateLimit";
 import { moderateMessage } from "@/lib/chat/moderation";
 import { logger } from "@/lib/logger";
 import { handleChatV2 } from "@/lib/chat/v2/engine";
 import { analyzeInput } from "@/lib/chat/ai/engine";
+import { maybeGroqNLU } from "@/lib/chat/ai/nlu";
+import { answerFreeFormQuestion } from "@/lib/chat/ai/freeform";
 import { fetchCategories } from "@/lib/chat/v1/api-gateway";
 
 // V1 imports kept for test compatibility — no longer used in production V2 path
 
-const chatRateLimit = rateLimiter(
-  Number(process.env.CHAT_RATE_LIMIT_MAX || 30),
-  Number(process.env.CHAT_RATE_LIMIT_WINDOW_MS || 60 * 1000),
-);
+const CHAT_RATE_LIMIT_MAX = Number(process.env.CHAT_RATE_LIMIT_MAX || 20);
+const CHAT_RATE_LIMIT_WINDOW_MS = Number(process.env.CHAT_RATE_LIMIT_WINDOW_MS || 60 * 1000);
 
 export async function POST(request: Request) {
   try {
-    // Apply simple rate limiting early
-    const limitResult = chatRateLimit(request);
-    if (limitResult) return limitResult;
+    // Apply per-IP rate limiting early
+    const ipLimitResult = await checkRateLimit(
+      request,
+      CHAT_RATE_LIMIT_MAX,
+      CHAT_RATE_LIMIT_WINDOW_MS,
+      "chat",
+    );
+    if (ipLimitResult) return ipLimitResult;
 
     const session = await getServerSession(authOptions);
 
@@ -36,9 +41,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = (session.user as any).id;
+
+    // Apply per-user rate limiting
+    const userLimitResult = await checkUserRateLimit(
+      userId,
+      "chat",
+      CHAT_RATE_LIMIT_MAX,
+      CHAT_RATE_LIMIT_WINDOW_MS,
+    );
+    if (userLimitResult) return userLimitResult;
+
     const body = await request.json();
     const message = body?.message?.toString().trim();
-    const userId = (session.user as any).id;
     const isMocked = (getChatIntent as any).mock !== undefined;
 
     if (message) {
@@ -58,9 +73,48 @@ export async function POST(request: Request) {
       }
     }
 
-    const aiResult = message && !body?.intentType
+    const localAiResult = message && !body?.intentType
       ? analyzeInput(message)
       : null;
+
+    let aiResult = localAiResult;
+    if (localAiResult) {
+      const groqResult = await maybeGroqNLU(message, localAiResult, {
+        userId,
+        request,
+        v2: body?.context?.v2,
+        conversation: body?.context?.conversation || body?.context?.lastTurns,
+      });
+      aiResult = groqResult ?? localAiResult;
+    }
+
+    // V4 greeting decision (PRD §5.2 gap): the local classifier detects
+    // greetings at high confidence, so they never reach Groq NLU, but the V2
+    // engine has no greeting branch. Reply with Sage's brand-anchored line
+    // here, unless an active V2 session owns the flow.
+    if (aiResult?.intent === "greeting" && !body?.context?.v2?.session) {
+      return NextResponse.json({
+        reply:
+          "Hi there! I'm Sage, your personal financial assistant. I can help you log expenses and income, set a budget, or answer questions about your spending — what would you like to do?",
+        success: true,
+      });
+    }
+
+    // V4 free-form Q&A: Groq classified a low-confidence message as a
+    // free-form financial question → answer it against sanitized facts.
+    // Falls back to the normal V3 path (generic reply) when unavailable.
+    if (aiResult?.intent === "free_form_question") {
+      const freeFormReply = await answerFreeFormQuestion({
+        userId,
+        request,
+        message,
+        conversation: body?.context?.conversation || body?.context?.lastTurns,
+      });
+      if (freeFormReply) {
+        return NextResponse.json({ reply: freeFormReply, success: true });
+      }
+      aiResult = localAiResult;
+    }
 
     const bodyWithAi = aiResult
       ? { ...body, ai: aiResult }

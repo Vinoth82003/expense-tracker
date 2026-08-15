@@ -1,12 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), error: vi.fn() } }));
+vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 
 const { POST } = await import("../app/api/chat/telemetry/route");
 const { logger } = await import("@/lib/logger");
+const { getServerSession } = await import("next-auth");
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // next-auth calls Next's headers() under the hood; in the vitest node
+  // environment there is no request scope, so mock the session directly
+  // (same pattern as tests/route.test.ts).
+  (getServerSession as unknown as Mock).mockResolvedValue({
+    user: { email: "user@example.com", id: "user-1" },
+  });
 });
 
 describe("Chat telemetry route", () => {

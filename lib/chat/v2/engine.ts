@@ -27,6 +27,8 @@ import {
   updateBudget,
 } from "../v1/api-gateway";
 import { logExtraction } from "../extraction-logger";
+import { phraseExpenseSummary } from "../ai/nlg";
+import { maybeGroqCategorySuggestion } from "../ai/category";
 
 type ChatEventType = "expenseAdded" | "incomeAdded" | "budgetUpdated";
 
@@ -259,7 +261,7 @@ function isIncomeMessage(message: string, aiResult?: any) {
   return INCOME_KEYWORDS.some((keyword) => lower.includes(keyword));
 }
 
-function isCrossUserDataRequest(message: string) {
+export function isCrossUserDataRequest(message: string) {
   const lower = message.toLowerCase();
   const hasDataRequest = /\b(show|tell|give|list|fetch|get|read|display|reveal)\b/.test(lower);
   const hasFinancialScope = /\b(spending|expenses?|income|budget|transactions?|data|records?)\b/.test(lower);
@@ -854,6 +856,69 @@ async function continueExpenseDraft(
         helperText: "You can use the suggestion, create your own name in chat, or skip and keep this under Other.",
         options: [
           { id: "use-suggested-category", label: `Use ${suggestion.suggestedName}`, action: "submit", variant: "primary" },
+          { id: "skip", label: "Skip", action: "submit", variant: "secondary" },
+          { id: "cancel", label: "Skip & Cancel", action: "cancel", variant: "danger" },
+        ],
+        allowTextInput: true,
+      });
+    }
+
+    // V4 §5.5: Groq category fallback — only after keyword scoring (<0.7) and
+    // maybeSuggestNewCategory both came up empty. Same session states, same
+    // findNearDuplicate safety net; any failure → V3 choose_expense_category.
+    const groqSuggestion = await maybeGroqCategorySuggestion(
+      draft.note,
+      categories,
+      { userId: (context as any).userId as string | undefined, request },
+    );
+    if (groqSuggestion) {
+      const duplicate = findNearDuplicate(
+        groqSuggestion.suggestedName,
+        groqSuggestion.parentType,
+        categories,
+      );
+
+      if (duplicate) {
+        const session: V2Session = {
+          ...sessionBase,
+          kind: "confirm_duplicate_category",
+          draft: {
+            ...draft,
+            suggestedCategory: groqSuggestion.suggestedName,
+          },
+          duplicateName: duplicate.name,
+          parentType: duplicate.type as ParentType as ParentType,
+        };
+        return buildFollowUp(context, session, {
+          kind: "choices",
+          prompt: `You already have a '${duplicate.name}' category — use that instead?`,
+          options: [
+            { id: "use-duplicate", label: `Use ${duplicate.name}`, action: "submit", variant: "primary" },
+            { id: "create-anyway", label: `Create ${groqSuggestion.suggestedName} anyway`, action: "submit", variant: "secondary" },
+            { id: "skip", label: "Skip", action: "submit", variant: "secondary" },
+            { id: "cancel", label: "Cancel", action: "cancel", variant: "danger" },
+          ],
+          allowTextInput: false,
+        });
+      }
+
+      const session: V2Session = {
+        ...sessionBase,
+        kind: "suggest_new_category",
+        draft: {
+          ...draft,
+          suggestedCategory: groqSuggestion.suggestedName,
+          matchingExpenseIds: groqSuggestion.matchingIds,
+        },
+        parentType: groqSuggestion.parentType,
+        moveCandidates: groqSuggestion.moveCandidates,
+      };
+      return buildFollowUp(context, session, {
+        kind: "choices",
+        prompt: `I can create a '${groqSuggestion.suggestedName}' subcategory for this. What would you like to do?`,
+        helperText: "You can use the suggestion, create your own name in chat, or skip and keep this under Other.",
+        options: [
+          { id: "use-suggested-category", label: `Use ${groqSuggestion.suggestedName}`, action: "submit", variant: "primary" },
           { id: "skip", label: "Skip", action: "submit", variant: "secondary" },
           { id: "cancel", label: "Skip & Cancel", action: "cancel", variant: "danger" },
         ],
@@ -2008,9 +2073,10 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
   }
 
   if (isExpenseSummaryQuery(message, aiResult)) {
+    const phrased = await phraseExpenseSummary(request, message, userId);
     return {
       handled: true,
-      reply: await handleExpenseSummary(request, message),
+      reply: phrased ?? (await handleExpenseSummary(request, message)),
       success: true,
       context: clearSession(context),
     };

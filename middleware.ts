@@ -51,15 +51,29 @@ export async function middleware(request: NextRequest) {
       );
     }
   }
-  // Rate‑limit the paid AI endpoint to prevent billing abuse
-  if (pathname.startsWith("/api/analyze")) {
-    if (!checkRateLimit(ip, "analyze", 5, 60 * 60 * 1000)) {
-      return new NextResponse(
-        JSON.stringify({ error: "Too many AI analysis requests. Please wait before trying again." }),
-        { status: 429, headers: { "Content-Type": "application/json" } }
-      );
-    }
-  }
+   // Rate‑limit the paid AI endpoint to prevent billing abuse
+   // ---- Staging-only rate-limit override for /api/analyze ----
+   // TEMPORARY — added to collect Groq-vs-Gemini parallel-run samples for the
+   // V4 go-live gate. Remove this block once staging deltas are collected.
+   //
+   // Safety: only takes effect if ANALYZE_RATE_LIMIT_OVERRIDE is explicitly set
+   // AND NODE_ENV is not "production" — a forgotten env var alone can't affect prod.
+   const isStagingOverrideActive =
+     process.env.NODE_ENV !== "production" &&
+     process.env.ANALYZE_RATE_LIMIT_OVERRIDE === "true";
+
+   const ANALYZE_RATE_LIMIT = isStagingOverrideActive
+     ? { max: 20, windowMs: 60 * 60 * 1000 } // staging: 20/hour while collecting samples
+     : { max: 5, windowMs: 60 * 60 * 1000 }; // production: unchanged V3 limit
+
+   if (pathname.startsWith("/api/analyze")) {
+     if (!checkRateLimit(ip, "analyze", ANALYZE_RATE_LIMIT.max, ANALYZE_RATE_LIMIT.windowMs)) {
+       return new NextResponse(
+         JSON.stringify({ error: "Too many AI analysis requests. Please wait before trying again." }),
+         { status: 429, headers: { "Content-Type": "application/json" } }
+       );
+     }
+   }
 
   // ---- Protected routes (server‑side) ----
   const protectedPaths = [
@@ -84,6 +98,7 @@ export async function middleware(request: NextRequest) {
 
   // ---- Protect authenticated API routes ----
   const protectedApiPaths = [
+    "/api/chat",
     "/api/expenses",
     "/api/income",
     "/api/analyze",
@@ -143,6 +158,7 @@ export const config = {
     "/profile/:path*",
     "/admin/:path*",
     "/api/contact",
+    "/api/chat",
     "/api/auth/:path*",
     "/api/login",
     "/api/analyze",

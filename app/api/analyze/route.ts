@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GoogleGenAI } from "@google/genai";
+import { sanitizePii } from "@/lib/pii";
+import { isGroqChatEnabled, callGroqAnalyze } from "@/lib/chat/groq";
+import { buildAnalysisSystemPrompt, validateAnalysisReport } from "@/lib/chat/ai/analyze";
+import { estimateCostUsd, logAiUsage } from "@/lib/chat/ai/usage";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -113,13 +117,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Prepare data (Sanitized - NO CONFIDENTIAL DATA LIKE NAMES/EMAILS)
-    const sanitizeNote = (note: string) => {
-      if (!note) return "";
-      return note
-        .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[EMAIL]")
-        .replace(/\b\d{10,14}\b/g, "[PHONE]")
-        .replace(/\b(?:\d[ -]*?){13,16}\b/g, "[CARD]");
-    };
+    const sanitizeNote = sanitizePii;
 
     const sanitizedIncomes = incomes.map(inc => ({
       amount: inc.amount,
@@ -135,6 +133,66 @@ export async function POST(req: NextRequest) {
       date: exp.date.toISOString().split("T")[0],
       note: sanitizeNote(exp.note || "")
     }));
+
+    // V4: Groq provider when enabled — with real token/cost tracking and
+    // schema validation. Any failure falls back to the V3 Gemini path below,
+    // so flipping GROQ_CHAT_ENABLED off restores exact V3 behavior.
+    if (isGroqChatEnabled()) {
+      const startedAt = Date.now();
+      try {
+        const system = buildAnalysisSystemPrompt({
+          user: {
+            budgetLimit: user?.monthlyLimit ?? null,
+            expenseMode: user?.expenseMode ?? null,
+          },
+          incomes: sanitizedIncomes,
+          expenses: sanitizedExpenses,
+        });
+
+        const groqResult = await callGroqAnalyze([
+          { role: "system", content: system },
+          { role: "user", content: "Generate the financial analysis JSON report." },
+        ]);
+
+        if (!validateAnalysisReport(groqResult.data)) {
+          throw new Error("Invalid analysis JSON from Groq.");
+        }
+
+        const promptTokens = groqResult.usage.promptTokens;
+        const outputTokens = groqResult.usage.outputTokens;
+
+        await (prisma as any).report.create({
+          data: {
+            userId,
+            content: groqResult.content,
+            status: "SUCCESS",
+            tokens: promptTokens + outputTokens,
+            cost: estimateCostUsd(promptTokens, outputTokens),
+          },
+        });
+
+        logAiUsage({
+          userId,
+          callType: "analyze",
+          intent: "analysis_report",
+          promptTokens,
+          outputTokens,
+          latencyMs: Date.now() - startedAt,
+          fallbackUsed: false,
+        });
+
+        return NextResponse.json(groqResult.data);
+      } catch (error) {
+        console.error("AI Analysis Error (Groq) — falling back to Gemini:", error);
+        logAiUsage({
+          userId,
+          callType: "analyze",
+          intent: "analysis_report",
+          latencyMs: Date.now() - startedAt,
+          fallbackUsed: true,
+        });
+      }
+    }
 
     // 3. Initialize Gemini SDK
     const apiKey = process.env.GEMINI_API_KEY;

@@ -70,4 +70,21 @@ describe('Chat API route', () => {
     expect(body.reply).toBe('Created');
     expect(chatServer.createExpense).toHaveBeenCalledWith('user-1', expect.objectContaining({ amount: 200 }));
   });
+
+  it('answers greetings with Sage brand-anchored line (V4 greeting decision)', async () => {
+    (getServerSession as any).mockResolvedValue({ user: { email: 'user@example.com', id: 'user-1' } });
+
+    const request = new Request('http://localhost/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message: 'hi' }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.reply).toContain("I'm Sage");
+    expect(body.success).toBe(true);
+    expect(chatServer.getExpenseSummary).not.toHaveBeenCalled();
+  });
 });
