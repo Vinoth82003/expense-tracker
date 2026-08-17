@@ -131,6 +131,19 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://accounts.google.com" />
 
+        {/* Google Analytics — always present for tag verification */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-66Q0PWXL6H" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-66Q0PWXL6H');
+            `,
+          }}
+        />
+
         {/* Prevent FOUC - inject theme before hydration */}
         <script src="/js/theme-init.js" />
       </head>
