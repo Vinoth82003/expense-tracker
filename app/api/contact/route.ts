@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { rateLimiter } from "@/lib/rateLimit";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { validateOrigin } from "@/lib/csrf";
 
 // SECURITY FIX: VULN-015 — Escape all user inputs before HTML email interpolation
-
-const limiter = rateLimiter(5, 15 * 60 * 1000);
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -18,7 +16,7 @@ function isValidEmail(email: string): boolean {
 
 export async function POST(req: Request) {
   try {
-    const limitResponse = limiter(req);
+    const limitResponse = await checkRateLimit(req, 5, 15 * 60 * 1000, "contact");
     if (limitResponse) return limitResponse;
 
     // SECURITY FIX: VULN-020 — CSRF origin validation

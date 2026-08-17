@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     title: "System Status | SpendWise — Expense Tracker for India",
     description:
       "Real-time status of SpendWise services including API, database, authentication, and AI features.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/status`,
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/status`,
     images: [
       {
         url: "/og-images/og-status-dark.png",

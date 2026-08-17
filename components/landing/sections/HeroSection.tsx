@@ -55,7 +55,7 @@ export function HeroSection() {
                 color: "transparent",
               }}
             >
-              Expenses tracked,
+              Expense tracker
             </span>
             <br />
             <span
@@ -68,7 +68,7 @@ export function HeroSection() {
                 color: "transparent",
               }}
             >
-              budgets enforced,
+              that enforces budgets,
             </span>
             <br />
             effortlessly.

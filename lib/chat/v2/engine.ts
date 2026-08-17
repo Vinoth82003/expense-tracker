@@ -27,7 +27,13 @@ import {
   updateBudget,
 } from "../v1/api-gateway";
 import { logExtraction } from "../extraction-logger";
-import { phraseExpenseSummary } from "../ai/nlg";
+import {
+  phraseExpenseSummary,
+  phraseIncomeSummary,
+  phraseSavingsInsights,
+  phraseCategoryQuery,
+  phraseComparisonSummary,
+} from "../ai/nlg";
 import { maybeGroqCategorySuggestion } from "../ai/category";
 
 type ChatEventType = "expenseAdded" | "incomeAdded" | "budgetUpdated";
@@ -2057,7 +2063,7 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
   if (isCategoryQuery(message, aiResult)) {
     return {
       handled: true,
-      reply: await handleCategoryQuery(request, message),
+      reply: (await phraseCategoryQuery(request, message, userId)) ?? (await handleCategoryQuery(request, message)),
       success: true,
       context: clearSession(context),
     };
@@ -2066,7 +2072,7 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
   if (isComparisonQuery(message, aiResult)) {
     return {
       handled: true,
-      reply: await handleComparisonQuery(request, message),
+      reply: (await phraseComparisonSummary(request, message, userId)) ?? (await handleComparisonQuery(request, message)),
       success: true,
       context: clearSession(context),
     };
@@ -2085,7 +2091,7 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
   if (isIncomeSummaryQuery(message, aiResult)) {
     return {
       handled: true,
-      reply: await handleIncomeSummary(request, message),
+      reply: (await phraseIncomeSummary(request, message, userId)) ?? (await handleIncomeSummary(request, message)),
       success: true,
       context: clearSession(context),
     };
@@ -2098,7 +2104,7 @@ export async function handleChatV2(envelope: RequestEnvelope): Promise<V2Result>
   if (isSavingsQuery(message, aiResult)) {
     return {
       handled: true,
-      reply: await handleSavingsInsights(request, message),
+      reply: (await phraseSavingsInsights(request, message, userId)) ?? (await handleSavingsInsights(request, message)),
       success: true,
       context: clearSession(context),
     };

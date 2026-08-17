@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const { selectedDoc, allDocs } = await getDocsData(slug);
 
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app";
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app";
 
   // Listing page metadata
   if (!slug || slug.length === 0) {
@@ -120,7 +120,7 @@ export default async function Page({ params }: PageProps) {
   const { slug } = await params;
   const { allDocs, selectedDoc } = await getDocsData(slug);
 
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app";
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app";
 
   const serialize = (doc: any) => ({
     ...doc,

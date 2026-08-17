@@ -43,7 +43,7 @@ export const viewport = {
 export const metadata: Metadata = {
   title: "SpendWise | Expense Tracker & Budget Manager for India",
   description:
-    "Master your personal finance with SpendWise, the smart AI-powered expense tracker and budget manager built for India. Track daily spending, set monthly budgets, and gain deep financial insights — aligned to the Indian financial year (April–March).",
+    "SpendWise is a free AI-powered expense tracker & budget manager for India. Track daily spending, set monthly budgets, gain deep insights — in Lakhs/Crores.",
   applicationName: "SpendWise",
   keywords: [
     "expense tracker",
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "SpendWise" }],
   robots: "index, follow",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app"),
   alternates: {
     canonical: "/",
   },
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
       "Track, categorize, and visualize your expenses. Built for India, powered by AI. Free forever.",
     type: "website",
     siteName: "SpendWise",
-    url: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
+    url: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
     images: [
       {
         url: "/og-images/og-home-dark.png",

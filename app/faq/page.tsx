@@ -46,13 +46,13 @@ export default async function FAQPage() {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
+        "item": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "FAQ",
-        "item": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/faq`,
+        "item": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/faq`,
       },
     ],
   };

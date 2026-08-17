@@ -209,6 +209,8 @@ export async function POST(req: NextRequest) {
       apiKey: apiKey,
     });
 
+    const fallbackStartedAt = Date.now();
+
     const prompt = `
       Act as a professional and friendly Senior Financial Advisor. 
       Analyze the provided financial data for the user.
@@ -239,7 +241,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Make request with JSON Schema
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash", // Using gemini-1.5-flash for stability
+      model: "gemini-2.5-flash", // Fallback provider when GROQ_CHAT_ENABLED is off or Groq fails
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         responseMimeType: "application/json",
@@ -347,15 +349,30 @@ export async function POST(req: NextRequest) {
 
     const reportData = JSON.parse(result);
 
-    // 5. Store the report in database
+    // 5. Store the report in database — track real token/cost (V4 §5.4/§9).
+    //    @google/genai exposes usageMetadata; fall back to zero only if absent.
+    const geminiUsage = (response as any)?.usageMetadata;
+    const promptTokens = Number(geminiUsage?.promptTokens) || 0;
+    const outputTokens = Number(geminiUsage?.candidatesTokens) || 0;
+
     await (prisma as any).report.create({
       data: {
         userId,
         content: result,
         status: "SUCCESS",
-        tokens: 0, // In a real app, you'd get this from the response
-        cost: 0,
+        tokens: promptTokens + outputTokens,
+        cost: estimateCostUsd(promptTokens, outputTokens),
       },
+    });
+
+    logAiUsage({
+      userId,
+      callType: "analyze",
+      intent: "analysis_report",
+      promptTokens,
+      outputTokens,
+      latencyMs: Date.now() - fallbackStartedAt,
+      fallbackUsed: true,
     });
 
     // Parse and return the structured JSON

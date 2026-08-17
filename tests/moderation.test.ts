@@ -24,6 +24,10 @@ describe('Chat moderation', () => {
     const result = moderateMessage('What did I spend this month?');
     expect(result.allowed).toBe(true);
   });
+
+  it('allows finance terms that previously false-blocked (e.g. "credit card")', () => {
+    expect(moderateMessage('I paid my credit card bill today').allowed).toBe(true);
+  });
 });
 
 describe('Chat moderation — configured blacklist (CHAT_MODERATION_BLACKLIST)', () => {

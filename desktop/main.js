@@ -35,7 +35,7 @@ function createWindow() {
   // Load the production site URL (with local development fallback)
   const startUrl = process.env.NODE_ENV === 'development' 
     ? 'http://localhost:3000' 
-    : 'https://money-spend-tracker.vercel.app';
+    : 'https://thespendwise.vercel.app';
 
   mainWindow.loadURL(startUrl);
 

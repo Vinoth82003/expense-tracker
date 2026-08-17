@@ -80,8 +80,8 @@ const nextConfig: NextConfig = {
               const scriptSrc = "script-src 'self' 'unsafe-inline' " + (isDev ? "'unsafe-eval' " : "") + "https://accounts.google.com https://www.googletagmanager.com";
               
               const connectSrc = isDev
-                ? "connect-src 'self' ws: wss: https://generativelanguage.googleapis.com https://api.openai.com https://www.google-analytics.com https://www.googletagmanager.com"
-                : "connect-src 'self' https://generativelanguage.googleapis.com https://api.openai.com https://www.google-analytics.com https://www.googletagmanager.com";
+                ? "connect-src 'self' ws: wss: https://generativelanguage.googleapis.com https://www.google-analytics.com https://www.googletagmanager.com"
+                : "connect-src 'self' https://generativelanguage.googleapis.com https://www.google-analytics.com https://www.googletagmanager.com";
 
               return [
                 "default-src 'self'",

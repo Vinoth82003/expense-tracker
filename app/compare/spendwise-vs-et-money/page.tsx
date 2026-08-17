@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     title: "SpendWise vs ET Money | Expense Tracker Comparison 2026",
     description:
       "Compare SpendWise vs ET Money for personal finance management in India. Expense tracking, AI insights, budgeting tools, and Indian financial year support.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/compare/spendwise-vs-et-money`,
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/compare/spendwise-vs-et-money`,
     type: "website",
     images: [
       {
@@ -37,7 +37,7 @@ const comparisonStructuredData = {
   "@type": "ComparisonPage",
   "name": "SpendWise vs ET Money — Expense Tracker Comparison",
   "description": "A detailed comparison of SpendWise and ET Money for personal finance management in India.",
-  "url": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/compare/spendwise-vs-et-money`,
+  "url": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/compare/spendwise-vs-et-money`,
   "about": {
     "@type": "SoftwareApplication",
     "name": "SpendWise",

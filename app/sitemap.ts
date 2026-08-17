@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { MetadataRoute } from "next";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app";
   const now = new Date();
 
   // Base static public pages of the application
@@ -66,18 +66,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/login`,
-      lastModified: now,
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/sitemap`,
-      lastModified: now,
-      changeFrequency: "monthly" as const,
-      priority: 0.4,
     },
     {
       url: `${baseUrl}/compare/spendwise-vs-walnut`,

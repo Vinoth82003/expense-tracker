@@ -13,7 +13,8 @@ import {
 } from "@/lib/chat/groq";
 import { logAiUsage } from "@/lib/chat/ai/usage";
 import { sanitizePii } from "@/lib/pii";
-import { fetchBudget, fetchExpenses } from "@/lib/chat/v1/api-gateway";
+import { fetchBudget, fetchCategories, fetchExpenses, fetchIncome } from "@/lib/chat/v1/api-gateway";
+import { matchCategoryFromText } from "@/lib/chat/categories";
 
 // V4 NLG phrasing bridge.
 // NLG rewrites a rule-engine reply into friendlier language, but ONLY when the
@@ -80,6 +81,8 @@ type RawExpense = {
   amount?: number | string;
   category?: string;
   subcategory?: string;
+  source?: string;
+  note?: string | null;
 };
 
 export async function computeExpenseSummaryFacts(
@@ -277,6 +280,275 @@ export async function phraseExpenseSummary(
   if (!facts) return null;
 
   return phraseResponse("query_expense", facts as Record<string, unknown>, {
+    message,
+    request,
+    userId,
+  });
+}
+
+// ── Income summary (mirror of v2/engine.ts handleIncomeSummary 1808-1826) ──
+
+export type IncomeSummaryFacts = {
+  label: string;
+  total: number;
+  incomeCount: number;
+  topSources: string[];
+};
+
+export async function computeIncomeSummaryFacts(
+  request: Request,
+  message: string,
+): Promise<IncomeSummaryFacts | null> {
+  const range = parseRelativeRange(message);
+  const response = await fetchIncome(
+    { fromDate: range.fromDate, toDate: range.toDate },
+    { req: request },
+  );
+  const incomes = (response?.incomes || []) as RawExpense[];
+  if (!incomes.length) return null;
+
+  const total = incomes.reduce(
+    (sum: number, income: RawExpense) => sum + Number(income.amount || 0),
+    0,
+  );
+  const topSources = [...new Set(incomes.map((i) => i.source).filter((s): s is string => Boolean(s)))].slice(0, 3);
+
+  return { label: range.label, total, incomeCount: incomes.length, topSources };
+}
+
+export async function phraseIncomeSummary(
+  request: Request,
+  message: string,
+  userId?: string,
+): Promise<string | null> {
+  if (!isGroqChatEnabled()) return null;
+  const facts = await computeIncomeSummaryFacts(request, message);
+  if (!facts) return null;
+  return phraseResponse("query_income", facts as Record<string, unknown>, {
+    message,
+    request,
+    userId,
+  });
+}
+
+// ── Savings insights (mirror of v2/engine.ts handleSavingsInsights 1869-1919) ──
+
+export type SavingsInsightsFacts = {
+  label: string;
+  totalSpent: number;
+  totalIncome: number;
+  budgetLimit?: number;
+  budgetUsagePercent?: number;
+  remaining?: number;
+  savings?: number;
+  dailyAverage?: number;
+  expenseMode?: string;
+};
+
+export async function computeSavingsInsightsFacts(
+  request: Request,
+  message: string,
+): Promise<SavingsInsightsFacts | null> {
+  const now = new Date();
+  const month = format(now, "yyyy-MM");
+  const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
+  const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
+
+  const [budgetResponse, expenseResponse, incomeResponse] = await Promise.all([
+    fetchBudget(month, { req: request }).catch(() => ({ limit: 0, expenseMode: "standard" })),
+    fetchExpenses({ fromDate: monthStart, toDate: monthEnd }, { req: request }),
+    fetchIncome({ fromDate: monthStart, toDate: monthEnd }, { req: request }),
+  ]);
+
+  const expenses = (expenseResponse?.expenses || []) as RawExpense[];
+  const incomes = (incomeResponse?.incomes || []) as RawExpense[];
+  if (!expenses.length && !incomes.length) return null;
+
+  const totalSpent = expenses.reduce(
+    (sum: number, e: RawExpense) => sum + Number(e.amount || 0),
+    0,
+  );
+  const totalIncome = incomes.reduce(
+    (sum: number, i: RawExpense) => sum + Number(i.amount || 0),
+    0,
+  );
+  const budgetLimit = Number(budgetResponse?.limit || 0);
+  const expenseMode = budgetResponse?.expenseMode as string | undefined;
+
+  const facts: SavingsInsightsFacts = {
+    label: "this month",
+    totalSpent,
+    totalIncome,
+    expenseMode,
+  };
+
+  if (expenseMode === "no-limit" || !budgetLimit) {
+    if (totalIncome) {
+      facts.savings = totalIncome - totalSpent;
+    }
+    return facts;
+  }
+
+  const remaining = budgetLimit - totalSpent;
+  const usage = (totalSpent / budgetLimit) * 100;
+  facts.budgetLimit = budgetLimit;
+  facts.budgetUsagePercent = Math.round(usage);
+  facts.remaining = remaining;
+  const daysLeft = Math.max(1, endOfMonth(now).getDate() - now.getDate());
+  facts.dailyAverage = Math.round(remaining / daysLeft);
+  return facts;
+}
+
+export async function phraseSavingsInsights(
+  request: Request,
+  message: string,
+  userId?: string,
+): Promise<string | null> {
+  if (!isGroqChatEnabled()) return null;
+  const facts = await computeSavingsInsightsFacts(request, message);
+  if (!facts) return null;
+  return phraseResponse("query_savings", facts as Record<string, unknown>, {
+    message,
+    request,
+    userId,
+  });
+}
+
+// ── Category query (mirror of v2/engine.ts handleCategoryQuery 1921-1954) ──
+
+export type CategoryQueryFacts = {
+  label: string;
+  category: string;
+  total: number;
+  count: number;
+};
+
+export async function computeCategoryQueryFacts(
+  request: Request,
+  message: string,
+): Promise<CategoryQueryFacts | null> {
+  const remaining = message
+    .replace(/(how much|total|spend|spent|expenses?|did I|do I|what|tell me|show me|my|give me)/gi, "")
+    .replace(/\b(on|for|in|this|last|that|the|a|an|of|to|with)\b/gi, "")
+    .replace(/[?.,!;:]/g, "")
+    .trim();
+
+  const catResponse = await fetchCategories({ req: request });
+  const userCategories = (catResponse?.categories || []) as Array<{
+    name: string;
+    type: string;
+  }>;
+  if (!userCategories.length) return null;
+
+  const matched = matchCategoryFromText(remaining, userCategories);
+  if (!matched) return null;
+
+  const range = parseRelativeRange(message);
+  const response = await fetchExpenses(
+    { fromDate: range.fromDate, toDate: range.toDate },
+    { req: request },
+  );
+  const expenses = (response?.expenses || []) as RawExpense[];
+  const matchedExpenses = expenses.filter(
+    (e: RawExpense) =>
+      (e.subcategory || e.category || "").toLowerCase() === matched.name.toLowerCase(),
+  );
+
+  if (!matchedExpenses.length) return null;
+
+  const total = matchedExpenses.reduce(
+    (sum: number, e: RawExpense) => sum + Number(e.amount || 0),
+    0,
+  );
+
+  return {
+    label: range.label,
+    category: matched.name,
+    total,
+    count: matchedExpenses.length,
+  };
+}
+
+export async function phraseCategoryQuery(
+  request: Request,
+  message: string,
+  userId?: string,
+): Promise<string | null> {
+  if (!isGroqChatEnabled()) return null;
+  const facts = await computeCategoryQueryFacts(request, message);
+  if (!facts) return null;
+  return phraseResponse("query_category", facts as Record<string, unknown>, {
+    message,
+    request,
+    userId,
+  });
+}
+
+// ── Comparison summary (mirror of v2/engine.ts handleComparisonQuery 1956-1991) ──
+
+export type ComparisonFacts = {
+  label: string;
+  currentTotal: number;
+  lastTotal: number;
+  diff: number;
+  pctChange?: string;
+  direction: "more" | "less" | "same";
+};
+
+export async function computeComparisonFacts(
+  request: Request,
+  message: string,
+): Promise<ComparisonFacts | null> {
+  const now = new Date();
+  const currentStart = format(startOfMonth(now), "yyyy-MM-dd");
+  const currentEnd = format(endOfMonth(now), "yyyy-MM-dd");
+  const lastMonth = subMonths(now, 1);
+  const lastStart = format(startOfMonth(lastMonth), "yyyy-MM-dd");
+  const lastEnd = format(endOfMonth(lastMonth), "yyyy-MM-dd");
+
+  const [currentResponse, lastResponse] = await Promise.all([
+    fetchExpenses({ fromDate: currentStart, toDate: currentEnd }, { req: request }),
+    fetchExpenses({ fromDate: lastStart, toDate: lastEnd }, { req: request }),
+  ]);
+
+  const current = (currentResponse?.expenses || []) as RawExpense[];
+  const last = (lastResponse?.expenses || []) as RawExpense[];
+  if (!current.length && !last.length) return null;
+
+  const currentTotal = current.reduce(
+    (sum: number, e: RawExpense) => sum + Number(e.amount || 0),
+    0,
+  );
+  const lastTotal = last.reduce(
+    (sum: number, e: RawExpense) => sum + Number(e.amount || 0),
+    0,
+  );
+  const diff = currentTotal - lastTotal;
+  const pctChange = lastTotal ? Math.abs((diff / lastTotal) * 100).toFixed(1) : undefined;
+
+  let direction: "more" | "less" | "same" = "more";
+  if (Math.abs(diff) < 0.01) direction = "same";
+  else direction = diff > 0 ? "more" : "less";
+
+  return {
+    label: `Compared to ${format(lastMonth, "MMMM")}`,
+    currentTotal,
+    lastTotal,
+    diff,
+    pctChange,
+    direction,
+  };
+}
+
+export async function phraseComparisonSummary(
+  request: Request,
+  message: string,
+  userId?: string,
+): Promise<string | null> {
+  if (!isGroqChatEnabled()) return null;
+  const facts = await computeComparisonFacts(request, message);
+  if (!facts) return null;
+  return phraseResponse("query_comparison", facts as Record<string, unknown>, {
     message,
     request,
     userId,

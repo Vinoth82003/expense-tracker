@@ -1,4 +1,8 @@
-const DEFAULT_BLACKLIST = ["kill", "attack", "bomb", "suicide", "hack", "credit card", "ssn"];
+// NOTE: "credit card" is intentionally NOT in the blacklist. It is a normal
+// finance term (e.g. "paid my credit card bill today") and the word alone is not
+// PII. Real card numbers are blocked by the 13-19 digit check below and any
+// that slip through are redacted by lib/pii.ts:sanitizePii before reaching Groq.
+const DEFAULT_BLACKLIST = ["kill", "attack", "bomb", "suicide", "hack", "ssn"];
 
 function loadBlacklist(): string[] {
   const env = process?.env?.CHAT_MODERATION_BLACKLIST;

@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
   // Use production URL fallback if NEXTAUTH_URL environment variable is not defined
-  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app";
 
   return {
     rules: [
@@ -40,9 +40,7 @@ export default function robots(): MetadataRoute.Robots {
           "/api/",
           "/onboarding/",
           "/verify-2fa/",
-          "/maintenance/",
-          "/_next/",
-          "/static/"
+          "/maintenance/"
         ]
       },
       {
@@ -87,7 +85,9 @@ export default function robots(): MetadataRoute.Robots {
           "/api/",
           "/onboarding/",
           "/verify-2fa/",
-          "/maintenance/"
+          "/maintenance/",
+          "/_next/",
+          "/static/"
         ]
       }
     ],

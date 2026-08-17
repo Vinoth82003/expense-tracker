@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { TrendingUp, X, Globe, Link as LinkIcon } from "lucide-react";
+import { TrendingUp, Globe, Link as LinkIcon } from "lucide-react";
 
 interface FooterLink {
   label: string;
@@ -34,7 +34,6 @@ const footerGroups: Record<string, FooterLink[]> = {
 };
 
 const socialLinks = [
-  { icon: X, href: "#", label: "Twitter" },
   { icon: Globe, href: "https://github.com/Vinoth82003", label: "GitHub" },
   { icon: LinkIcon, href: "https://linkedin.com/in/vinoth82003", label: "LinkedIn" },
 ];
@@ -109,7 +108,7 @@ export function Footer() {
         {/* ── Bottom Sub-bar ── */}
         <div className="pt-6 border-t border-border-subtle flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted">
-            &copy; {currentYear} SpendWise. All rights reserved.
+            &copy; {currentYear} SpendWise. All rights reserved. Last updated: August 2026.
           </p>
           <p className="text-xs text-muted">
             Built with 💖 by{" "}

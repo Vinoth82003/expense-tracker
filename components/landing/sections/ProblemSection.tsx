@@ -7,8 +7,8 @@ import { fadeUp } from "./animations";
 const problems = [
   {
     icon: Clock,
-    stat: "4+ hrs/week",
-    title: "Manual tracking burns hours",
+    stat: "Hours wasted",
+    title: "Manual tracking burns time",
     description:
       "Sorting through UPI SMS alerts, entering transactions by hand, and reconciling across PhonePe, GPay, and bank apps eats into time you could spend actually living.",
     iconBg: "bg-amber-500/10",
@@ -16,21 +16,19 @@ const problems = [
   },
   {
     icon: AlertTriangle,
-    stat: "67%",
+    stat: "Budget blind spots",
     title: "Overspend without realizing",
     description:
       "Without real-time alerts, most people discover they blew their budget when the credit card bill arrives — by then it is already too late to course-correct.",
-    source: "Illustrative estimate",
     iconBg: "bg-red-500/10",
     iconColor: "text-red-500",
   },
   {
     icon: Brain,
-    stat: "78%",
+    stat: "Constant worry",
     title: "Financial anxiety is constant",
     description:
       "Not knowing where your money went creates a low-grade stress that follows you everywhere — from small daily guilt to dread at the end of every month.",
-    source: "Illustrative estimate",
     iconBg: "bg-violet-500/10",
     iconColor: "text-violet-600",
   },

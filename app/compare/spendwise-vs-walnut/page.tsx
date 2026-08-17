@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     title: "SpendWise vs Walnut | Expense Tracker Comparison 2026",
     description:
       "Compare SpendWise vs Walnut (axio) for expense tracking in India. Features, pricing, AI analysis, and Indian financial year support.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/compare/spendwise-vs-walnut`,
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/compare/spendwise-vs-walnut`,
     type: "website",
     images: [
       {
@@ -37,7 +37,7 @@ const comparisonStructuredData = {
   "@type": "ComparisonPage",
   "name": "SpendWise vs Walnut (axio) — Expense Tracker Comparison",
   "description": "A detailed comparison of SpendWise and Walnut (axio) for expense tracking in India.",
-  "url": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/compare/spendwise-vs-walnut`,
+  "url": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/compare/spendwise-vs-walnut`,
   "about": {
     "@type": "SoftwareApplication",
     "name": "SpendWise",

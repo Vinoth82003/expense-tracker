@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     title: "Privacy Policy | SpendWise — AI-Powered Expense Tracker for India",
     description:
       "Read the SpendWise Privacy Policy. Learn about our commitment to data protection, compliance with the Indian DPDP Act 2023, data retention, and how to contact our Grievance Officer.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/privacy`,
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/privacy`,
     images: [
       {
         url: "/og-images/og-privacy-dark.png",
@@ -37,12 +37,12 @@ const privacyStructuredData = {
   name: "Privacy Policy",
   description:
     "SpendWise Privacy Policy — data protection, DPDP Act 2023 compliance, data retention, and Grievance Officer contact.",
-  url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/privacy`,
+  url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/privacy`,
   dateModified: "2026-06-01",
   publisher: {
     "@type": "Organization",
     name: "SpendWise",
-    url: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
+    url: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
   },
 };
 
@@ -54,13 +54,13 @@ const breadcrumbStructuredData = {
       "@type": "ListItem",
       position: 1,
       name: "Home",
-      item: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
+      item: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
     },
     {
       "@type": "ListItem",
       position: 2,
       name: "Privacy Policy",
-      item: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/privacy`,
+      item: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/privacy`,
     },
   ],
 };

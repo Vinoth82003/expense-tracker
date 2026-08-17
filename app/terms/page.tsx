@@ -13,7 +13,7 @@ export const metadata: Metadata = {
       "Terms of Service | SpendWise — AI-Powered Expense Tracker for India",
     description:
       "Review the Terms of Service for SpendWise. Learn about personal use rules, data ownership, third-party integrations, and governing laws.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/terms`,
+    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/terms`,
     images: [
       {
         url: "/og-images/og-terms-dark.png",
@@ -39,12 +39,12 @@ const termsStructuredData = {
   name: "Terms of Service",
   description:
     "SpendWise Terms of Service — personal use rules, data ownership, third-party integrations, and governing laws.",
-  url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/terms`,
+  url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/terms`,
   dateModified: "2026-06-01",
   publisher: {
     "@type": "Organization",
     name: "SpendWise",
-    url: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
+    url: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
   },
 };
 
@@ -56,13 +56,13 @@ const breadcrumbStructuredData = {
       "@type": "ListItem",
       position: 1,
       name: "Home",
-      item: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app",
+      item: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
     },
     {
       "@type": "ListItem",
       position: 2,
       name: "Terms of Service",
-      item: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://money-spend-tracker.vercel.app"}/terms`,
+      item: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/terms`,
     },
   ],
 };

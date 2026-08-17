@@ -63,7 +63,7 @@ export default async function Home() {
     }
   })();
 
-  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://money-spend-tracker.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app";
 
   const structuredData = {
     "@context": "https://schema.org",
