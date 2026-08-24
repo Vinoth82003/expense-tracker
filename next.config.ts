@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import withPWAInit from "@ducanh2912/next-pwa";
+import { getAllowedOrigins } from "./lib/origins";
 
 const withPWA = withPWAInit({
   dest: "public",
@@ -82,6 +83,12 @@ const nextConfig: NextConfig = {
               const connectSrc = isDev
                 ? "connect-src 'self' ws: wss: https://generativelanguage.googleapis.com https://www.google-analytics.com https://www.googletagmanager.com"
                 : "connect-src 'self' https://generativelanguage.googleapis.com https://www.google-analytics.com https://www.googletagmanager.com";
+              // Sibling SpendWise origins may call this deployment's API cross-origin
+              const siblingConnectSrc = getAllowedOrigins()
+                .filter((o) => o !== "http://localhost:3000")
+                .map((o) => o.replace(/^http(s?):\/\//, ""))
+                .join(" ");
+              const connectSrcFull = `${connectSrc} ${siblingConnectSrc}`;
 
               return [
                 "default-src 'self'",
@@ -89,7 +96,7 @@ const nextConfig: NextConfig = {
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "font-src 'self' https://fonts.gstatic.com",
                 "img-src 'self' data: blob: https://lh3.googleusercontent.com https://res.cloudinary.com https://www.googletagmanager.com https://www.google-analytics.com",
-                connectSrc,
+                connectSrcFull,
                 "frame-src https://accounts.google.com",
                 "frame-ancestors 'self'",
                 "object-src 'none'",

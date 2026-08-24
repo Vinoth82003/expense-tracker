@@ -4,8 +4,30 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { sendWelcomeEmail, sendAdminNewUserNotification } from "@/lib/mail";
+import { isAllowedOrigin } from "@/lib/origins";
 
 const failedLogins = new Map<string, { count: number; first: number }>();
+
+const isProduction = process.env.NODE_ENV === "production";
+
+// Session cookie must be readable on sibling SpendWise origins (CORS data
+// sharing), so in production it is SameSite=None; Secure. Origin checks
+// (VULN-020) still guard mutations.
+export const IS_AUTH_PRODUCTION = isProduction;
+
+export const SESSION_COOKIE_NAME = isProduction
+  ? "__Secure-next-auth.session-token"
+  : "next-auth.session-token";
+
+export function sessionCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    sameSite: isProduction ? ("none" as const) : ("lax" as const),
+    path: "/",
+    secure: isProduction,
+    maxAge,
+  };
+}
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -92,6 +114,12 @@ export const authOptions: AuthOptions = {
   pages: {
     signIn: "/login",
   },
+  cookies: {
+    sessionToken: {
+      name: SESSION_COOKIE_NAME,
+      options: sessionCookieOptions(30 * 24 * 60 * 60),
+    },
+  },
   session: {
     strategy: "jwt",
   },
@@ -100,7 +128,9 @@ export const authOptions: AuthOptions = {
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       try {
-        if (new URL(url).origin === baseUrl) return url;
+        const target = new URL(url);
+        // Same-origin, or any trusted SpendWise origin (cross-origin auth bridge)
+        if (target.origin === baseUrl || isAllowedOrigin(target.origin)) return url;
       } catch {}
       return `${baseUrl}/onboarding`;
     },

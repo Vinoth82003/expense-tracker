@@ -21,7 +21,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function LoginClient() {
+export function LoginClient({ bridgeTo }: { bridgeTo?: string | null }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState("");
@@ -32,11 +32,17 @@ export function LoginClient() {
 
   const canSubmit = termsAccepted && !isLoading;
 
+  // Cross-origin sign-in: after auth completes on this (primary) origin,
+  // hop through /bridge so the origin that started sign-in gets a session.
+  const callbackUrl = bridgeTo
+    ? `/bridge?to=${encodeURIComponent(bridgeTo)}`
+    : "/onboarding";
+
   const handleGoogleSignIn = async () => {
     if (!canSubmit) return;
     setIsLoading(true);
     try {
-      await signIn("google", { callbackUrl: "/onboarding" });
+      await signIn("google", { callbackUrl });
     } catch {
       setIsLoading(false);
     }
@@ -71,6 +77,10 @@ export function LoginClient() {
         const sessionRes = await fetch("/api/auth/session");
         const session = await sessionRes.json();
         if (session?.user) {
+          if (bridgeTo) {
+            router.push(callbackUrl);
+            return;
+          }
           const redirectTo = (session.user as any).redirectTo || "onboarding";
           router.push("/" + redirectTo);
         } else {

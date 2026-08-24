@@ -4,6 +4,7 @@ import { signAdminSession } from "@/lib/admin-auth";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { sendEmail } from "@/lib/mail";
 import bcrypt from "bcryptjs";
+import { isAllowedOrigin } from "@/lib/origins";
 
 // SECURITY FIX: VULN-014 — Use crypto.randomUUID() for admin session nonce
 // SECURITY FIX: VULN-028 — Use bcrypt comparison + Redis-backed rate limiting for admin login
@@ -17,8 +18,7 @@ export async function POST(req: Request) {
   try {
     // SECURITY FIX: VULN-020 — Validate CSRF origin header
     const origin = req.headers.get("origin");
-    const allowedOrigins = [process.env.NEXTAUTH_URL, process.env.NEXT_PUBLIC_APP_URL, "http://localhost:3000"].filter(Boolean);
-    if (origin && !allowedOrigins.some((a) => origin.startsWith(a || ""))) {
+    if (origin && !isAllowedOrigin(origin)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

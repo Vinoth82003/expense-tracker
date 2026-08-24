@@ -2,12 +2,32 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { verifyAdminToken } from "@/lib/admin-auth";
+import { isAllowedOrigin } from "@/lib/origins";
 
 function isTrustedInternalRequest(request: NextRequest) {
   const userId = request.headers.get("x-internal-user-id");
   const secret = request.headers.get("x-internal-api-secret");
   const expected = process.env.INTERNAL_API_SECRET || process.env.NEXTAUTH_SECRET;
   return Boolean(userId && secret && expected && secret === expected);
+}
+
+// ---- CORS ----
+// Sibling SpendWise origins (app instances + marketing site) are allowed to
+// call this deployment's API with credentials. The origin is echoed back
+// instead of "*" so cookies survive; unknown origins get no CORS headers.
+function withCors(request: NextRequest, response: NextResponse) {
+  const origin = request.headers.get("origin");
+  if (!origin || !isAllowedOrigin(origin)) return response;
+  response.headers.set("Access-Control-Allow-Origin", origin);
+  response.headers.set("Access-Control-Allow-Credentials", "true");
+  response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  response.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With"
+  );
+  response.headers.set("Access-Control-Max-Age", "86400");
+  response.headers.append("Vary", "Origin");
+  return response;
 }
 
 // Simple in‑memory rate limiter – suitable for low‑traffic endpoints.
@@ -30,6 +50,11 @@ function checkRateLimit(ip: string, key: string, limit: number, windowMs: number
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ip = request.headers.get("x-forwarded-for") || (request as any).ip || "unknown";
+
+  // ---- CORS preflight for allowed sibling origins ----
+  if (pathname.startsWith("/api") && request.method === "OPTIONS") {
+    return withCors(request, new NextResponse(null, { status: 204 }));
+  }
 
   // ---- Rate limiting ----
   if (pathname.startsWith("/api/contact")) {
@@ -112,11 +137,14 @@ export async function middleware(request: NextRequest) {
   ];
   if (protectedApiPaths.some((p) => pathname.startsWith(p))) {
     if (isTrustedInternalRequest(request)) {
-      return NextResponse.next();
+      return withCors(request, NextResponse.next());
     }
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return withCors(
+        request,
+        NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      );
     }
   }
 
@@ -136,15 +164,21 @@ export async function middleware(request: NextRequest) {
     const isValidAdmin = adminCookie?.value ? await verifyAdminToken(adminCookie.value) : false;
     if (!isValidAdmin) {
       console.warn(`[SECURITY] Unauthorized admin API access attempt to ${pathname} from IP: ${ip}`);
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return withCors(
+        request,
+        NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      );
     }
   }
 
-  return NextResponse.next();
+  return pathname.startsWith("/api")
+    ? withCors(request, NextResponse.next())
+    : NextResponse.next();
 }
 
 export const config = {
   matcher: [
+    "/api/:path*",
     "/dashboard/:path*",
     "/expenses/:path*",
     "/income/:path*",
@@ -157,20 +191,5 @@ export const config = {
     "/feedback/:path*",
     "/profile/:path*",
     "/admin/:path*",
-    "/api/contact",
-    "/api/chat",
-    "/api/auth/:path*",
-    "/api/login",
-    "/api/analyze",
-    "/api/expenses/:path*",
-    "/api/income/:path*",
-    "/api/admin/:path*",
-    "/api/budget/:path*",
-    "/api/categories/:path*",
-    "/api/groups/:path*",
-    "/api/invitations/:path*",
-    "/api/onboarding/:path*",
-    "/api/profile/:path*",
-    "/api/user/:path*",
   ],
 };
