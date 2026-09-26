@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -61,7 +62,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "SpendWise" }],
   robots: "index, follow",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app"),
+  metadataBase: new URL(SITE_ORIGIN),
   alternates: {
     canonical: "/",
   },
@@ -71,7 +72,7 @@ export const metadata: Metadata = {
       "Track, categorize, and visualize your expenses. Built for India, powered by AI. Free forever.",
     type: "website",
     siteName: "SpendWise",
-    url: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
+    url: SITE_ORIGIN,
     images: [
       {
         url: "/og-images/og-home-dark.png",

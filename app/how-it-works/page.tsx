@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HowItWorksClient } from "./HowItWorksClient";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "How It Works | SpendWise — Expense Tracker for India",
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
     title: "How It Works | SpendWise — Expense Tracker for India",
     description:
       "Learn how SpendWise works in 4 simple steps: Secure sign-up, effortless expense tracking, AI forensic analysis, and Indian financial year reporting.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/how-it-works`,
+    url: `${SITE_ORIGIN}/how-it-works`,
     images: [
       {
         url: "/og-images/og-how-it-works-dark.png",

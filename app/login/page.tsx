@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { LoginClient } from "./LoginClient";
+import { SITE_ORIGIN } from "@/lib/site-url";
 import {
   PRIMARY_APP_ORIGIN,
   isAllowedOrigin,
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
     title: "Sign In | SpendWise — AI-Powered Expense Tracker",
     description:
       "Sign in to SpendWise. Access your personal AI-powered expense tracking dashboard securely.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/login`,
+    url: `${SITE_ORIGIN}/login`,
     type: "website",
     siteName: "SpendWise",
     images: [

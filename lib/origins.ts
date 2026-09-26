@@ -4,10 +4,17 @@
 //   Primary app + Google auth: https://money-spend-tracker.vercel.app
 //   Secondary app instance:    https://expense-tracker-black-nine-57.vercel.app
 //
+// This module owns the CORS/CSRF allowlist and the cross-origin auth bridge.
+// The resolved primary/marketing origins are owned by lib/site-url.ts so that
+// the allowlist, the SEO surfaces and outbound email can never disagree about
+// which host is which.
+//
 // All deployments of this repo share one database and one NEXTAUTH_SECRET.
 // Google OAuth is only configured on the primary app origin; sign-ins started
 // on any other origin redirect there and are bridged back after auth completes
 // (see app/bridge/page.tsx and app/auth/bridge/route.ts).
+
+import { APP_ORIGIN, SITE_ORIGIN } from "./site-url";
 
 function normalizeOrigin(url: string): string | null {
   try {
@@ -19,13 +26,9 @@ function normalizeOrigin(url: string): string | null {
   }
 }
 
-export const PRIMARY_APP_ORIGIN =
-  normalizeOrigin(process.env.NEXT_PUBLIC_APP_ORIGIN || "") ||
-  "https://money-spend-tracker.vercel.app";
+export const PRIMARY_APP_ORIGIN = APP_ORIGIN;
 
-export const MARKETING_ORIGIN =
-  normalizeOrigin(process.env.NEXT_PUBLIC_MARKETING_ORIGIN || "") ||
-  "https://thespendwise.vercel.app";
+export const MARKETING_ORIGIN = SITE_ORIGIN;
 
 const SIBLING_APP_ORIGINS = ["https://expense-tracker-black-nine-57.vercel.app"];
 
@@ -42,11 +45,11 @@ export function getAllowedOrigins(): string[] {
         MARKETING_ORIGIN,
         ...SIBLING_APP_ORIGINS,
         ...EXTRA_ORIGINS,
-        process.env.NEXTAUTH_URL ? normalizeOrigin(process.env.NEXTAUTH_URL) : null,
-        process.env.NEXT_PUBLIC_APP_URL ? normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL) : null,
-        process.env.NEXT_PUBLIC_PRODUCTION_LINK
-          ? normalizeOrigin(process.env.NEXT_PUBLIC_PRODUCTION_LINK)
-          : null,
+        // NEXTAUTH_URL is deliberately absent. It is the Auth.js callback base,
+        // not a peer origin: folding it in meant a misconfigured deployment
+        // silently widened its own CORS/CSRF allowlist. PRIMARY_APP_ORIGIN and
+        // MARKETING_ORIGIN already absorb the *_APP_URL / *_PRODUCTION_LINK
+        // variables via lib/site-url.ts, so nothing legitimate is lost.
         "http://localhost:3000",
       ].filter((o): o is string => Boolean(o))
     )

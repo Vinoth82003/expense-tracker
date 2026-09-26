@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
+import { siteUrl } from "@/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
-  // Use production URL fallback if NEXTAUTH_URL environment variable is not defined
-  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app";
+  const baseUrl = siteUrl();
 
   return {
     rules: [

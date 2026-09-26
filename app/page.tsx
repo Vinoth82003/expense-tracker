@@ -1,6 +1,7 @@
 import { HomeClient } from "@/components/landing/HomeClient";
 import type { PublicStatsData } from "@/components/landing/sections/CounterStats";
 import { prisma } from "@/lib/prisma";
+import { siteUrl } from "@/lib/site-url";
 
 const defaultFaqs = [
   {
@@ -63,7 +64,7 @@ export default async function Home() {
     }
   })();
 
-  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app";
+  const baseUrl = siteUrl();
 
   const structuredData = {
     "@context": "https://schema.org",

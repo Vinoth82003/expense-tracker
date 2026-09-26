@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CalculatorClient } from "./CalculatorClient";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "50/30/20 Budget Calculator | Free Indian Expense Planner | SpendWise",
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
     title: "50/30/20 Budget Calculator | Free Indian Expense Planner | SpendWise",
     description:
       "Calculate your ideal 50/30/20 budget split in Indian Rupees. Enter your monthly income and see Needs, Wants, and Savings amounts instantly.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/tools/50-30-20-budget-calculator`,
+    url: `${SITE_ORIGIN}/tools/50-30-20-budget-calculator`,
     type: "website",
     images: [
       {
@@ -37,7 +38,7 @@ const calculatorStructuredData = {
   "@type": "WebApplication",
   "name": "50/30/20 Budget Calculator",
   "description": "A free calculator to split your monthly income into Needs (50%), Wants (30%), and Savings (20%) in Indian Rupees with Lakhs/Crores formatting.",
-  "url": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/tools/50-30-20-budget-calculator`,
+  "url": `${SITE_ORIGIN}/tools/50-30-20-budget-calculator`,
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Web",
   "offers": {
@@ -48,7 +49,7 @@ const calculatorStructuredData = {
   "provider": {
     "@type": "Organization",
     "name": "SpendWise",
-    "url": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"
+    "url": SITE_ORIGIN
   }
 };
 

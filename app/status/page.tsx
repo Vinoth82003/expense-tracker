@@ -3,6 +3,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import Link from "next/link";
 import { CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "System Status | SpendWise — Expense Tracker for India",
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
     title: "System Status | SpendWise — Expense Tracker for India",
     description:
       "Real-time status of SpendWise services including API, database, authentication, and AI features.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/status`,
+    url: `${SITE_ORIGIN}/status`,
     images: [
       {
         url: "/og-images/og-status-dark.png",

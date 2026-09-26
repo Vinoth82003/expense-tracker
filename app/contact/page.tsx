@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ContactClient } from "./ContactClient";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Contact Us | SpendWise — AI-Powered Expense Tracker for India",
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     title: "Contact Us | SpendWise — AI-Powered Expense Tracker",
     description:
       "Get in touch with the SpendWise support team. Send us a message, email support@spendwise.app, or call our Indian helpline.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/contact`,
+    url: `${SITE_ORIGIN}/contact`,
     type: "website",
     siteName: "SpendWise",
     images: [
@@ -45,12 +46,12 @@ const contactStructuredData = {
   "@type": "ContactPage",
   "name": "Contact SpendWise",
   "description": "Get in touch with the SpendWise support team.",
-  "url": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/contact`,
+  "url": `${SITE_ORIGIN}/contact`,
   "mainEntity": {
     "@type": "Organization",
     "name": "SpendWise",
     "email": "support@spendwise.app",
-    "url": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
+    "url": SITE_ORIGIN,
   },
 };
 
@@ -62,13 +63,13 @@ const breadcrumbStructuredData = {
       "@type": "ListItem",
       "position": 1,
       "name": "Home",
-        "item": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
+        "item": SITE_ORIGIN,
     },
     {
       "@type": "ListItem",
       "position": 2,
       "name": "Contact",
-      "item": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/contact`,
+      "item": `${SITE_ORIGIN}/contact`,
     },
   ],
 };

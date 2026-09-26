@@ -4,6 +4,7 @@ import { verifyAdminSession } from "@/lib/admin-auth";
 import { DocsPageClient } from "@/app/docs/[[...slug]]/DocsPageClient";
 import { DocsListingPage } from "@/components/docs/DocsListingPage";
 import { stripMarkdown, extractExcerpt } from "@/lib/docs-utils";
+import { siteUrl } from "@/lib/site-url";
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const { selectedDoc, allDocs } = await getDocsData(slug);
 
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app";
+  const baseUrl = siteUrl();
 
   // Listing page metadata
   if (!slug || slug.length === 0) {
@@ -120,7 +121,7 @@ export default async function Page({ params }: PageProps) {
   const { slug } = await params;
   const { allDocs, selectedDoc } = await getDocsData(slug);
 
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app";
+  const baseUrl = siteUrl();
 
   const serialize = (doc: any) => ({
     ...doc,

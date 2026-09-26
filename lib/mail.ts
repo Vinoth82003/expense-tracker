@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { logger } from "./logger";
+import { appUrl } from "./site-url";
 
 /**
  * Creates a fresh non-pooled SMTP transporter for each send.
@@ -66,7 +67,7 @@ export const wrapLayout = (content: string, recipientEmail = "") => {
         <div class="container">
           <div class="header">
             <div class="logo-box">
-              <img src="${process.env.NEXT_PUBLIC_PRODUCTION_LINK || 'http://localhost:3000'}/web-app-manifest-192x192.png" width="48" height="48" alt="SpendWise Logo" style="display: block; border-radius: 14px;" />
+              <img src="${appUrl("/web-app-manifest-192x192.png")}" width="48" height="48" alt="SpendWise Logo" style="display: block; border-radius: 14px;" />
             </div>
             <h1 class="brand-name">Spend<span>Wise</span></h1>
           </div>
@@ -77,11 +78,11 @@ export const wrapLayout = (content: string, recipientEmail = "") => {
             <p>© ${new Date().getFullYear()} SpendWise Inc. All rights reserved.</p>
             <p>Financial forensics at your fingertips.</p>
             <p style="margin-top: 10px;">
-              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/feedback" style="color: #0d9488; text-decoration: none; font-weight: bold;">Share Feedback</a>
+              <a href="${appUrl("/feedback")}" style="color: #0d9488; text-decoration: none; font-weight: bold;">Share Feedback</a>
               &nbsp;·&nbsp;
-              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/settings" style="color: #9ca3af; text-decoration: none;">Manage Notifications</a>
+              <a href="${appUrl("/settings")}" style="color: #9ca3af; text-decoration: none;">Manage Notifications</a>
               &nbsp;·&nbsp;
-              <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/unsubscribe?email=${encodeURIComponent(recipientEmail)}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
+              <a href="${appUrl(`/api/unsubscribe?email=${encodeURIComponent(recipientEmail)}`)}" style="color: #9ca3af; text-decoration: none;">Unsubscribe</a>
             </p>
           </div>
         </div>
@@ -98,7 +99,7 @@ export const sendWelcomeEmail = async (email: string, name: string) => {
     <p>Welcome to SpendWise! We're thrilled to have you onboard.</p>
     <p>With SpendWise, you can seamlessly track your expenses, manage budgets, and achieve your financial goals using our state-of-the-art forensic AI.</p>
     <p>Get started by setting up your first budget threshold!</p>
-    <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard" class="button">Go to Dashboard</a>
+    <a href="${appUrl("/dashboard")}" class="button">Go to Dashboard</a>
     <p style="margin-top: 30px;">Best Regards,<br/> <strong>The SpendWise Team</strong></p>
   `;
 
@@ -156,7 +157,7 @@ export const sendBudgetAlertEmail = async (email: string, name: string, spentPer
       </ul>
     </div>
     <p>Review your spending patterns and adjust your budget if needed.</p>
-    <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard" class="button">View Dashboard</a>
+    <a href="${appUrl("/dashboard")}" class="button">View Dashboard</a>
     <p style="margin-top: 30px;">Best,<br/> <strong>The SpendWise Team</strong></p>
   `;
   return sendEmail(email, subject, wrapLayout(content, email));
@@ -169,7 +170,7 @@ export const sendFeedbackRequestEmail = async (email: string, name: string) => {
     <p>We've been working hard to make SpendWise the best forensic financial tool for you.</p>
     <p>Could you spare a minute to share your feedback? Your insights help us prioritize features that matter most to you.</p>
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/feedback" class="button">Share My Experience</a>
+      <a href="${appUrl("/feedback")}" class="button">Share My Experience</a>
     </div>
     <p>Thank you for being a valued member of the SpendWise community!</p>
     <p style="margin-top: 30px;">Best Regards,<br/> <strong>The SpendWise Team</strong></p>

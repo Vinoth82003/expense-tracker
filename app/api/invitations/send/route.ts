@@ -6,6 +6,7 @@ import { sendGroupInvitationEmail } from "@/lib/mail";
 import crypto from "crypto";
 import { checkUserRateLimit } from "@/lib/rateLimit";
 import { validateOrigin } from "@/lib/csrf";
+import { appUrl } from "@/lib/site-url";
 
 export async function POST(req: Request) {
   try {
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
           },
         });
 
-        const inviteLink = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/groups/invite/${token}`;
+        const inviteLink = appUrl(`/groups/invite/${token}`);
         await sendGroupInvitationEmail(email, requester.name || requester.email, group.name, inviteLink);
         
         sentCount++;

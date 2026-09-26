@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TermsClient } from "./TermsClient";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Terms of Service | SpendWise — AI-Powered Expense Tracker for India",
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
       "Terms of Service | SpendWise — AI-Powered Expense Tracker for India",
     description:
       "Review the Terms of Service for SpendWise. Learn about personal use rules, data ownership, third-party integrations, and governing laws.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/terms`,
+    url: `${SITE_ORIGIN}/terms`,
     images: [
       {
         url: "/og-images/og-terms-dark.png",
@@ -39,12 +40,12 @@ const termsStructuredData = {
   name: "Terms of Service",
   description:
     "SpendWise Terms of Service — personal use rules, data ownership, third-party integrations, and governing laws.",
-  url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/terms`,
+  url: `${SITE_ORIGIN}/terms`,
   dateModified: "2026-06-01",
   publisher: {
     "@type": "Organization",
     name: "SpendWise",
-    url: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
+    url: SITE_ORIGIN,
   },
 };
 
@@ -56,13 +57,13 @@ const breadcrumbStructuredData = {
       "@type": "ListItem",
       position: 1,
       name: "Home",
-      item: process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
+      item: SITE_ORIGIN,
     },
     {
       "@type": "ListItem",
       position: 2,
       name: "Terms of Service",
-      item: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/terms`,
+      item: `${SITE_ORIGIN}/terms`,
     },
   ],
 };

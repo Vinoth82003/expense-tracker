@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { getInternalApiHeaders } from "@/lib/internal-api-auth";
+import { appUrl } from "@/lib/site-url";
 
 export interface GatewayParams {
   headers?: HeadersInit;
@@ -45,10 +46,7 @@ function buildRequestInit(params?: GatewayParams, method: string = "GET", body?:
 
 // Get the base API URL dynamically depending on env
 function getBaseUrl(): string {
-  if (process.env.NEXTAUTH_URL) {
-    return process.env.NEXTAUTH_URL;
-  }
-  return "http://localhost:3000";
+  return appUrl();
 }
 
 export async function fetchExpenses(

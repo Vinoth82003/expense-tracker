@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import { siteUrl } from "@/lib/site-url";
 import type { MetadataRoute } from "next";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app";
+  const baseUrl = siteUrl();
   const now = new Date();
 
   // Base static public pages of the application

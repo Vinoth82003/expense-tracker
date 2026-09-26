@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import  DownloadClient  from "./DownloadClient";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Download App | SpendWise — Expense Tracker for India",
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
     title: "Download App | SpendWise — Expense Tracker for India",
     description:
       "Install the SpendWise Progressive Web App on Android, iOS, or Desktop. Enjoy offline access to your dashboard and Indian financial year reporting.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/download`,
+    url: `${SITE_ORIGIN}/download`,
     images: [
       {
         url: "/og-images/og-download-dark.png",
@@ -36,7 +37,7 @@ const downloadStructuredData = {
   "@type": "SoftwareApplication",
   "name": "SpendWise",
   "description": "AI-powered expense tracker for India. Track spending, set budgets, and gain forensic financial insights.",
-  "url": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
+  "url": SITE_ORIGIN,
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Web, Android, iOS",
   "offers": {
@@ -44,12 +45,12 @@ const downloadStructuredData = {
     "price": "0",
     "priceCurrency": "INR"
   },
-  "downloadUrl": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/download`,
+  "downloadUrl": `${SITE_ORIGIN}/download`,
   "installFeature": {
     "@type": "SoftwareFeature",
     "name": "PWA Install"
   },
-  "screenshot": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/og-images/og-home-dark.png`
+  "screenshot": `${SITE_ORIGIN}/og-images/og-home-dark.png`
 };
 
 export default function DownloadPage() {

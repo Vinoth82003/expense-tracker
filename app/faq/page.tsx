@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FAQClient, type FAQItem } from "./FAQClient";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "FAQ | SpendWise — AI-Powered Expense Tracker for India",
@@ -46,13 +47,13 @@ export default async function FAQPage() {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app",
+        "item": SITE_ORIGIN,
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "FAQ",
-        "item": `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/faq`,
+        "item": `${SITE_ORIGIN}/faq`,
       },
     ],
   };

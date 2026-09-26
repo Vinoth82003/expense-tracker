@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { ReviewsClient } from "./ReviewsClient";
+import { siteUrl } from "@/lib/site-url";
 
-const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app";
+const baseUrl = siteUrl();
 
 export const metadata: Metadata = {
   title: "Customer Reviews | SpendWise — India's #1 Expense Tracker",

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { siteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const baseUrl = process.env.NEXT_PUBLIC_PRODUCTION_LINK || process.env.NEXTAUTH_URL || "https://thespendwise.vercel.app";
+  const baseUrl = siteUrl();
 
   // 1. High-level Summary
   const header = `# SpendWise\n\n> SpendWise is a modern, premium personal finance and budget manager designed for Indian users. It supports Rupee-native expense tracking, budgeting, category insights (categorizing expenses into Needs and Wants), AI forensic analysis, offline PWA capability, and shared group expense splitting.\n\n`;

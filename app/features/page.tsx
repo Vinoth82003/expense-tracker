@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import type { PublicStatsData } from "@/components/landing/sections/CounterStats";
 import { FeaturesClient } from "./FeaturesClient";
+import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Features | SpendWise — AI-Powered Expense Tracker for India",
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
     title: "Features | SpendWise — AI-Powered Expense Tracker for India",
     description:
       "Explore SpendWise features — manual expense & income tracking, AI forensic analysis via Gemini, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
-    url: `${process.env.NEXT_PUBLIC_PRODUCTION_LINK || "https://thespendwise.vercel.app"}/features`,
+    url: `${SITE_ORIGIN}/features`,
     images: [
       {
         url: "/og-images/og-features-dark.png",

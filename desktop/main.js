@@ -32,10 +32,14 @@ function createWindow() {
     });
   });
 
-  // Load the production site URL (with local development fallback)
-  const startUrl = process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:3000' 
-    : 'https://thespendwise.vercel.app';
+  // Load the app origin (with local development fallback).
+  // This must be the APP origin, not the marketing origin: the desktop shell
+  // hosts the logged-in product, and only the app origin is registered in the
+  // Google OAuth console, so sign-in completes here without a cross-origin
+  // redirect. Mirrors APP_ORIGIN in client/lib/site-url.ts.
+  const startUrl = process.env.NODE_ENV === 'development'
+    ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+    : (process.env.NEXT_PUBLIC_APP_URL || 'https://money-spend-tracker.vercel.app');
 
   mainWindow.loadURL(startUrl);
 
