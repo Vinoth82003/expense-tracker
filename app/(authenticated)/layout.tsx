@@ -41,6 +41,7 @@ import { SystemStatusChecker } from "@/components/layout/SystemStatusChecker";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 import { SuspendedOverlay } from "@/components/layout/SuspendedOverlay";
 import { useModal } from "@/components/providers/ModalProvider";
+import { evaluateEntitlement } from "@/lib/user-entitlement";
 import { DataProvider } from "@/context/DataContext";
 
 const navGroups = [
@@ -65,12 +66,12 @@ const navGroups = [
       { name: "Category Map", href: "/settings/categories", icon: LayoutGrid },
     ],
   },
-  // {
-  //   title: "Community",
-  //   items: [
-  //     { name: "Expense Groups", href: "/groups", icon: Users },
-  //   ]
-  // },
+  {
+    title: "Community",
+    items: [
+      { name: "Expense Groups", href: "/groups", icon: Users },
+    ],
+  },
   {
     title: "Preferences",
     items: [
@@ -136,13 +137,26 @@ export default function DashboardLayout({
       router.push("/onboarding");
       return;
     }
-    if (
-      status === "authenticated" &&
-      (session?.user as any)?.twoFactorEnabled
-    ) {
-      const cookies = document.cookie.split(";").map((c) => c.trim());
-      const is2faVerified = cookies.some((c) => c.startsWith("2fa_verified="));
-      if (!is2faVerified) {
+    // SECURITY FIX: SEC-01 — the old check read `2fa_verified` out of
+    // `document.cookie`, but that cookie is httpOnly so the browser never exposes
+    // it to JS. The check could therefore only ever fail, locking every 2FA user
+    // out of the app. The server now owns this decision (middleware reads
+    // twoFactorVerifiedAt) and surfaces it here via the session.
+    const sessionUser = session?.user as
+      | {
+          id?: string;
+          twoFactorEnabled?: boolean;
+          twoFactorVerifiedAt?: Date | string | null;
+        }
+      | undefined;
+
+    if (status === "authenticated" && sessionUser?.twoFactorEnabled) {
+      const decision = evaluateEntitlement({
+        id: sessionUser.id,
+        twoFactorEnabled: sessionUser.twoFactorEnabled,
+        twoFactorVerifiedAt: sessionUser.twoFactorVerifiedAt,
+      });
+      if (decision.status === "two_factor_required") {
         router.push(`/verify-2fa?callbackUrl=${encodeURIComponent(pathname)}`);
       }
     }

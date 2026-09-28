@@ -3,9 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { sendBudgetAlertEmail } from "@/lib/mail";
 
 export async function GET(req: Request) {
-  // Simple auth for cron (in production, use a secure cron secret)
+  // SECURITY FIX: the previous guard was
+  //   if (process.env.CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) reject
+  // which is fail-OPEN: with CRON_SECRET unset the whole condition is false and
+  // the endpoint runs unauthenticated, letting anyone on the internet trigger
+  // budget-alert emails to every eligible user. Now it fails closed.
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error(
+      "[SECURITY] CRON_SECRET is not set — refusing to run the budget-alert cron."
+    );
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
   const authHeader = req.headers.get("authorization");
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
