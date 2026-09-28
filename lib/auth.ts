@@ -3,15 +3,10 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { checkIdentifierRateLimit } from "@/lib/rateLimit";
-import {
-  getClientIpFromHeaders,
-  getUserAgentFromHeaders,
-  requestMetaHeaders,
-} from "@/lib/request-meta";
-import { describeBrowser, describeDevice } from "@/lib/user-agent";
 import { sendWelcomeEmail, sendAdminNewUserNotification } from "@/lib/mail";
 import { isAllowedOrigin } from "@/lib/origins";
+
+const failedLogins = new Map<string, { count: number; first: number }>();
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -51,38 +46,31 @@ export const authOptions: AuthOptions = {
           throw new Error("Missing email or password");
         }
 
-        const email = credentials.email.toLowerCase().trim();
-        const maxFailures = 10;
+        const email = credentials.email.toLowerCase();
+        const now = Date.now();
         const windowMs = 15 * 60 * 1000;
+        const maxFailures = 10;
 
-        // SECURITY FIX: SEC-08 — the old check used a module-level Map, which is
-        // per-instance on serverless: a cold start or a second instance reset the
-        // counter, so the 10-attempt cap was effectively unenforced. Throttling is
-        // now shared via the Redis-backed limiter, keyed on the normalised email.
-        const limited = await checkIdentifierRateLimit(
-          email,
-          "login",
-          maxFailures,
-          windowMs
-        );
-        if (limited) {
+        const record = failedLogins.get(email) ?? { count: 0, first: now };
+        if (now - record.first > windowMs) {
+          record.count = 0;
+          record.first = now;
+        }
+
+        if (record.count >= maxFailures) {
           throw new Error("Too many failed login attempts. Please try again in 15 minutes.");
         }
 
         const user = await prisma.user.findUnique({
-          where: { email },
+          where: { email: credentials.email },
         });
 
         if (!user) {
-          // Auto-signup. SEC-03: because this path also acts as registration, an
-          // attacker can pre-register a victim's address with a password they
-          // know. The takeover is neutralised in the OAuth signIn callback below,
-          // which invalidates a password on an account the verified identity
-          // provider claims.
+          // Auto-signup logic: If user doesn't exist, create them
           const hashedPassword = await bcrypt.hash(credentials.password, 10);
           const newUser = await (prisma.user.create as any)({
             data: {
-              email,
+              email: credentials.email,
               password: hashedPassword,
               authProvider: "credentials",
               onboarded: false,
@@ -99,26 +87,26 @@ export const authOptions: AuthOptions = {
             console.error("Admin new-user notification failed:", e)
           );
 
+          failedLogins.delete(email);
           return newUser;
         }
 
         // If user exists but was Google-only, we might want to block this or link it
         // For now, let's check if they have a password
         if (!(user as any).password) {
+          record.count++;
+          failedLogins.set(email, record);
           throw new Error("This account uses Google sign-in. Please use Google to continue.");
-        }
-
-        if (user.isSuspended) {
-          throw new Error("This account is suspended. Contact support for assistance.");
         }
 
         const isValid = await bcrypt.compare(credentials.password, (user as any).password);
         if (!isValid) {
-          // The email is resolved above, so use it for a uniform failure path and
-          // avoid revealing whether the account exists (user enumeration).
-          throw new Error("Invalid email or password");
+          record.count++;
+          failedLogins.set(email, record);
+          throw new Error("Invalid password");
         }
 
+        failedLogins.delete(email);
         return user;
       }
     }),
@@ -160,43 +148,10 @@ export const authOptions: AuthOptions = {
           where: { email: user.email },
         });
 
-        // SECURITY FIX: SEC-03 — the credentials flow doubles as sign-up, so an
-        // attacker could pre-register a victim's address with a password they
-        // know. Left alone, the victim's first Google sign-in would land them
-        // inside the attacker's account. Google has just verified control of the
-        // mailbox, so it outranks a password set through the other flow: clear
-        // that password, which locks the attacker out and keeps the verified
-        // owner in. Flagged for the admin audit trail.
-        if (
-          existingUser &&
-          existingUser.authProvider === "credentials" &&
-          existingUser.password
-        ) {
-          await prisma.user.update({
-            where: { id: existingUser.id },
-            data: { password: null, authProvider: account?.provider || "google" },
-          });
-
-          await prisma.securityAlert
-            .create({
-              data: {
-                type: "CREDENTIAL_OVERRIDE",
-                severity: "WARNING",
-                description:
-                  "A verified OAuth sign-in cleared a password on a credentials account, which is the signature of an account pre-registration attempt.",
-                userId: existingUser.id,
-              },
-            })
-            .catch(() => {});
-
-          console.warn(
-            `[SECURITY] Cleared a credentials password for ${existingUser.email} on verified OAuth sign-in.`
-          );
-        }
-
         if (!existingUser) {
         console.log(`[Auth] New user account creation initiated.`);
-                    // Create user and seed default categories
+          
+          // Create user and seed default categories
           const newUser = await prisma.user.create({
             data: {
               email: user.email,
@@ -223,22 +178,15 @@ export const authOptions: AuthOptions = {
         // Log successful login
         const loggedUser = await prisma.user.findUnique({ where: { email: user.email } });
         if (loggedUser) {
-          // SECURITY FIX: SEC-10 — login history recorded hardcoded placeholder
-          // values. Parse the real request headers so a compromised account can
-          // actually be traced back to an origin. The next-auth `account`
-          // object does not carry request metadata, so this reads the ambient
-          // request headers when available and falls back to explicit unknowns.
-          const reqHeaders = requestMetaHeaders();
-          const userAgent = getUserAgentFromHeaders(reqHeaders);
           await (prisma as any).loginHistory.create({
             data: {
               userId: loggedUser.id,
               method: account?.provider || "google",
               status: "SUCCESS",
-              ip: getClientIpFromHeaders(reqHeaders),
-              device: describeDevice(userAgent),
-              browser: describeBrowser(userAgent),
-              userAgent,
+              ip: "0.0.0.0", 
+              device: "Unknown",
+              browser: "Unknown",
+              userAgent: "",
             }
           }).catch((e: any) => console.error("Failed to log login history:", e));
         }
@@ -256,7 +204,7 @@ export const authOptions: AuthOptions = {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: session.user.email! },
-            select: { id: true, name: true, onboarded: true, expenseMode: true, monthlyLimit: true, twoFactorEnabled: true, twoFactorVerifiedAt: true, isSuspended: true },
+            select: { id: true, name: true, onboarded: true, expenseMode: true, monthlyLimit: true, twoFactorEnabled: true, isSuspended: true },
           });
 
           if (dbUser) {
@@ -266,7 +214,6 @@ export const authOptions: AuthOptions = {
             (session.user as any).expenseMode = dbUser.expenseMode;
             (session.user as any).monthlyLimit = dbUser.monthlyLimit;
             (session.user as any).twoFactorEnabled = (dbUser as any).twoFactorEnabled;
-            (session.user as any).twoFactorVerifiedAt = dbUser.twoFactorVerifiedAt;
             (session.user as any).isSuspended = dbUser.isSuspended;
             (session.user as any).redirectTo = dbUser.onboarded ? "dashboard" : "onboarding";
           }

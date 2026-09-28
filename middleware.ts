@@ -3,93 +3,12 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { verifyAdminToken } from "@/lib/admin-auth";
 import { isAllowedOrigin } from "@/lib/origins";
-import { prisma } from "@/lib/prisma";
-import {
-  evaluateEntitlement,
-  entitlementCode,
-  entitlementHttpStatus,
-  denialMessage,
-  isEntitlementExempt,
-} from "@/lib/user-entitlement";
 
 function isTrustedInternalRequest(request: NextRequest) {
   const userId = request.headers.get("x-internal-user-id");
   const secret = request.headers.get("x-internal-api-secret");
-  // SECURITY FIX: SEC-04 — never fall back to NEXTAUTH_SECRET here. That secret
-  // signs session JWTs; sharing it would let any holder impersonate a user id.
-  const expected = process.env.INTERNAL_API_SECRET;
+  const expected = process.env.INTERNAL_API_SECRET || process.env.NEXTAUTH_SECRET;
   return Boolean(userId && secret && expected && secret === expected);
-}
-
-// SECURITY FIX: SEC-01 / SEC-02 — single server-side chokepoint for suspension
-// and outstanding 2FA challenges. Runs on the Node runtime so it can read the
-// authoritative user row; every protected page and API route passes through
-// here, so no individual handler can forget the check.
-async function enforceEntitlement(
-  request: NextRequest,
-  token: { sub?: string } | null
-): Promise<NextResponse | null> {
-  const { pathname } = request.nextUrl;
-
-  if (!token?.sub) return null;
-  if (isTrustedInternalRequest(request)) return null;
-  if (isEntitlementExempt(pathname)) return null;
-
-  const userId = token.sub as string;
-
-  let user: {
-    id: string;
-    isSuspended: boolean;
-    twoFactorEnabled: boolean;
-    twoFactorVerifiedAt: Date | null;
-  } | null = null;
-
-  try {
-    user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        isSuspended: true,
-        twoFactorEnabled: true,
-        twoFactorVerifiedAt: true,
-      },
-    });
-  } catch (error) {
-    // Fail closed on a lookup error rather than waving the request through.
-    console.error("[SECURITY] entitlement lookup failed:", error);
-    const res = pathname.startsWith("/api")
-      ? NextResponse.json({ error: "Unable to verify session" }, { status: 503 })
-      : NextResponse.redirect(new URL("/login", request.url));
-    return res;
-  }
-
-  // A live token for a user row that no longer exists must not pass.
-  if (!user) {
-    return pathname.startsWith("/api")
-      ? NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-      : NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  const decision = evaluateEntitlement(user);
-  if (decision.status === "ok") return null;
-
-  if (pathname.startsWith("/api")) {
-    return NextResponse.json(
-      {
-        error: denialMessage(decision.status),
-        code: entitlementCode(decision.status),
-      },
-      { status: entitlementHttpStatus(decision.status) }
-    );
-  }
-
-  if (decision.status === "two_factor_required") {
-    const url = new URL("/verify-2fa", request.url);
-    url.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.redirect(new URL("/login", request.url));
 }
 
 // ---- CORS ----
@@ -200,8 +119,6 @@ export async function middleware(request: NextRequest) {
     if (!token) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    const blocked = await enforceEntitlement(request, token);
-    if (blocked) return blocked;
   }
 
   // ---- Protect authenticated API routes ----
@@ -228,10 +145,6 @@ export async function middleware(request: NextRequest) {
         request,
         NextResponse.json({ error: "Unauthorized" }, { status: 401 })
       );
-    }
-    const blocked = await enforceEntitlement(request, token);
-    if (blocked) {
-      return withCors(request, blocked);
     }
   }
 
@@ -264,7 +177,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  runtime: "nodejs",
   matcher: [
     "/api/:path*",
     "/dashboard/:path*",

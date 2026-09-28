@@ -23,7 +23,6 @@ model User {
   twoFactorEnabled    Boolean   @default(false)
   twoFactorOTP        String?
   twoFactorOTPExpires DateTime?
-  twoFactorVerifiedAt DateTime?
   
   isPWAInstalled   Boolean    @default(false)
 
@@ -67,8 +66,6 @@ model User {
 
   createdAt        DateTime?   @default(now())
   updatedAt        DateTime    @updatedAt
-
-  @@index([isSuspended])
 }
 
 model Review {
@@ -163,8 +160,6 @@ model UserSession {
   location  String?
   expires   DateTime
   createdAt DateTime @default(now())
-
-  @@index([userId, expires])
 }
 
 model OTPLog {
@@ -178,8 +173,6 @@ model OTPLog {
   attempts  Int      @default(1)
   createdAt DateTime @default(now())
   expiresAt DateTime
-
-  @@index([userId, createdAt])
 }
 
 model LoginHistory {
@@ -351,7 +344,6 @@ model GroupMember {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, groupId])
-  @@index([groupId])
 }
 
 model GroupExpense {
@@ -369,8 +361,6 @@ model GroupExpense {
 
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
-
-  @@index([groupId, date])
 }
 
 model ExpenseSplit {
