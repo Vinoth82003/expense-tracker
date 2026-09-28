@@ -12,13 +12,8 @@ import {
   Activity,
   Shield,
   FileText,
-  LayoutDashboard,
   Coins,
   TrendingUp,
-  Users,
-  Brain,
-  Settings,
-  Bell,
   Lock,
   Compass,
   Download,
@@ -27,8 +22,33 @@ import {
 export const metadata: Metadata = {
   title: "Sitemap | SpendWise — AI-Powered Expense Tracker for India",
   description:
-    "Navigate through the full page directory, help guides, documentation articles, and user dashboard paths of SpendWise.",
+    "Browse the full page directory, help guides, documentation articles, and free tools available on the SpendWise platform.",
+  // Without this, /sitemap inherits the root layout's `canonical: "/"` and
+  // Google drops the page as a duplicate of the homepage.
+  alternates: {
+    canonical: "/sitemap",
+  },
   robots: "index, follow",
+  openGraph: {
+    title: "Sitemap | SpendWise — AI-Powered Expense Tracker for India",
+    description:
+      "Browse the full page directory, help guides, documentation articles, and free tools available on the SpendWise platform.",
+    type: "website",
+    images: [
+      {
+        url: "/og-images/og-sitemap-dark.png",
+        width: 1200,
+        height: 630,
+        alt: "SpendWise Sitemap",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sitemap | SpendWise",
+    description: "Browse every public page, guide, and free tool on SpendWise.",
+    images: ["/og-images/og-sitemap-dark.png"],
+  },
 };
 
 function Separator() {
@@ -40,7 +60,12 @@ function Separator() {
 }
 
 export default async function SitemapPage() {
-  let dbDocs: any[] = [];
+  let dbDocs: {
+    id: string;
+    title: string;
+    slug: string;
+    category: string | null;
+  }[] = [];
   try {
     dbDocs = await prisma.doc.findMany({
       where: { status: "PUBLISHED" },
@@ -72,16 +97,21 @@ export default async function SitemapPage() {
     { label: "Terms of Service", href: "/terms", desc: "Governing rules and usage conditions for using SpendWise.", icon: FileText },
   ];
 
+  // NOT rendered as <Link href>. Every path below is Disallow:ed in
+  // app/robots.ts and most are behind auth, so linking to them from an
+  // indexable page spends crawl budget on URLs Google is forbidden to fetch —
+  // the classic "internal link to blocked resource" anti-pattern that gets a
+  // sitemap page itself deindexed. Shown as plain text instead.
   const portalRoutes = [
-    { label: "Sign In", href: "/login", desc: "Access your account via secure Google OAuth or credentials.", icon: Lock },
-    { label: "User Onboarding", href: "/onboarding", desc: "Initial questionnaire to tailor monthly limits.", icon: HelpCircle },
-    { label: "Dashboard", href: "/dashboard", desc: "Visual center for monthly spending, remaining balance, and limits.", icon: LayoutDashboard },
-    { label: "Expenses Manager", href: "/expenses", desc: "Track, categorize, search, and upload receipts for expenses.", icon: Coins },
-    { label: "Income Tracker", href: "/income", desc: "Log monthly income streams and track cash inflows.", icon: TrendingUp },
-    { label: "Group Splitting", href: "/groups", desc: "Create groups, split shared bills, and track settlements.", icon: Users },
-    { label: "AI Analysis & Reports", href: "/reports", desc: "AI-generated financial audits identifying wasteful spending.", icon: Brain },
-    { label: "Notifications", href: "/notifications", desc: "Budget breach alerts, updates, and system activity logs.", icon: Bell },
-    { label: "Settings", href: "/settings", desc: "Manage your email presets, custom categories, and profile details.", icon: Settings },
+    { label: "Sign In", path: "/login", desc: "Access your account via secure Google OAuth or credentials." },
+    { label: "User Onboarding", path: "/onboarding", desc: "Initial questionnaire to tailor monthly limits." },
+    { label: "Dashboard", path: "/dashboard", desc: "Visual center for monthly spending, remaining balance, and limits." },
+    { label: "Expenses Manager", path: "/expenses", desc: "Track, categorize, search, and upload receipts for expenses." },
+    { label: "Income Tracker", path: "/income", desc: "Log monthly income streams and track cash inflows." },
+    { label: "Group Splitting", path: "/groups", desc: "Create groups, split shared bills, and track settlements." },
+    { label: "AI Analysis & Reports", path: "/reports", desc: "AI-generated financial audits identifying wasteful spending." },
+    { label: "Notifications", path: "/notifications", desc: "Budget breach alerts, updates, and system activity logs." },
+    { label: "Settings", path: "/settings", desc: "Manage your email presets, custom categories, and profile details." },
   ];
 
   return (
@@ -160,21 +190,20 @@ export default async function SitemapPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {portalRoutes.map((route) => (
-                <Link
-                  key={route.href}
-                  href={route.href}
-                  className="group flex gap-4 p-4 rounded-2xl hover:bg-surface/60 border border-transparent hover:border-border-subtle transition-all duration-300"
+                <div
+                  key={route.path}
+                  className="flex gap-4 p-4 rounded-2xl border border-transparent"
                 >
-                  <div className="w-10 h-10 shrink-0 rounded-xl bg-surface/80 group-hover:bg-violet-500 group-hover:text-white flex items-center justify-center text-secondary transition-all">
-                    <route.icon size={18} />
+                  <div className="w-10 h-10 shrink-0 rounded-xl bg-surface/80 flex items-center justify-center text-secondary">
+                    <Lock size={18} />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-foreground group-hover:text-violet-600 transition-colors text-[14px]">
+                      <h3 className="font-bold text-foreground text-[14px]">
                         {route.label}
                       </h3>
-                      {route.href !== "/login" &&
-                        route.href !== "/onboarding" && (
+                      {route.path !== "/login" &&
+                        route.path !== "/onboarding" && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-warning/10 text-warning text-[9px] font-semibold uppercase tracking-wider">
                             Secure
                           </span>
@@ -183,10 +212,22 @@ export default async function SitemapPage() {
                     <p className="text-[12px] text-secondary font-medium mt-1 leading-normal">
                       {route.desc}
                     </p>
+                    <code className="inline-block mt-1.5 text-[11px] font-mono text-secondary/70">
+                      {route.path}
+                    </code>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
+            <p className="mt-5 text-[12px] text-secondary/80 leading-relaxed">
+              These are members-only screens reached after signing in, so they are
+              intentionally excluded from the index. The machine-readable
+              version of this directory is{" "}
+              <a href="/sitemap.xml" className="underline hover:text-primary-600">
+                sitemap.xml
+              </a>
+              .
+            </p>
           </div>
         </section>
 

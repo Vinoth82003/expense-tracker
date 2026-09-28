@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { DocsPageClient } from "@/app/docs/[[...slug]]/DocsPageClient";
 import { DocsListingPage } from "@/components/docs/DocsListingPage";
 import { stripMarkdown, extractExcerpt } from "@/lib/docs-utils";
 import { siteUrl } from "@/lib/site-url";
+import type { Doc } from "@/types/docs";
 
 interface PageProps {
   params: Promise<{ slug?: string[] }>;
@@ -13,17 +15,20 @@ interface PageProps {
 async function getDocsData(slugParam?: string[]) {
   const isAdmin = await verifyAdminSession();
 
-  let whereClause: any = {};
-  if (!isAdmin) {
-    whereClause.status = "PUBLISHED";
-  }
+  const whereClause: { status?: string } = isAdmin
+    ? {}
+    : { status: "PUBLISHED" };
 
   const allDocs = await prisma.doc.findMany({
     where: whereClause,
     orderBy: { order: "asc" },
   });
 
-  const activeSlug = slugParam && slugParam.length > 0 ? slugParam[0] : null;
+  // Docs are single-segment slugs. Only slug[0] was ever consulted, so
+  // /docs/getting-started/anything/else silently rendered getting-started —
+  // an unlimited set of duplicate 200s for the same article.
+  const activeSlug =
+    slugParam && slugParam.length === 1 ? slugParam[0] : null;
 
   let selectedDoc = null;
   if (activeSlug) {
@@ -35,7 +40,7 @@ async function getDocsData(slugParam?: string[]) {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const { selectedDoc, allDocs } = await getDocsData(slug);
+  const { selectedDoc } = await getDocsData(slug);
 
   const baseUrl = siteUrl();
 
@@ -74,13 +79,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   // Detail page metadata
+  //
+  // The page component calls notFound() for this same condition, so Google
+  // receives a real 404. The metadata below only ever renders if metadata
+  // generation and the render pass disagree (e.g. a doc was unpublished
+  // between the two). Keep it noindex so that race can never produce an
+  // indexable page with a self-referencing canonical — that combination is what
+  // turned every junk /docs/* URL into a 200 in the index.
   if (!selectedDoc) {
     return {
       title: "Doc Not Found | SpendWise Docs",
-      description: "The requested documentation page could not be found.",
-      alternates: {
-        canonical: `/docs/${slug?.[0] || ""}`,
-      },
+      robots: { index: false, follow: false },
     };
   }
 
@@ -123,10 +132,13 @@ export default async function Page({ params }: PageProps) {
 
   const baseUrl = siteUrl();
 
-  const serialize = (doc: any) => ({
+  // Prisma returns Date objects; Doc (the prop type on the client components)
+  // expects ISO strings. Doc already allows `string | Date` for updatedAt, so a
+  // serialize that emits ISO strings satisfies it without a cast.
+  const serialize = (doc: Doc): Doc => ({
     ...doc,
-    createdAt: doc.createdAt?.toISOString() || null,
-    updatedAt: doc.updatedAt?.toISOString() || null,
+    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : undefined,
+    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : undefined,
   });
 
   const serializedAllDocs = allDocs.map(serialize);
@@ -164,23 +176,21 @@ export default async function Page({ params }: PageProps) {
             __html: JSON.stringify(listingStructuredData),
           }}
         />
-        <DocsListingPage docs={serializedAllDocs as any} />
+          <DocsListingPage docs={serializedAllDocs} />
       </>
     );
   }
 
   // ── Detail Page: /docs/[slug] ──
+  //
+  // Hard 404 for any slug that does not resolve to a PUBLISHED doc (or to a
+  // doc the caller is admin-authorised to preview). This route is a catch-all,
+  // so every URL under /docs/* is reachable by typing. Returning a rendered
+  // "Document not found" page with HTTP 200 made all of those soft 404s: a
+  // 200 that Google will happily crawl, index, and then have to drop. notFound()
+  // is what actually communicates "this does not exist".
   if (!selectedDoc) {
-    return (
-      <div className="flex-1 max-w-4xl px-6 md:px-12 py-12">
-        <div className="py-20 text-center space-y-4">
-          <h3 className="text-2xl font-black">Document not found</h3>
-          <p className="text-secondary">
-            Please select another section from the sidebar.
-          </p>
-        </div>
-      </div>
-    );
+    notFound();
   }
 
   const serializedSelectedDoc = serialize(selectedDoc);
@@ -228,8 +238,8 @@ export default async function Page({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
       />
       <DocsPageClient
-        selectedDoc={serializedSelectedDoc as any}
-        allDocs={serializedAllDocs as any}
+        selectedDoc={serializedSelectedDoc}
+        allDocs={serializedAllDocs}
       />
     </>
   );

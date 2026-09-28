@@ -6,6 +6,33 @@ export const metadata: Metadata = {
   title: "FAQ | SpendWise — AI-Powered Expense Tracker for India",
   description:
     "Find answers to common questions about SpendWise — AI-powered forensic analysis, expense tracking, budget alerts, data security, exports, and Indian financial year reporting.",
+  // MUST be set here. Without it this route inherits the root layout's
+  // `alternates.canonical: "/"`, so /faq declares the homepage as its canonical
+  // and Google drops it as a duplicate.
+  alternates: {
+    canonical: "/faq",
+  },
+  openGraph: {
+    title: "FAQ | SpendWise — AI-Powered Expense Tracker for India",
+    description:
+      "Answers to common questions about SpendWise — AI forensic analysis, expense tracking, budgets, security, and exports.",
+    url: `${SITE_ORIGIN}/faq`,
+    type: "website",
+    images: [
+      {
+        url: "/og-images/og-faq-dark.png",
+        width: 1200,
+        height: 630,
+        alt: "SpendWise FAQ",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "FAQ | SpendWise — AI-Powered Expense Tracker for India",
+    description: "Answers to common questions about SpendWise expense tracking, budgets, and security.",
+    images: ["/og-images/og-faq-dark.png"],
+  },
 };
 
 const FAQS: FAQItem[] = [

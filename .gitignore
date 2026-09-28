@@ -53,15 +53,17 @@ public/workbox-*.js
 public/sw.js.map
 public/workbox-*.js.map
 
-# Desktop node_modules
-desktop/node_modules
-
-# Dist Desktop files
-desktop/dist/*
-
-desktop/dist/
+# Desktop (Electron) build output and deps
 desktop/node_modules/
- 
+desktop/dist/
+
+# Downloadable desktop binaries
 public/download/*.exe
-desktop/dist/
-desktop/node_modules/
+
+# Local tooling output
+tsc-output.txt
+
+# Test / coverage artifacts
+playwright-report/
+test-results/
+/coverage

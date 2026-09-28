@@ -16,12 +16,12 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { fadeUp } from "@/components/landing/sections/animations";
 
-interface ReviewUser {
+export interface ReviewUser {
   name: string | null;
   avatar: string | null;
 }
 
-interface Review {
+export interface Review {
   id: string;
   rating: number;
   comment: string;
@@ -159,26 +159,54 @@ function SkeletonCard() {
   );
 }
 
-export function ReviewsClient() {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
+/**
+ * `initialReviews` is resolved on the server by app/reviews/page.tsx and is
+ * always present in the initial HTML.
+ *
+ * This component used to fetch /api/reviews inside a useEffect, which made the
+ * server-rendered page a near-empty shell (733 characters of visible text —
+ * navbar and footer only). That matters because /api/ is Disallow:ed in
+ * app/robots.ts, so Google's renderer was forbidden from loading the very
+ * request that supplied the page's content. The reviews were in the DOM for
+ * humans and invisible to the crawler, which is why /reviews showed up as
+ * "Crawled - currently not indexed".
+ *
+ * `initialReviews === null` means the server could not reach the database. The
+ * client retries in that case only, so the failure path is still covered
+ * without ever making the happy path depend on a client-side fetch.
+ */
+export function ReviewsClient({
+  initialReviews,
+}: {
+  initialReviews: Review[] | null;
+}) {
+  const [reviews, setReviews] = useState<Review[]>(initialReviews ?? []);
+  const [loading, setLoading] = useState(initialReviews === null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    if (initialReviews !== null) return;
+
+    let cancelled = false;
+
     const fetchReviews = async () => {
       try {
         const res = await fetch("/api/reviews");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
-        setReviews(data);
+        if (!cancelled) setReviews(data);
       } catch {
-        setError(true);
+        if (!cancelled) setError(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchReviews();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialReviews]);
 
   return (
     <>
