@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('next-auth', () => ({ getServerSession: vi.fn() }));
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), error: vi.fn() } }));
+// The route gates on admin AI policy before any model call. Allow by default
+// here; tests/ai-access.test.ts covers the allow/deny matrix itself. Without
+// this the suite reads the live Settings row and fails whenever an admin
+// has the chat kill-switch off in the dev database.
+vi.mock('@/lib/ai/access', () => ({
+  checkAiAccess: vi.fn(async () => ({ allowed: true })),
+}));
 vi.mock('@/lib/chat/intent', () => ({ getChatIntent: vi.fn() }));
 vi.mock('@/lib/chat/server', () => ({
   createExpense: vi.fn(),
