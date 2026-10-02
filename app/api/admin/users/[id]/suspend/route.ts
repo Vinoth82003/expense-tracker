@@ -34,10 +34,13 @@ export async function PATCH(
     // Create Audit Log
     // SECURITY FIX: VULN-019 — Resolve real admin identity from session
     const adminInfo = await getAdminInfo();
+    const safeAdminId = (adminInfo?.adminId && /^[0-9a-fA-F]{24}$/.test(adminInfo.adminId))
+      ? adminInfo.adminId
+      : "000000000000000000000000";
     await (prisma as any).auditLog.create({
       data: {
         adminName: adminInfo?.adminName || "Admin",
-        adminId: adminInfo?.adminId || "unknown",
+        adminId: safeAdminId,
         actionType: (updatedUser as any).isSuspended ? "USER_SUSPENDED" : "USER_UNSUSPENDED",
         target: user.email,
         details: `Reason: ${reason || 'N/A'}`,

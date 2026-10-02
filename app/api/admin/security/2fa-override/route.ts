@@ -35,10 +35,13 @@ export async function POST(req: NextRequest) {
     // 3. Log to audit trail
     // SECURITY FIX: VULN-019 — Resolve real admin identity from session
     const adminInfo = await getAdminInfo();
+    const safeAdminId = (adminInfo?.adminId && /^[0-9a-fA-F]{24}$/.test(adminInfo.adminId))
+      ? adminInfo.adminId
+      : "000000000000000000000000";
     await (prisma as any).auditLog.create({
       data: {
         adminName: adminInfo?.adminName || "Admin",
-        adminId: adminInfo?.adminId || "unknown",
+        adminId: safeAdminId,
         actionType: "2FA_RESET",
         target: user.email,
         details: `2FA force disabled by admin. Reason: ${reason}`,

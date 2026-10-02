@@ -106,16 +106,16 @@ export async function checkAiAccess(
 
   const flagKey = FEATURE_FLAG_BY_AI_FEATURE[feature];
   if (featureFlags[flagKey] === false) {
-    const label =
+    const errorMsg =
       feature === "chat"
-        ? "Sage Assistant"
+        ? "Sage AI is temporarily unavailable. We are upgrading Sage AI for better performance and will be back soon."
         : feature === "analyze"
-          ? "Forensic Analysis"
-          : "Smart Categorization";
+          ? "AI Forensic Analysis is temporarily unavailable. We are upgrading our AI services for better performance."
+          : "Smart Categorization is temporarily unavailable.";
     return {
       allowed: false,
       status: 403,
-      error: `${label} is currently disabled by the administrator.`,
+      error: errorMsg,
     };
   }
 

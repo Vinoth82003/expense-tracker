@@ -59,10 +59,13 @@ export async function PATCH(
     const headerList = await req.headers;
     const ip = headerList.get("x-forwarded-for") || "127.0.0.1";
     const adminInfo = await getAdminInfo();
+    const safeAdminId = (adminInfo?.adminId && /^[0-9a-fA-F]{24}$/.test(adminInfo.adminId))
+      ? adminInfo.adminId
+      : "000000000000000000000000";
     await (prisma as any).auditLog.create({
       data: {
         adminName: adminInfo?.adminName || "Admin",
-        adminId: adminInfo?.adminId || "unknown",
+        adminId: safeAdminId,
         actionType: "SETTING_CHANGED",
         target: "featureFlags",
         details: `Feature flag '${key}' set to ${enabled}`,

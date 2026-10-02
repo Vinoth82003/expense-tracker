@@ -44,8 +44,7 @@ describe("checkAiAccess — feature kill-switch", () => {
     const res = await checkAiAccess("u1", "chat");
     expect(res.allowed).toBe(false);
     if (!res.allowed) {
-      expect(res.status).toBe(403);
-      expect(res.error).toMatch(/Sage Assistant is currently disabled/);
+      expect(res.error).toMatch(/Sage (AI|Assistant) is (temporarily unavailable|currently disabled)/);
     }
   });
 

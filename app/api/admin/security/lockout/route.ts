@@ -57,10 +57,13 @@ export async function POST(req: NextRequest) {
     const headerList = await req.headers;
     const ip = headerList.get("x-forwarded-for") || "127.0.0.1";
     const adminInfo = await getAdminInfo();
+    const safeAdminId = (adminInfo?.adminId && /^[0-9a-fA-F]{24}$/.test(adminInfo.adminId))
+      ? adminInfo.adminId
+      : "000000000000000000000000";
     await (prisma as any).auditLog.create({
       data: {
         adminName: adminInfo?.adminName || "Admin",
-        adminId: adminInfo?.adminId || "unknown",
+        adminId: safeAdminId,
         actionType: isLocked ? "USER_LOCKED" : "USER_UNLOCKED",
         target: user.email,
         details: `Account ${isLocked ? 'locked' : 'unlocked'}. Reason: ${reason}`,
