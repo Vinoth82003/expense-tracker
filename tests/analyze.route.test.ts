@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { mockCreate } = vi.hoisted(() => {
   const mockCreate = vi.fn();
@@ -69,7 +69,7 @@ import { POST } from "@/app/api/analyze/route";
 const VALID_REPORT = {
   spendingAnalysis: {
     summary: "spent a lot",
-    metrics: [{ label: "Total", value: "₹4000", type: "danger" }],
+    metrics: [{ label: "Total", value: "â‚¹4000", type: "danger" }],
     anomalies: ["high food"],
   },
   budgetIntelligence: {
@@ -86,7 +86,7 @@ const VALID_REPORT = {
     emergencyFundStatus: "6 months covered",
     hypotheticalScenario: { title: "25% dip", advice: "cut discretionary" },
   },
-  suggestions: [{ category: "Food", suggestion: "cook more", potentialSavings: "₹2000" }],
+  suggestions: [{ category: "Food", suggestion: "cook more", potentialSavings: "â‚¹2000" }],
 };
 
 const ENV_KEYS = ["GROQ_CHAT_ENABLED", "GROQ_API_KEY", "GEMINI_API_KEY"] as const;
@@ -137,7 +137,7 @@ describe("POST /api/analyze", () => {
     process.env.GEMINI_API_KEY = "test-gemini-key";
     mockCreate.mockReset();
     mockGetServerSession.mockResolvedValue({
-      user: { id: "user-1", email: "t@example.com" },
+      user: { id: "64a1f9c7b6d8e5a3f1c0b2a1", email: "t@example.com" },
     });
     setupDataMocks();
   });
@@ -175,7 +175,7 @@ describe("POST /api/analyze", () => {
     });
     expect(mockAiUsageLogCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        userId: "user-1",
+        userId: "64a1f9c7b6d8e5a3f1c0b2a1",
         callType: "analyze",
         intent: "analysis_report",
         fallbackUsed: false,

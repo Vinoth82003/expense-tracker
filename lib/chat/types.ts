@@ -5,6 +5,7 @@ export type ChatMessage = {
   role: ChatRole;
   text: string;
   timestamp?: Date;
+  operations?: any[];
 };
 
 export type ChatAPIRequest = {
@@ -22,7 +23,9 @@ export type ChatAPIResponse = {
   success?: boolean;
   followUp?: { type: string; payload?: any };
   /** Custom window event name dispatched to sync DashboardContext in real-time */
-  eventType?: "expenseAdded" | "incomeAdded" | "budgetUpdated";
+  eventType?: "expenseAdded" | "incomeAdded" | "budgetUpdated" | "batchTransactionsAdded";
+  operations?: any[];
+  data?: any;
   context?: any; // Allow passing back context state
   confidence?: {
     intent: string;

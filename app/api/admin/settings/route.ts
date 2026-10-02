@@ -10,7 +10,7 @@ const defaultFeatureFlags = DEFAULT_FEATURE_FLAGS;
 const defaultAiSettings = {
   maxReports: 3,
   maxTokens: 4096,
-  model: "gemini-1.5-flash",
+  model: "gemini-2.5-flash",
   quotaAlertThreshold: 80,
   costPer1k: 0.05
 };

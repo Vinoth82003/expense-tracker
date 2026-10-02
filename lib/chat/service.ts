@@ -44,6 +44,14 @@ export async function sendChatMessage(
         await sendChatTelemetry("chat.error", telemetryPayload);
       }
 
+      // An admin-disabled Sage or an exhausted daily cap is a normal
+      // conversation state, not a transport failure. The route returns a
+      // Sage-branded `reply` for these, so surface it as an assistant message
+      // rather than throwing it into the red error banner.
+      if (errorBody?.aiDisabled && errorBody?.reply) {
+        return errorBody as ChatAPIResponse;
+      }
+
       throw new Error(errorBody?.error || "Unable to send the chat request.");
     }
 

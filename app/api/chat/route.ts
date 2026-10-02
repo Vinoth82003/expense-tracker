@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getChatIntent } from "@/lib/chat/intent";
 import {
   createExpense,
@@ -19,11 +20,26 @@ import { analyzeInput } from "@/lib/chat/ai/engine";
 import { maybeGroqNLU } from "@/lib/chat/ai/nlu";
 import { answerFreeFormQuestion } from "@/lib/chat/ai/freeform";
 import { fetchCategories } from "@/lib/chat/v1/api-gateway";
+import { extractFinancialIntent } from "@/lib/chat/v2/batch-extractor";
+import { executeOperationsBatch, executeQuery } from "@/lib/chat/v2/batch-executor";
 
 // V1 imports kept for test compatibility — no longer used in production V2 path
 
 const CHAT_RATE_LIMIT_MAX = Number(process.env.CHAT_RATE_LIMIT_MAX || 20);
 const CHAT_RATE_LIMIT_WINDOW_MS = Number(process.env.CHAT_RATE_LIMIT_WINDOW_MS || 60 * 1000);
+
+/**
+ * Sage-branded fallback copy for when the admin kill-switch is off (403) or the
+ * daily AI cap is exhausted (429). Returned as `reply` alongside `error` so the
+ * chat panel can render it as a normal Sage message instead of a raw error
+ * banner, while `error` still carries the short string for telemetry.
+ */
+function sageUnavailableReply(status: 403 | 429): string {
+  if (status === 429) {
+    return "You've reached your daily AI message limit. Your tracked expenses and budgets are unaffected — you can keep logging transactions manually, or come back tomorrow to chat with Sage again.";
+  }
+  return "Sage AI is currently disabled by the administrator. I can't read or write anything right now, but your expense tracking keeps working as usual — you can still add, edit, and review transactions manually until Sage is turned back on.";
+}
 
 export async function POST(request: Request) {
   try {
@@ -64,7 +80,15 @@ export async function POST(request: Request) {
         undefined,
         userId,
       );
-      return NextResponse.json({ error: aiAccess.error }, { status: aiAccess.status });
+      return NextResponse.json(
+        {
+          error: aiAccess.error,
+          reply: sageUnavailableReply(aiAccess.status),
+          success: false,
+          aiDisabled: true,
+        },
+        { status: aiAccess.status },
+      );
     }
 
     const body = await request.json();
@@ -85,6 +109,55 @@ export async function POST(request: Request) {
           { error: "Message blocked for safety." },
           { status: 400 },
         );
+      }
+    }
+
+    // Sage v2: Production Multi-Transaction LLM Extractor & Executor
+    if (!isMocked && !body?.details && !body?.intentType && !body?.context?.v2?.session && message) {
+      const userCats = await prisma.category.findMany({
+        where: { OR: [{ userId: null }, { userId }] },
+        select: { name: true },
+      });
+      const catNames = userCats.map((c) => c.name);
+
+      const extraction = await extractFinancialIntent(
+        message,
+        userId,
+        catNames,
+        body?.context?.conversation || body?.context?.lastTurns || []
+      );
+
+      if (extraction.degraded) {
+        // Every AI engine was unreachable. Surface the extractor's service
+        // status message as-is; re-handling the text through the legacy engine
+        // would replace it with a confusing unrelated error.
+        return NextResponse.json({
+          reply: extraction.reply,
+          success: false,
+          aiUnavailable: true,
+        });
+      }
+
+      if (extraction.type === "TRANSACTION_BATCH" && extraction.operations?.length) {
+        const batchRes = await executeOperationsBatch(userId, extraction.operations, extraction.reply);
+        return NextResponse.json({
+          reply: batchRes.reply,
+          success: true,
+          eventType: batchRes.eventType,
+          data: batchRes.data,
+          operations: extraction.operations,
+        });
+      } else if (extraction.type === "QUERY" && extraction.queryKind) {
+        const queryReply = await executeQuery(userId, extraction.queryKind, extraction.queryParam);
+        return NextResponse.json({
+          reply: queryReply,
+          success: true,
+        });
+      } else if (extraction.type === "GREETING" || extraction.type === "FREEFORM") {
+        return NextResponse.json({
+          reply: extraction.reply,
+          success: true,
+        });
       }
     }
 

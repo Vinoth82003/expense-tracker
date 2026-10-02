@@ -27,6 +27,7 @@ export function estimateCostUsd(promptTokens: number, outputTokens: number): num
 
 export function logAiUsage(input: AiUsageInput): void {
   const { userId, callType, intent, promptTokens, outputTokens, latencyMs, fallbackUsed } = input;
+  if (!userId || !/^[0-9a-fA-F]{24}$/.test(userId)) return;
   const costUsd = estimateCostUsd(promptTokens || 0, outputTokens || 0);
 
   prisma.aiUsageLog

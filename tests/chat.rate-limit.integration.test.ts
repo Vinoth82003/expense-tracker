@@ -41,6 +41,26 @@ vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/chat/intent", () => ({ getChatIntent: vi.fn() }));
 
+// Keep this integration test hermetic. Without these mocks the route runs the
+// real Sage v2 path, so every one of the N+1 requests makes a live Groq call
+// (~1s) and a live prisma.category.findMany for the user's categories (~1.5s),
+// which pushed the suite past its timeout. The subject of this test is the rate
+// limiter, so the AI gate, category lookup and extractor are all stubbed.
+vi.mock("@/lib/ai/access", () => ({ checkAiAccess: async () => ({ allowed: true }) }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: { category: { findMany: async () => [{ name: "Groceries" }] } },
+}));
+vi.mock("@/lib/chat/v2/batch-extractor", () => ({
+  extractFinancialIntent: vi.fn(async () => ({
+    type: "FREEFORM",
+    reply: "pong",
+  })),
+}));
+vi.mock("@/lib/chat/v2/batch-executor", () => ({
+  executeOperationsBatch: vi.fn(),
+  executeQuery: vi.fn(),
+}));
+
 const { POST } = await import("../app/api/chat/route");
 const { getServerSession } = await import("next-auth");
 const { getChatIntent } = await import("@/lib/chat/intent");

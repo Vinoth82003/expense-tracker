@@ -368,8 +368,8 @@ export default function AdminSettingsPage() {
                 <div className="space-y-2 col-span-2">
                   <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Gemini model</label>
                   <select value={aiSettings.model} onChange={e => setAiSettings({...aiSettings, model: e.target.value})} className="w-full p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 appearance-none text-[var(--admin-text-primary)]">
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (High Accuracy)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast)</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (High Accuracy)</option>
                   </select>
                 </div>
                 <div className="space-y-2">

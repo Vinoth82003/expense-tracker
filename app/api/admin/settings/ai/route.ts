@@ -15,7 +15,7 @@ export async function PATCH(req: NextRequest) {
     const settingsToSave = {
       maxReports: parseInt(aiConfig.maxReports) || 3,
       maxTokens: parseInt(aiConfig.maxTokens) || 4096,
-      model: aiConfig.model || "llama-3.3-70b-versatile",
+      model: aiConfig.model || "openai/gpt-oss-120b",
       quotaAlertThreshold: parseInt(aiConfig.quotaAlertThreshold) || 80,
       costPer1k: parseFloat(aiConfig.costPer1k) || 0.05
     };

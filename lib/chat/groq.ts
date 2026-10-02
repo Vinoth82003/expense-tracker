@@ -66,7 +66,9 @@ export type GroqNLGResult = {
   model: string;
 };
 
-const DEFAULT_CHAT_MODEL = "llama-3.3-70b-versatile";
+// Groq decommissioned the llama-3.x chat models; gpt-oss-120b is the current
+// general-purpose chat model that supports OpenAI-compatible JSON mode.
+const DEFAULT_CHAT_MODEL = "openai/gpt-oss-120b";
 
 const TIMEOUTS_MS: Record<GroqCallKind, number> = {
   nlu: 10_000,
@@ -75,7 +77,11 @@ const TIMEOUTS_MS: Record<GroqCallKind, number> = {
 };
 
 const MAX_TOKENS: Record<GroqCallKind, number> = {
-  nlu: 200,
+  // Reasoning models (gpt-oss) emit a reasoning block before the JSON body, so
+  // the budget must cover reasoning plus a full multi-transaction batch. At 200
+  // tokens Groq returned 400 json_validate_failed ("max completion tokens
+  // reached before generating a valid document") on ordinary messages.
+  nlu: 1024,
   nlg: 400,
   analyze: 1024,
 };

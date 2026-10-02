@@ -70,7 +70,7 @@ class Logger {
             message,
             details: details ? (typeof details === "string" ? details : JSON.stringify(details)) : null,
             ip,
-            userId,
+            userId: (userId && /^[0-9a-fA-F]{24}$/.test(userId)) ? userId : null,
           },
         });
       }

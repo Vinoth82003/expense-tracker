@@ -116,7 +116,12 @@ describe("groq provider", () => {
 
     expect(result.data).toEqual({ intent: "add_expense", amount: 75 });
     expect(result.usage).toEqual({ promptTokens: 10, outputTokens: 4, totalTokens: 14 });
-    expect(result.model).toBe("llama-3.3-70b-versatile");
+    expect(result.model).toBe("openai/gpt-oss-120b");
+    // gpt-oss is a reasoning model: it emits a reasoning block before the JSON
+    // body. At 200 tokens Groq rejected ordinary messages with 400
+    // json_validate_failed ("max completion tokens reached before generating a
+    // valid document"), and the budget must also fit a large multi-transaction batch.
+    expect(mockCreate.mock.calls[0][0].max_tokens).toBeGreaterThanOrEqual(1024);
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         response_format: { type: "json_object" },

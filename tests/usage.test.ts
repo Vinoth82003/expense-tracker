@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+﻿import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockCreate, mockCreatedWith } = vi.hoisted(() => {
   const mockCreate = vi.fn().mockResolvedValue({});
@@ -44,7 +44,7 @@ describe("logAiUsage", () => {
 
   it("persists a usage row with computed cost", () => {
     logAiUsage({
-      userId: "u1",
+      userId: "64a1f9c7b6d8e5a3f1c0b2a1",
       callType: "nlu",
       intent: "add_expense",
       promptTokens: 1000,
@@ -53,7 +53,7 @@ describe("logAiUsage", () => {
     });
 
     mockCreatedWith({
-      userId: "u1",
+      userId: "64a1f9c7b6d8e5a3f1c0b2a1",
       callType: "nlu",
       intent: "add_expense",
       promptTokens: 1000,
@@ -66,7 +66,7 @@ describe("logAiUsage", () => {
 
   it("marks fallbackUsed for fallback events", () => {
     logAiUsage({
-      userId: "u1",
+      userId: "64a1f9c7b6d8e5a3f1c0b2a1",
       callType: "nlg",
       intent: "query_expense",
       fallbackUsed: true,
@@ -78,7 +78,7 @@ describe("logAiUsage", () => {
   it("never throws when persistence fails", () => {
     mockCreate.mockRejectedValueOnce(new Error("db down"));
     expect(() =>
-      logAiUsage({ userId: "u1", callType: "analyze", intent: null }),
+      logAiUsage({ userId: "64a1f9c7b6d8e5a3f1c0b2a1", callType: "analyze", intent: null }),
     ).not.toThrow();
   });
 });
