@@ -94,10 +94,21 @@ export default function AdminSettingsPage() {
   };
 
   const toggleFlag = async (key: string, enabled: boolean) => {
-    if (key === "aiAnalysis" && !enabled) {
-      const isConfirmed = await confirm({
+    const AI_FLAG_COPY: Record<string, { title: string; message: string }> = {
+      aiAnalysis: {
         title: "Disable AI Analysis?",
         message: "This will prevent all users from generating AI reports. Are you sure?",
+      },
+      chatAssistant: {
+        title: "Disable Sage Assistant?",
+        message: "This hides the assistant button and blocks /api/chat for all users. Are you sure?",
+      },
+    };
+
+    if (!enabled && AI_FLAG_COPY[key]) {
+      const isConfirmed = await confirm({
+        title: AI_FLAG_COPY[key].title,
+        message: AI_FLAG_COPY[key].message,
         danger: true
       });
       if (!isConfirmed) return;
@@ -263,6 +274,7 @@ export default function AdminSettingsPage() {
 
   const FLAG_DEFS = [
     { key: "aiAnalysis", name: "AI analysis", desc: "Enables /analyze page and /api/analyze endpoint for all users", affects: "All Users" },
+    { key: "chatAssistant", name: "Sage chat assistant", desc: "Enables the Sage assistant button and /api/chat endpoint for all users", affects: "All Users" },
     { key: "pdfExport", name: "PDF export", desc: "Allows users to export AI reports as PDF", affects: "All Users" },
     { key: "twoFactorAuth", name: "Two-factor auth", desc: "Allows users to enable 2FA. Existing 2FA sessions remain active.", affects: "All Users" },
     { key: "pwaPrompt", name: "PWA install prompt", desc: "Shows 'Add to home screen' prompt", affects: "Mobile Users" },

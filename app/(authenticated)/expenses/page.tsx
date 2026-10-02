@@ -29,7 +29,8 @@ import {
   Save,
 } from "lucide-react";
 import { useUI } from "@/context/UIContext";
-import { useExpenses, useMutations } from "@/context/DataContext";
+import { useExpenses } from "@/context/DataContext";
+import { useUser } from "@/context/UserContext";
 
 interface Expense {
   id: string;
@@ -71,7 +72,7 @@ export default function ExpensesPage() {
   });
 
   const { data: expenses, loading, error, refetch } = useExpenses(currentMonth);
-  const mutations = useMutations();
+  const user = useUser();
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -150,7 +151,7 @@ export default function ExpensesPage() {
 
     setSaving(true);
     try {
-      await mutations.updateExpense(selectedExpense.id, {
+      await user.updateExpense(selectedExpense.id, {
         amount,
         category: form.category,
         subcategory: form.subcategory.trim(),
@@ -179,7 +180,7 @@ export default function ExpensesPage() {
 
     setDeleting(true);
     try {
-      await mutations.deleteExpense(selectedExpense.id);
+      await user.deleteExpense(selectedExpense.id);
       toast.success("Transaction deleted");
       closeDetail();
     } catch (e: any) {

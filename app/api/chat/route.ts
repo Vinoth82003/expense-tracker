@@ -11,6 +11,7 @@ import {
   updateBudget,
 } from "@/lib/chat/server";
 import { checkRateLimit, checkUserRateLimit } from "@/lib/rateLimit";
+import { checkAiAccess } from "@/lib/ai/access";
 import { moderateMessage } from "@/lib/chat/moderation";
 import { logger } from "@/lib/logger";
 import { handleChatV2 } from "@/lib/chat/v2/engine";
@@ -51,6 +52,20 @@ export async function POST(request: Request) {
       CHAT_RATE_LIMIT_WINDOW_MS,
     );
     if (userLimitResult) return userLimitResult;
+
+    // Admin AI kill-switch + daily quota. Must run before any model call and
+    // before the body is read, so a disabled feature costs nothing.
+    const aiAccess = await checkAiAccess(userId, "chat");
+    if (!aiAccess.allowed) {
+      await logger.info(
+        "Chat blocked by AI policy",
+        { userId, status: aiAccess.status, reason: aiAccess.error },
+        "API",
+        undefined,
+        userId,
+      );
+      return NextResponse.json({ error: aiAccess.error }, { status: aiAccess.status });
+    }
 
     const body = await request.json();
     const message = body?.message?.toString().trim();

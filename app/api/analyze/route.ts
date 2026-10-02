@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GoogleGenAI } from "@google/genai";
 import { sanitizePii } from "@/lib/pii";
+import { checkAiAccess } from "@/lib/ai/access";
 import { isGroqChatEnabled, callGroqAnalyze } from "@/lib/chat/groq";
 import { buildAnalysisSystemPrompt, validateAnalysisReport } from "@/lib/chat/ai/analyze";
 import { estimateCostUsd, logAiUsage } from "@/lib/chat/ai/usage";
@@ -71,11 +72,11 @@ export async function POST(req: NextRequest) {
       return acc;
     }, {});
     
-    const featureFlags = settingsMap.featureFlags || { aiAnalysis: true };
     const aiSettings = settingsMap.aiSettings || { maxReports: 3 };
 
-    if (!featureFlags.aiAnalysis) {
-      return NextResponse.json({ error: "AI Analysis feature is currently disabled by the administrator." }, { status: 403 });
+    const aiAccess = await checkAiAccess(userId, "analyze");
+    if (!aiAccess.allowed) {
+      return NextResponse.json({ error: aiAccess.error }, { status: aiAccess.status });
     }
 
     const today = new Date();

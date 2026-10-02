@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useIncome, useMutations } from "@/context/DataContext";
+import { useIncome } from "@/context/DataContext";
+import { useUser } from "@/context/UserContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -66,7 +67,7 @@ export default function IncomePage() {
   });
 
   const { data: incomes, loading, error, refetch } = useIncome(currentMonth);
-  const mutations = useMutations();
+  const user = useUser();
 
   const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -134,7 +135,7 @@ export default function IncomePage() {
 
     setSaving(true);
     try {
-      await mutations.updateIncome(selectedIncome.id, {
+      await user.updateIncome(selectedIncome.id, {
         amount, source: form.source, note: form.note, date: form.date,
       });
       toast.success("Income updated");
@@ -159,7 +160,7 @@ export default function IncomePage() {
 
     setDeleting(true);
     try {
-      await mutations.deleteIncome(selectedIncome.id);
+      await user.deleteIncome(selectedIncome.id);
       toast.success("Income deleted");
       closeDetail();
     } catch (e: any) {
@@ -559,7 +560,7 @@ export default function IncomePage() {
 
                       setSaving(true);
                       try {
-                        await mutations.createIncome({
+                        await user.addIncome({
                           amount, source: form.source, note: form.note, date: form.date,
                         });
                         toast.success("Income recorded!");

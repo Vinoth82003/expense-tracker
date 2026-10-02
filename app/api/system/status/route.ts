@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getFeatureFlags } from "@/lib/ai/access";
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function GET(req: NextRequest) {
     const settingsRows = await (prisma as any).settings.findMany({
       where: {
         key: {
-          in: ["maintenance", "featureFlags"]
+          in: ["maintenance"]
         }
       }
     });
@@ -24,7 +25,9 @@ export async function GET(req: NextRequest) {
     }, {});
 
     const maintenance = settingsMap.maintenance || { enabled: false, message: "" };
-    const featureFlags = settingsMap.featureFlags || {};
+    // Merged over defaults so the client always sees a definite value for every
+    // flag, including ones added after this row was written.
+    const featureFlags = await getFeatureFlags();
 
     let userStatus: { isSuspended: boolean; suspensionReason: string | null } = {
       isSuspended: false,

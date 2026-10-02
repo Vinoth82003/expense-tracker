@@ -30,9 +30,12 @@ import {
   Users,
   MessageSquare,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { AddExpenseModal } from "@/components/expenses/AddExpenseModal";
+import { AddIncomeModal } from "@/components/income/AddIncomeModal";
 import { ChatPanel } from "@/components/chat/ChatPanel";
+import { UserProvider } from "@/context/UserContext";
 import { DashboardProvider } from "@/context/DashboardContext";
 
 import { useTheme } from "@/components/providers/ThemeProvider";
@@ -43,7 +46,21 @@ import { SuspendedOverlay } from "@/components/layout/SuspendedOverlay";
 import { useModal } from "@/components/providers/ModalProvider";
 import { DataProvider } from "@/context/DataContext";
 
-const navGroups = [
+type NavItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  premium?: boolean;
+  /** Feature flag that must be enabled for this item to be shown. */
+  requiresFlag?: string;
+};
+
+type NavGroup = {
+  title: string;
+  items: NavItem[];
+};
+
+const navGroups: NavGroup[] = [
   {
     title: "Intelligence",
     items: [
@@ -53,6 +70,7 @@ const navGroups = [
         href: "/analyze",
         icon: BrainCog,
         premium: true,
+        requiresFlag: "aiAnalysis",
       },
       { name: "Visual Reports", href: "/reports", icon: PieChart },
     ],
@@ -91,9 +109,47 @@ export default function DashboardLayout({
   const { confirm } = useModal();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
+  const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [featureFlags, setFeatureFlags] = useState<any>({ aiAnalysis: true });
   const { theme, toggleTheme } = useTheme();
+
+  // Admin kill-switch: hide any nav entry whose feature flag is off.
+  const visibleNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.requiresFlag || featureFlags[item.requiresFlag] !== false,
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const chatEnabled = featureFlags.chatAssistant !== false;
+  const analysisEnabled = featureFlags.aiAnalysis !== false;
+
+  // The primary "+" action follows the current route: income pages add income,
+  // everything else defaults to adding an expense.
+  const primaryAction: "expense" | "income" = pathname.startsWith("/income")
+    ? "income"
+    : "expense";
+  const primaryActionLabel =
+    primaryAction === "income" ? "Add Income" : "Add Expense";
+  const PrimaryIcon = primaryAction === "income" ? Banknote : Plus;
+  const openPrimaryAction = () =>
+    primaryAction === "income"
+      ? setIsAddIncomeOpen(true)
+      : setIsAddExpenseOpen(true);
+
+  // Modals live in the layout, which survives navigation — close them when the
+  // route changes so a modal does not outlive the page that opened it.
+  useEffect(() => {
+    setIsAddExpenseOpen(false);
+    setIsAddIncomeOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!chatEnabled) setIsChatOpen(false);
+  }, [chatEnabled]);
 
   useEffect(() => {
     fetch("/api/system/status")
@@ -119,11 +175,14 @@ export default function DashboardLayout({
     }
 
     const handleOpenAddExpense = () => setIsAddExpenseOpen(true);
+    const handleOpenAddIncome = () => setIsAddIncomeOpen(true);
     window.addEventListener("open-add-expense", handleOpenAddExpense);
+    window.addEventListener("open-add-income", handleOpenAddIncome);
 
     return () => {
       window.removeEventListener("appinstalled", handleAppInstalled);
       window.removeEventListener("open-add-expense", handleOpenAddExpense);
+      window.removeEventListener("open-add-income", handleOpenAddIncome);
     };
   }, []);
 
@@ -136,6 +195,11 @@ export default function DashboardLayout({
       router.push("/onboarding");
       return;
     }
+    // Admin kill-switch: a stale bookmark or history entry must not reach a
+    // disabled feature page. Only redirect once flags have actually loaded.
+    if (analysisEnabled === false && pathname === "/analyze") {
+      router.replace("/dashboard");
+    }
     if (
       status === "authenticated" &&
       (session?.user as any)?.twoFactorEnabled
@@ -146,7 +210,7 @@ export default function DashboardLayout({
         router.push(`/verify-2fa?callbackUrl=${encodeURIComponent(pathname)}`);
       }
     }
-  }, [session, status, router, pathname]);
+  }, [session, status, router, pathname, analysisEnabled]);
 
   const handleLogout = async () => {
     const isConfirmed = await confirm({
@@ -227,7 +291,7 @@ export default function DashboardLayout({
         </div>
 
         <nav className="flex-1 overflow-y-auto no-scrollbar px-3 py-5 space-y-6">
-          {navGroups.map((group) => (
+          {visibleNavGroups.map((group) => (
             <div key={group.title} className="space-y-1">
               <h3 className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
                 {group.title}
@@ -334,11 +398,11 @@ export default function DashboardLayout({
 
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setIsAddExpenseOpen(true)}
+              onClick={openPrimaryAction}
               className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 transition-colors active:scale-[0.97] shadow-sm shadow-primary-500/20"
             >
-              <Plus size={15} />
-              Add
+              <PrimaryIcon size={15} />
+              {primaryActionLabel}
             </button>
 
             <div className="flex items-center gap-0.5 bg-surface border border-border-subtle rounded-lg p-0.5">
@@ -424,7 +488,7 @@ export default function DashboardLayout({
               </div>
 
               <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
-                {navGroups.map((group) => (
+                {visibleNavGroups.map((group) => (
                   <div key={group.title} className="space-y-1">
                     <h3 className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
                       {group.title}
@@ -474,23 +538,28 @@ export default function DashboardLayout({
       </AnimatePresence>
 
       {/* Floating Action Button (FAB) for Chat */}
-      <button
-        onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-xl shadow-indigo-600/30 hover:scale-110 active:scale-95 transition-all chat-fab-ring"
-        aria-label="Open Sage Assistant"
-      >
-        <Sparkles size={22} className="animate-pulse" />
-      </button>
+      {chatEnabled && (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-xl shadow-indigo-600/30 hover:scale-110 active:scale-95 transition-all chat-fab-ring"
+          aria-label="Open Sage Assistant"
+        >
+          <Sparkles size={22} className="animate-pulse" />
+        </button>
+      )}
 
-      {/* Mobile Add Expense Button (shifted to the left slightly or stacked with FAB) */}
+      {/* Mobile primary action — mirrors the route, same as the desktop header button */}
       <button
-        onClick={() => setIsAddExpenseOpen(true)}
+        onClick={openPrimaryAction}
+        aria-label={primaryActionLabel}
         className="sm:hidden fixed bottom-6 right-24 w-14 h-14 rounded-2xl bg-primary-500 text-white shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform"
       >
-        <Plus size={32} />
+        <PrimaryIcon size={primaryAction === "income" ? 26 : 32} />
       </button>
 
-      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      {chatEnabled && (
+        <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      )}
 
       <AddExpenseModal
         isOpen={isAddExpenseOpen}
@@ -499,16 +568,26 @@ export default function DashboardLayout({
           // DashboardContext handles the 'expenseAdded' custom event triggered inside AddExpenseModal
         }}
       />
+
+      <AddIncomeModal
+        isOpen={isAddIncomeOpen}
+        onClose={() => setIsAddIncomeOpen(false)}
+        onSuccess={() => {
+          // DashboardContext handles the 'incomeAdded' custom event triggered inside AddIncomeModal
+        }}
+      />
     </div>
   );
 
   return (
     <DataProvider>
-      <DashboardProvider>
-        <SystemStatusChecker />
-        <ActivityTracker />
-        {(session?.user as any)?.isSuspended ? <SuspendedOverlay /> : content}
-      </DashboardProvider>
+      <UserProvider>
+        <DashboardProvider>
+          <SystemStatusChecker />
+          <ActivityTracker />
+          {(session?.user as any)?.isSuspended ? <SuspendedOverlay /> : content}
+        </DashboardProvider>
+      </UserProvider>
     </DataProvider>
   );
 }

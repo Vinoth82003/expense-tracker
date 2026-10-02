@@ -2,6 +2,7 @@ import { verifyAdminSession } from "@/lib/admin-auth";
 import { getAdminInfo } from "@/lib/admin/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_FEATURE_FLAGS } from "@/lib/ai/access";
 
 export async function PATCH(
   req: NextRequest,
@@ -15,34 +16,36 @@ export async function PATCH(
     const { key } = await params;
     const { enabled } = await req.json();
 
+    if (typeof enabled !== "boolean") {
+      return NextResponse.json({ error: "enabled must be a boolean" }, { status: 400 });
+    }
+
     // Fetch existing feature flags
     const existing = await (prisma as any).settings.findUnique({
       where: { key: "featureFlags" }
     });
 
-    let flags: any = {
-      aiAnalysis: true,
-      pdfExport: true,
-      twoFactorAuth: true,
-      pwaPrompt: true,
-      budgetAlerts: true,
-      customSubcategories: true
-    };
-
+    // Merge over defaults so flags added after this row was written (e.g.
+    // chatAssistant) are accepted instead of rejected as unknown keys.
+    let stored: Record<string, unknown> = {};
     if (existing) {
       try {
-        flags = JSON.parse(existing.value);
+        stored = JSON.parse(existing.value);
       } catch (e) {
         // Fallback to default
       }
     }
 
-    // Update the specific flag
-    if (Object.keys(flags).includes(key)) {
-      flags[key] = enabled;
-    } else {
-       return NextResponse.json({ error: "Invalid feature flag key" }, { status: 400 });
+    const flags: Record<string, boolean> = {
+      ...DEFAULT_FEATURE_FLAGS,
+      ...stored,
+    } as Record<string, boolean>;
+
+    if (!Object.prototype.hasOwnProperty.call(DEFAULT_FEATURE_FLAGS, key)) {
+      return NextResponse.json({ error: "Invalid feature flag key" }, { status: 400 });
     }
+
+    flags[key] = enabled;
 
     // Save back to DB
     await (prisma as any).settings.upsert({

@@ -1,16 +1,11 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_FEATURE_FLAGS } from "@/lib/ai/access";
 
-// Default Configurations
-const defaultFeatureFlags = {
-  aiAnalysis: true,
-  pdfExport: true,
-  twoFactorAuth: true,
-  pwaPrompt: true,
-  budgetAlerts: true,
-  customSubcategories: true
-};
+// Default Configurations — feature flags are shared with the runtime gate in
+// lib/ai/access.ts so the admin form and the enforced defaults cannot drift.
+const defaultFeatureFlags = DEFAULT_FEATURE_FLAGS;
 
 const defaultAiSettings = {
   maxReports: 3,

@@ -51,6 +51,14 @@ export function cacheKey(...parts: string[]): string {
   return parts.join("::");
 }
 
+/**
+ * Canonical list keys. The dashboard store and the per-page domain hooks must
+ * agree on these, otherwise the same month is fetched (and cached) twice.
+ * Values are the full API envelope, e.g. { expenses: [...] }.
+ */
+export const expenseListKey = (month: string) => cacheKey("expenses", month);
+export const incomeListKey = (month: string) => cacheKey("income", month);
+
 export function matchPrefix(key: string, prefix: string): boolean {
   return key === prefix || key.startsWith(prefix + "::");
 }
@@ -247,12 +255,12 @@ export function useData() {
 
 // ──────────────── Domain Hooks ────────────────
 
-type CurrencyData = { amount: number; category: string; subcategory: string; note: string | null; date: string }[];
+type CurrencyData = { id?: string; amount: number; category: string; subcategory: string; note: string | null; date: string }[];
 type CategoryData = { id: string; name: string; type: string }[];
 
 export function useExpenses(month: string) {
   const { fetchCached, invalidate, subscribe } = useData();
-  const key = cacheKey("expenses", "list", month);
+  const key = expenseListKey(month);
 
   useEffect(() => {
     const unsub = subscribe(() => {});
@@ -269,13 +277,13 @@ export function useExpenses(month: string) {
     let cancelled = false;
     setState((s) => ({ ...s, loading: true, error: null }));
 
-    fetchCached<CurrencyData>(
+    fetchCached<{ expenses: CurrencyData }>(
       key,
-      () => fetch(`/api/expenses?month=${month}`).then(handleResponse).then(r => r.expenses),
+      () => fetch(`/api/expenses?month=${month}`).then(handleResponse),
       TTL.DEFAULT
     )
       .then((d) => {
-        if (!cancelled) setState({ data: d, loading: false, error: null });
+        if (!cancelled) setState({ data: d.expenses ?? [], loading: false, error: null });
       })
       .catch((e) => {
         if (!cancelled) setState({ data: null, loading: false, error: e.message });
@@ -288,11 +296,11 @@ export function useExpenses(month: string) {
 
   const refetch = useCallback(() => {
     invalidate(key);
-    return fetchCached<CurrencyData>(
+    return fetchCached<{ expenses: CurrencyData }>(
       key,
-      () => fetch(`/api/expenses?month=${month}`).then(handleResponse).then(r => r.expenses),
+      () => fetch(`/api/expenses?month=${month}`).then(handleResponse),
       0
-    );
+    ).then((d) => d.expenses ?? []);
   }, [key, month, invalidate, fetchCached]);
 
   return { ...state, refetch };
@@ -300,7 +308,7 @@ export function useExpenses(month: string) {
 
 export function useIncome(month: string) {
   const { fetchCached, invalidate, subscribe } = useData();
-  const key = cacheKey("income", "list", month);
+  const key = incomeListKey(month);
 
   useEffect(() => {
     const unsub = subscribe(() => {});
@@ -317,13 +325,13 @@ export function useIncome(month: string) {
     let cancelled = false;
     setState((s) => ({ ...s, loading: true, error: null }));
 
-    fetchCached<CurrencyData>(
+    fetchCached<{ incomes: CurrencyData }>(
       key,
-      () => fetch(`/api/income?month=${month}`).then(handleResponse).then(r => r.incomes),
+      () => fetch(`/api/income?month=${month}`).then(handleResponse),
       TTL.DEFAULT
     )
       .then((d) => {
-        if (!cancelled) setState({ data: d, loading: false, error: null });
+        if (!cancelled) setState({ data: d.incomes ?? [], loading: false, error: null });
       })
       .catch((e) => {
         if (!cancelled) setState({ data: null, loading: false, error: e.message });
@@ -336,11 +344,11 @@ export function useIncome(month: string) {
 
   const refetch = useCallback(() => {
     invalidate(key);
-    return fetchCached<CurrencyData>(
+    return fetchCached<{ incomes: CurrencyData }>(
       key,
-      () => fetch(`/api/income?month=${month}`).then(handleResponse).then(r => r.incomes),
+      () => fetch(`/api/income?month=${month}`).then(handleResponse),
       0
-    );
+    ).then((d) => d.incomes ?? []);
   }, [key, month, invalidate, fetchCached]);
 
   return { ...state, refetch };
