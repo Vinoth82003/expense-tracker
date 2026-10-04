@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { sendAdminAccountDeletionNotification } from "@/lib/mail";
 
 export async function DELETE() {
   try {
@@ -25,6 +26,12 @@ export async function DELETE() {
     await prisma.user.delete({
       where: { id: user.id }
     });
+
+    // Notify the admin last. Fire-and-forget so an SMTP outage can never turn a
+    // completed deletion into an error response for the user.
+    sendAdminAccountDeletionNotification(user.email, user.name || "").catch((err) =>
+      console.error("Account-deletion admin notification failed:", err)
+    );
 
     return NextResponse.json({ message: "Account successfully deleted." });
 

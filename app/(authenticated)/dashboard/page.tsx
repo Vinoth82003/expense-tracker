@@ -27,10 +27,27 @@ import {
   Target,
   PieChart as PieChartIcon,
   Settings2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useDashboard } from "@/context/DashboardContext";
+import { useExpenses, useIncome } from "@/context/DataContext";
+
+const monthKeyOf = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+const shiftMonth = (key: string, offset: number) => {
+  const [year, month] = key.split("-").map(Number);
+  return monthKeyOf(new Date(year, month - 1 + offset, 1));
+};
+
+const monthLabel = (key: string, style: "long" | "short" = "long") =>
+  new Date(`${key}-01`).toLocaleDateString("en-IN", {
+    month: style,
+    year: "numeric",
+  });
 
 const COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#f59e0b", "#ec4899", "#10b981"];
 const CATEGORY_ICONS: Record<string, typeof Wallet> = {
@@ -89,16 +106,45 @@ function KpiCard({
 export default function DashboardPage() {
   const { data: session } = useSession();
   const {
-    expenses,
-    incomes,
-    prevExpenses,
-    prevIncomes,
-    monthlyLimit,
-    expenseMode,
-    loading,
-    isTogglingMode,
-    toggleExpenseMode,
-  } = useDashboard();
+monthlyLimit,
+  expenseMode,
+  loading: contextLoading,
+  isTogglingMode,
+  toggleExpenseMode,
+} = useDashboard();
+
+  // The dashboard browses its own month. UserContext stays pinned to the current
+  // month because chat/Sage writes and the monthly budget are both defined in
+  // terms of it; navigating here must not change what `useUser()` reports to the
+  // rest of the app. `useExpenses`/`useIncome` already accept any month and share
+  // the cache, so viewing the current month costs no extra request.
+  const thisMonth = monthKeyOf(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(thisMonth);
+  const isCurrentMonth = selectedMonth === thisMonth;
+
+  const { data: monthExpenses, loading: expensesLoading } = useExpenses(selectedMonth);
+  const { data: monthIncomes, loading: incomesLoading } = useIncome(selectedMonth);
+
+  const previousMonth = useMemo(() => shiftMonth(selectedMonth, -1), [selectedMonth]);
+  const { data: priorMonthExpenses } = useExpenses(previousMonth);
+  const { data: priorMonthIncomes } = useIncome(previousMonth);
+
+  // A shared empty array so the fallbacks below stay referentially stable and do
+// not invalidate the stats memo on every render.
+const NO_TRANSACTIONS: never[] = [];
+
+const expenses = monthExpenses ?? NO_TRANSACTIONS;
+  const incomes = monthIncomes ?? NO_TRANSACTIONS;
+  const prevExpenses = priorMonthExpenses ?? NO_TRANSACTIONS;
+  const prevIncomes = priorMonthIncomes ?? NO_TRANSACTIONS;
+  const loading = contextLoading || expensesLoading || incomesLoading;
+
+  const canGoForward = selectedMonth < thisMonth;
+
+  const daysInSelectedMonth = useMemo(() => {
+    const [year, month] = selectedMonth.split("-").map(Number);
+    return new Date(year, month, 0).getDate();
+  }, [selectedMonth]);
 
   const firstName = session?.user?.name?.split(" ")[0] || "there";
 
@@ -106,17 +152,27 @@ export default function DashboardPage() {
     const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
     const totalIncome = incomes.reduce((s, i) => s + i.amount, 0);
     const netBalance = totalIncome - totalSpent;
-    const remaining = monthlyLimit - totalSpent;
+
+    // Spend figures hold for any month. Budget pacing does not: "today" and
+    // "days left" only mean anything inside the current month, so a past month
+    // reports them as zero and the UI hides the pacing panels instead of showing
+    // a misleading bar.
+    const remaining = isCurrentMonth ? monthlyLimit - totalSpent : 0;
 
     const today = new Date();
     const currentDay = today.getDate();
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
     const daysLeft = daysInMonth - currentDay + 1;
-    const dailyAverage = totalSpent / (currentDay || 1);
+    const dailyAverage = isCurrentMonth ? totalSpent / (currentDay || 1) : 0;
 
     const todayStr = today.toISOString().split("T")[0];
-    const todaySpend = expenses.filter((e) => e.date.startsWith(todayStr)).reduce((s, e) => s + e.amount, 0);
-    const dailyLimit = expenseMode === "limit" ? Math.max(0, (monthlyLimit - (totalSpent - todaySpend)) / daysLeft) : 0;
+    const todaySpend = isCurrentMonth
+      ? expenses.filter((e) => e.date.startsWith(todayStr)).reduce((s, e) => s + e.amount, 0)
+      : 0;
+    const dailyLimit =
+      isCurrentMonth && expenseMode === "limit"
+        ? Math.max(0, (monthlyLimit - (totalSpent - todaySpend)) / daysLeft)
+        : 0;
     const todayUsagePercent = dailyLimit > 0 ? (todaySpend / dailyLimit) * 100 : 0;
 
     const needs = expenses.filter((e) => e.category === "Needs").reduce((s, e) => s + e.amount, 0);
@@ -154,7 +210,7 @@ export default function DashboardPage() {
       needsChartData: Array.from(needsCatMap.entries()).map(([n, v]) => ({ name: n, value: v })),
       wantsChartData: Array.from(wantsCatMap.entries()).map(([n, v]) => ({ name: n, value: v })),
     };
-  }, [expenses, incomes, prevExpenses, prevIncomes, expenseMode, monthlyLimit]);
+  }, [expenses, incomes, prevExpenses, prevIncomes, expenseMode, monthlyLimit, isCurrentMonth]);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -169,8 +225,7 @@ export default function DashboardPage() {
             Welcome back, {firstName}
           </h1>
           <p className="text-sm text-muted mt-1">
-            Here&apos;s your financial overview for{" "}
-            {new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
+            Here&apos;s your financial overview for {monthLabel(selectedMonth)}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -182,12 +237,49 @@ export default function DashboardPage() {
             <Settings2 size={14} className={expenseMode === "limit" ? "text-primary-500" : "text-muted"} />
             {expenseMode === "limit" ? "Budget Mode" : "Free Mode"}
           </button>
-          <div className="flex items-center gap-2 text-sm text-muted bg-surface border border-border-subtle px-3 py-2 rounded-xl">
-            <CalendarDays size={14} />
-            {new Date().toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+
+          {/* Month navigator */}
+          <div className="flex items-center bg-surface border border-border-subtle rounded-xl overflow-hidden">
+            <button
+              onClick={() => setSelectedMonth((m) => shiftMonth(m, -1))}
+              aria-label="Previous month"
+              className="p-2.5 text-muted hover:text-foreground hover:bg-surface-variant transition-colors"
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <div className="flex items-center gap-2 px-1 text-sm text-muted">
+              <CalendarDays size={14} />
+              <span className="font-semibold text-foreground whitespace-nowrap tabular-nums">
+                {monthLabel(selectedMonth, "short")}
+              </span>
+            </div>
+            <button
+              onClick={() => setSelectedMonth((m) => shiftMonth(m, 1))}
+              disabled={!canGoForward}
+              aria-label="Next month"
+              className="p-2.5 text-muted hover:text-foreground hover:bg-surface-variant transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted"
+            >
+              <ChevronRight size={15} />
+            </button>
           </div>
+
+          {!isCurrentMonth && (
+            <button
+              onClick={() => setSelectedMonth(thisMonth)}
+              className="text-xs font-semibold text-primary-500 hover:text-primary-600 whitespace-nowrap"
+            >
+              Back to current
+            </button>
+          )}
         </div>
       </motion.div>
+
+      {!isCurrentMonth && (
+        <p className="text-xs text-muted">
+          Viewing {monthLabel(selectedMonth)}. Budget limits and daily pacing apply to the
+          current month only, so they are hidden here.
+        </p>
+      )}
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -202,21 +294,34 @@ export default function DashboardPage() {
           loading={loading}
         />
         {expenseMode === "limit" ? (
-          <KpiCard
-            icon={Target}
-            label="Budget Left"
-            value={`\u20B9${Math.max(0, stats.remaining).toLocaleString("en-IN")}`}
-            color={stats.remaining >= 0 ? "bg-primary-500" : "bg-error"}
-            delay={0.2}
-            loading={loading}
-          />
+          isCurrentMonth ? (
+            <KpiCard
+              icon={Target}
+              label="Budget Left"
+              value={`\u20B9${Math.max(0, stats.remaining).toLocaleString("en-IN")}`}
+              color={stats.remaining >= 0 ? "bg-primary-500" : "bg-error"}
+              delay={0.2}
+              loading={loading}
+            />
+          ) : (
+            <KpiCard
+              icon={Activity}
+              label="Daily Avg"
+              value={`\u20B9${Math.round(
+                stats.totalSpent / (daysInSelectedMonth || 1)
+              ).toLocaleString("en-IN")}`}
+              color="bg-tertiary-500"
+              delay={0.2}
+              loading={loading}
+            />
+          )
         ) : (
           <KpiCard icon={Activity} label="Daily Avg" value={`\u20B9${Math.round(stats.dailyAverage).toLocaleString("en-IN")}`} color="bg-tertiary-500" delay={0.2} loading={loading} />
         )}
       </div>
 
       {/* Daily Budget Bar */}
-      {expenseMode === "limit" && monthlyLimit > 0 && (
+      {expenseMode === "limit" && monthlyLimit > 0 && isCurrentMonth && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}

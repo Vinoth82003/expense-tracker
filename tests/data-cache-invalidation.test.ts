@@ -179,6 +179,6 @@ describe("domain hooks revalidate on invalidation", () => {
   });
 
   it("the ttl sweep does not use the notifying clear", () => {
-    expect(source).toMatch(/setInterval\([\s\S]{0,120}storeRef\.current\.sweep\(\)/);
+    expect(source).toMatch(/setInterval\([\s\S]{0,120}store\.sweep\(\)/);
   });
 });

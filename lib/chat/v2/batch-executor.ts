@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ParsedOperation, QueryKind } from "./batch-extractor";
 import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
+import { ENTRY_SOURCE } from "@/lib/transaction-source";
 
 export interface BatchExecutionResult {
   success: boolean;
@@ -35,6 +36,7 @@ export async function executeOperationsBatch(
           subcategory: exp.subcategory || "Other",
           note: exp.note || null,
           date: exp.date ? new Date(exp.date) : new Date(),
+          entrySource: ENTRY_SOURCE.SAGE,
         },
       });
       createdExpenses.push(record);
@@ -48,6 +50,7 @@ export async function executeOperationsBatch(
           source: inc.source || "Others",
           note: inc.note || null,
           date: inc.date ? new Date(inc.date) : new Date(),
+          entrySource: ENTRY_SOURCE.SAGE,
         },
       });
       createdIncomes.push(record);

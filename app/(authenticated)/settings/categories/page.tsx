@@ -14,6 +14,8 @@ import {
   Tag,
   ShoppingCart,
   Sparkles,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { useModal } from "@/components/providers/ModalProvider";
 import { useCategories, useMutations } from "@/context/DataContext";
@@ -24,7 +26,11 @@ interface Category {
   name: string;
   type: string;
   isDefault?: boolean;
-  userId: string | null;
+  userId?: string | null;
+  /** Derived server-side: a Category row with no owner is shared/system. */
+  isSystem?: boolean;
+  /** This user's hide/unhide preference (system categories only). */
+  hidden?: boolean;
 }
 
 const TYPE_ICONS: Record<string, typeof ShoppingCart> = {
@@ -32,18 +38,30 @@ const TYPE_ICONS: Record<string, typeof ShoppingCart> = {
   Wants: Sparkles,
 };
 
+const PARENT_TYPES = ["Needs", "Wants"] as const;
+
+/** Pull a human-readable message off an unknown thrown value. */
+function errMsg(e: unknown, fallback: string): string {
+  return e instanceof Error && e.message ? e.message : fallback;
+}
+
 export default function MyCategoriesPage() {
   const { confirm } = useModal();
   const { toast } = useUI();
-  const { data: catData, loading, error, refetch } = useCategories();
+  const { data: catData, loading, error } = useCategories();
   const mutations = useMutations();
 
-  const globalCategories = ((catData as any)?.globalCategories || []) as Category[];
-  const userCategories = ((catData as any)?.userCategories || []) as Category[];
-  const allCategories = [...globalCategories, ...userCategories] as Category[];
+  // The API returns ONE merged array (`categories`), not separate global/user
+  // buckets. Reading `globalCategories`/`userCategories` here is what left this
+  // page permanently empty, so derive the split from the rows themselves.
+  const allCategories: Category[] = catData?.categories ?? [];
+  const isSystemRow = (c: Category) => c.isSystem ?? c.userId === null;
+  const systemCategories = allCategories.filter(isSystemRow);
+  const customCategories = allCategories.filter((c) => !isSystemRow(c));
 
-  const myCategories = userCategories;
   const [typeFilter, setTypeFilter] = useState<"all" | "Needs" | "Wants">("all");
+  const [showHidden, setShowHidden] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -86,17 +104,18 @@ export default function MyCategoriesPage() {
       }
       toast.success(editingId ? "Category updated" : "Category created");
       closeForm();
-    } catch (e: any) {
-      setErrorProp(e.message || "Failed to save");
+    } catch (e) {
+      setErrorProp(errMsg(e, "Failed to save"));
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDelete(id: string) {
+async function handleDelete(id: string, name: string) {
     const ok = await confirm({
       title: "Delete Category",
-      message: "Are you sure you want to delete this custom category?",
+      message: `Delete "${name}"? Transactions already using it keep the name, but it will no longer be offered when adding.`,
+      confirmText: "Delete",
       danger: true,
     });
     if (!ok) return;
@@ -104,16 +123,34 @@ export default function MyCategoriesPage() {
     try {
       await mutations.deleteCategory(id);
       toast.success("Category deleted");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to delete");
+    } catch (e) {
+      toast.error(errMsg(e, "Failed to delete"));
     }
   }
 
-  const filteredMyCategories =
-    typeFilter === "all" ? myCategories : myCategories.filter((c) => c.type === typeFilter);
+async function handleToggleVisibility(cat: Category) {
+    const nextHidden = !cat.hidden;
+    setBusyId(cat.id);
+    try {
+      await mutations.setCategoryVisibility(cat.id, nextHidden);
+      toast.success(
+        nextHidden ? `"${cat.name}" hidden` : `"${cat.name}" is visible again`
+      );
+    } catch (e) {
+      toast.error(errMsg(e, "Failed to update"));
+    } finally {
+      setBusyId(null);
+    }
+  }
 
-  const filteredGlobalCategories =
-    typeFilter === "all" ? globalCategories : globalCategories.filter((c) => c.type === typeFilter);
+const matchesFilter = (c: Category) =>
+    typeFilter === "all" || c.type === typeFilter;
+
+  const visibleCustom = customCategories.filter(matchesFilter);
+  const visibleSystem = systemCategories.filter(
+    (c) => matchesFilter(c) && !c.hidden
+  );
+  const hiddenSystem = systemCategories.filter((c) => c.hidden);
 
   return (
     <div className="px-4 mx-auto space-y-5 pb-24">
@@ -123,8 +160,9 @@ export default function MyCategoriesPage() {
           <div>
             <div className="text-xl font-bold text-foreground">Categories</div>
             <div className="text-[11px] text-muted">
-              {myCategories.length} custom &middot; {globalCategories.length}{" "}
-              system
+              {customCategories.length} custom &middot;{" "}
+              {systemCategories.length - hiddenSystem.length} system
+              {hiddenSystem.length > 0 && ` · ${hiddenSystem.length} hidden`}
             </div>
           </div>
           <button
@@ -285,6 +323,21 @@ export default function MyCategoriesPage() {
           <Loader2 className="animate-spin mb-3" size={24} />
           <span className="text-xs font-medium">Loading...</span>
         </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center text-muted">
+          <p className="text-sm mb-1">Could not load categories</p>
+          <p className="text-xs">{error}</p>
+        </div>
+      ) : allCategories.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center bg-surface border border-dashed border-border-subtle rounded-2xl">
+          <div className="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center mb-2">
+            <Tag size={18} className="text-muted" />
+          </div>
+          <p className="text-sm text-muted mb-1">No categories available</p>
+          <p className="text-xs text-muted">
+            Create one to start tracking spending
+          </p>
+        </div>
       ) : (
         <div className="space-y-8">
           {/* Custom Categories */}
@@ -292,13 +345,13 @@ export default function MyCategoriesPage() {
             <div className="flex items-center gap-2 mb-3 px-1">
               <User size={14} className="text-primary-500" />
               <h2 className="text-sm font-bold text-foreground">
-                Custom Categories
+                Your Categories
               </h2>
               <span className="text-xs text-muted">
-                ({myCategories.length})
+                ({visibleCustom.length})
               </span>
             </div>
-            {filteredMyCategories.length === 0 ? (
+            {visibleCustom.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center bg-surface border border-dashed border-border-subtle rounded-2xl">
                 <div className="w-10 h-10 rounded-xl bg-surface-variant flex items-center justify-center mb-2">
                   <Tag size={18} className="text-muted" />
@@ -320,7 +373,7 @@ export default function MyCategoriesPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {filteredMyCategories.map((cat) => {
+                {visibleCustom.map((cat) => {
                   const Icon = TYPE_ICONS[cat.type] || Tag;
                   return (
                     <motion.div
@@ -352,15 +405,17 @@ export default function MyCategoriesPage() {
                           {cat.type}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
                         <button
                           onClick={() => openEdit(cat)}
+                          aria-label={`Edit ${cat.name}`}
                           className="p-1.5 rounded-lg text-muted hover:text-primary-500 hover:bg-primary-500/10 transition-colors"
                         >
                           <Edit2 size={13} />
                         </button>
                         <button
-                          onClick={() => handleDelete(cat.id)}
+                          onClick={() => handleDelete(cat.id, cat.name)}
+                          aria-label={`Delete ${cat.name}`}
                           className="p-1.5 rounded-lg text-muted hover:text-error hover:bg-error/10 transition-colors"
                         >
                           <Trash2 size={13} />
@@ -380,56 +435,102 @@ export default function MyCategoriesPage() {
               <h2 className="text-sm font-bold text-foreground">
                 System Categories
               </h2>
-              <span className="text-xs text-muted">
-                ({globalCategories.length})
+<span className="text-xs text-muted">
+                ({visibleSystem.length} shown)
               </span>
+              {hiddenSystem.length > 0 && (
+                <button
+                  onClick={() => setShowHidden((v) => !v)}
+                  className="ml-auto text-[11px] font-semibold text-primary-500 hover:text-primary-600 transition-colors"
+                >
+                  {showHidden ? "Hide hidden" : `Show ${hiddenSystem.length} hidden`}
+                </button>
+              )}
             </div>
-            {filteredGlobalCategories.length === 0 ? (
-              <div className="flex items-center justify-center py-8 text-sm text-muted bg-surface border border-dashed border-border-subtle rounded-2xl">
-                No system categories for this type
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {filteredGlobalCategories.map((cat) => {
-                  const Icon = TYPE_ICONS[cat.type] || Tag;
-                  return (
-                    <div
-                      key={cat.id}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-surface-variant/50 border border-border-subtle"
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          cat.type === "Needs"
-                            ? "bg-primary-500/10 text-primary-500"
-                            : "bg-tertiary-500/10 text-tertiary-500"
-                        }`}
-                      >
-                        <Icon size={16} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-foreground truncate">
-                          {cat.name}
-                        </div>
-                        <span
-                          className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${
-                            cat.type === "Needs"
-                              ? "bg-primary-500/10 text-primary-500"
-                              : "bg-tertiary-500/10 text-tertiary-500"
+
+            {PARENT_TYPES.filter((t) => typeFilter === "all" || typeFilter === t).map(
+              (parent) => {
+                const group = [
+                  ...visibleSystem,
+                  ...(showHidden ? hiddenSystem : []),
+                ].filter((c) => c.type === parent);
+                if (group.length === 0) return null;
+
+                const ParentIcon = TYPE_ICONS[parent];
+                const isNeeds = parent === "Needs";
+
+                return (
+                  <div key={parent} className="mb-4 last:mb-0">
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <ParentIcon
+                        size={13}
+                        className={isNeeds ? "text-primary-500" : "text-tertiary-500"}
+                      />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
+                        {parent}
+                      </h3>
+                      <span className="text-[10px] text-muted">({group.length})</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {group.map((cat) => (
+                        <div
+                          key={cat.id}
+                          className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                            cat.hidden
+                              ? "bg-surface-variant/30 border-border-subtle/60 opacity-60"
+                              : "bg-surface-variant/50 border-border-subtle"
                           }`}
                         >
-                          {cat.type}
-                        </span>
-                      </div>
-                      <ShieldCheck
-                        size={14}
-                        className="text-muted flex-shrink-0"
-                      />
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                              isNeeds
+                                ? "bg-primary-500/10 text-primary-500"
+                                : "bg-tertiary-500/10 text-tertiary-500"
+                            }`}
+                          >
+                            <Tag size={16} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-foreground truncate">
+                              {cat.name}
+                            </div>
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-surface-variant text-muted">
+                              {cat.hidden ? "Hidden" : "System"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleToggleVisibility(cat)}
+                            disabled={busyId === cat.id}
+                            aria-label={cat.hidden ? `Show ${cat.name} again` : `Hide ${cat.name}`}
+                            title={
+                              cat.hidden
+                                ? "Show in category lists"
+                                : "Hide from category lists"
+                            }
+                            className="p-2 rounded-lg text-muted hover:text-foreground hover:bg-surface-variant transition-colors disabled:opacity-50 flex-shrink-0"
+                          >
+                            {busyId === cat.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : cat.hidden ? (
+                              <Eye size={14} />
+                            ) : (
+                              <EyeOff size={14} />
+                            )}
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              }
             )}
           </section>
+
+          <p className="text-[11px] text-muted text-center px-4 pt-1">
+            {systemCategories.length - hiddenSystem.length +
+              customCategories.length}{" "}
+            categories available for new transactions
+          </p>
         </div>
       )}
 

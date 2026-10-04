@@ -26,13 +26,21 @@ export async function GET(request: Request) {
     // 1. Get cached global categories
     const globalCategories = await getCachedGlobalCategories();
 
-    // 2. Get user's custom categories
+// 2. Get user's custom categories
     const userCategories = await prisma.category.findMany({
       where: { userId },
       orderBy: { name: "asc" },
     });
 
-    // 3. Merge and deduplicate by name + type
+    // 3. Which categories this user has chosen to hide (system categories are
+    // shared, so the preference lives on the user, not on the Category row).
+    const hiddenPrefs = await prisma.userCategoryPreference.findMany({
+      where: { userId, hidden: true },
+      select: { categoryId: true },
+    });
+    const hiddenIds = new Set(hiddenPrefs.map((p) => p.categoryId));
+
+    // 4. Merge and deduplicate by name + type
     const combined = [...globalCategories, ...userCategories];
     
     // Deduplication via Map using a composite key
@@ -50,7 +58,13 @@ export async function GET(request: Request) {
       }
     });
 
-    const categories = Array.from(uniqueMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    const categories = Array.from(uniqueMap.values())
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((c) => ({
+        ...c,
+        isSystem: c.userId === null,
+        hidden: hiddenIds.has(c.id),
+      }));
 
     return NextResponse.json({ categories }, {
       headers: {
@@ -97,59 +111,5 @@ export async function POST(req: Request) {
   }
 }
 
-// PATCH - Update user-custom category
-export async function PATCH(req: Request) {
-  const userId = await getAuthenticatedUserId(req);
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  try {
-    const { id, name, type } = await req.json();
-    if (!id || !name || !type) return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-
-    const category = await prisma.category.findUnique({ where: { id } });
-    if (!category) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (category.userId !== userId || category.isDefault) {
-      return NextResponse.json({ error: "Forbidden: Cannot edit default categories" }, { status: 403 });
-    }
-
-    const globalCategories = await getCachedGlobalCategories();
-    const isGlobalParams = globalCategories.some(c => c.name.toLowerCase() === name.toLowerCase() && c.type === type && c.id !== id);
-    if (isGlobalParams) {
-      return NextResponse.json({ error: "This is already a system category" }, { status: 400 });
-    }
-
-    const updatedCategory = await prisma.category.update({
-      where: { id },
-      data: { name, type }
-    });
-
-    return NextResponse.json({ category: updatedCategory });
-  } catch (error) {
-    console.error("Failed to update category", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-// DELETE - Delete user-custom category
-export async function DELETE(req: Request) {
-  const userId = await getAuthenticatedUserId(req);
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  try {
-    const { id } = await req.json();
-    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-
-    const category = await prisma.category.findUnique({ where: { id } });
-    if (!category) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (category.userId !== userId || category.isDefault) {
-      return NextResponse.json({ error: "Forbidden: Cannot delete default categories" }, { status: 403 });
-    }
-
-    await prisma.category.delete({ where: { id } });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Failed to delete category", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+// PATCH and DELETE for a single category live in ./[id]/route.ts, which matches
+// the RESTful URLs the client mutations call.

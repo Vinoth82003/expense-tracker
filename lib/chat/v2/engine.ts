@@ -111,6 +111,17 @@ type V2Context = {
   [key: string]: unknown;
 };
 
+/**
+ * The authenticated user id attached to the context by `handleChatV2`.
+ *
+ * Returns undefined when absent so a gateway call simply falls back to session
+ * auth rather than sending an empty `x-internal-user-id`.
+ */
+function getContextUserId(context: V2Context): string | undefined {
+  const userId = context.userId;
+  return typeof userId === "string" && userId.length > 0 ? userId : undefined;
+}
+
 type V2UIOption = {
   id: string;
   label: string;
@@ -593,7 +604,13 @@ async function finalizeExpense(
   };
 
   try {
-    const response = await createExpense(payload, { req: request });
+    // internalUserId marks this as a server-side Sage write: the API route
+    // derives entrySource from the verified internal header rather than trusting
+    // anything in the payload.
+    const response = await createExpense(payload, {
+      req: request,
+      internalUserId: getContextUserId(context),
+    });
     logExtraction(
       (context as any).userId || "",
       "",
@@ -1082,7 +1099,7 @@ async function continueIncomeDraft(
         note,
         date: draft.date,
       },
-      { req: request },
+      { req: request, internalUserId: getContextUserId(context) },
     );
 
     logExtraction(

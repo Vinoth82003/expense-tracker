@@ -33,6 +33,7 @@ model User {
   aiUsageLogs  AiUsageLog[]
   budgets      Budget[]
   pageViews    PageView[]
+  categoryPreferences UserCategoryPreference[]
 
   streak       Int        @default(0)
   lastActive   DateTime?  @default(now())
@@ -246,6 +247,11 @@ model Expense {
   date          DateTime
   attachmentUrl String?
 
+  // Provenance: how this row was entered. Defaults to MANUAL so every row that
+  // predates this column keeps a valid value. Set server-side only — never
+  // trusted from the request body — so a client cannot forge "By Sage".
+  entrySource   String   @default("MANUAL") // "MANUAL" (by you) | "SAGE" (by Sage)
+
   userId        String   @db.ObjectId
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -262,6 +268,8 @@ model Category {
 
   userId    String?  @db.ObjectId
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  hiddenBy  UserCategoryPreference[]
 }
 
 model Income {
@@ -271,10 +279,32 @@ model Income {
   note    String?
   date    DateTime
 
+  // Provenance: how this row was entered, not what the income is.
+  // `source` above already means the income origin (Salary, Freelance, ...).
+  entrySource String @default("MANUAL") // "MANUAL" (by you) | "SAGE" (by Sage)
+
   userId  String   @db.ObjectId
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime? @default(now())
+}
+
+/**
+ * A user's own "hide this system category" choice. Deliberately per-user:
+ * hiding a shared system Category row would hide it for every account, which
+ * is not what a settings-page toggle should do.
+ */
+model UserCategoryPreference {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String   @db.ObjectId
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  hidden     Boolean  @default(true)
+
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, categoryId])
 }
 
 model FAQ {

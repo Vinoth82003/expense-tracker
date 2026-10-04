@@ -263,6 +263,72 @@ export const sendAdminNewUserNotification = async (newUserEmail: string, userNam
   return sendEmail(ADMIN_EMAIL, subject, wrapLayout(content, ADMIN_EMAIL));
 };
 
+/**
+ * Admin notification when a user erases all of their transaction data.
+ * The account survives; only the expense/income rows are removed.
+ */
+export const sendAdminDataWipeNotification = async (
+  userEmail: string,
+  userName: string,
+  deletedExpenses: number,
+  deletedIncomes: number
+) => {
+  if (!ADMIN_EMAIL) {
+    await logger.warn("Admin email not configured – skipping data-wipe notification", { userEmail }, "MAIL");
+    return { success: false, error: "Admin email not configured" };
+  }
+
+  const subject = `SpendWise: A user erased all transaction data`;
+  const content = `
+    <h2>Destructive Action: Transaction Data Wiped</h2>
+    <p>A user erased all of their expense and income records. Their account is still active; only transaction data was removed.</p>
+    <div class="security-box">
+      <p style="margin: 0 0 10px 0; font-weight: bold; color: #111827;">Wipe details:</p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b5563;">
+        <li><strong>Email:</strong> ${userEmail}</li>
+        <li><strong>Name:</strong> ${userName || "Not provided"}</li>
+        <li><strong>Expenses deleted:</strong> ${deletedExpenses}</li>
+        <li><strong>Income records deleted:</strong> ${deletedIncomes}</li>
+        <li><strong>Time:</strong> ${new Date().toUTCString()}</li>
+      </ul>
+    </div>
+    <p style="margin-top: 30px;">Best,<br/> <strong>SpendWise System</strong></p>
+  `;
+
+  return sendEmail(ADMIN_EMAIL, subject, wrapLayout(content, ADMIN_EMAIL));
+};
+
+/**
+ * Admin notification when a user deletes their account, which also cascades to
+ * their expenses, incomes, categories, budgets, and sessions.
+ */
+export const sendAdminAccountDeletionNotification = async (
+  userEmail: string,
+  userName: string
+) => {
+  if (!ADMIN_EMAIL) {
+    await logger.warn("Admin email not configured – skipping account-deletion notification", { userEmail }, "MAIL");
+    return { success: false, error: "Admin email not configured" };
+  }
+
+  const subject = `SpendWise: An account was deleted`;
+  const content = `
+    <h2>Destructive Action: Account Deleted</h2>
+    <p>A user permanently deleted their SpendWise account. All associated records (expenses, incomes, categories, budgets, and sessions) were removed by cascade.</p>
+    <div class="security-box">
+      <p style="margin: 0 0 10px 0; font-weight: bold; color: #111827;">Deletion details:</p>
+      <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b5563;">
+        <li><strong>Email:</strong> ${userEmail}</li>
+        <li><strong>Name:</strong> ${userName || "Not provided"}</li>
+        <li><strong>Time:</strong> ${new Date().toUTCString()}</li>
+      </ul>
+    </div>
+    <p style="margin-top: 30px;">Best,<br/> <strong>SpendWise System</strong></p>
+  `;
+
+  return sendEmail(ADMIN_EMAIL, subject, wrapLayout(content, ADMIN_EMAIL));
+};
+
 // Debounce map to prevent email spam for rapid-fire errors
 const errorEmailDebounce = new Map<string, number>();
 const ERROR_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes

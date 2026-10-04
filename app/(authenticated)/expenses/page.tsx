@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search,
   Plus,
   ChevronLeft,
   ChevronRight,
@@ -31,6 +30,21 @@ import {
 import { useUI } from "@/context/UIContext";
 import { useExpenses } from "@/context/DataContext";
 import { useUser } from "@/context/UserContext";
+import SubcategoryPicker from "@/components/expenses/SubcategoryPicker";
+import EntrySourceBadge from "@/components/transactions/EntrySourceBadge";
+import TransactionFilterBar from "@/components/transactions/TransactionFilterBar";
+import GroupByControl from "@/components/transactions/GroupByControl";
+import {
+  EMPTY_FILTERS,
+  applyFilters,
+  collectFacets,
+  groupOptionsFor,
+  groupTransactions,
+  isFilterActive,
+  sumAmount,
+  type GroupKey,
+  type TransactionFilters,
+} from "@/lib/transaction-grouping";
 
 interface Expense {
   id: string;
@@ -39,6 +53,8 @@ interface Expense {
   subcategory: string;
   note: string | null;
   date: string;
+  /** "MANUAL" | "SAGE"; absent on rows written before the field existed. */
+  entrySource?: string | null;
 }
 
 const CATEGORY_ICONS: Record<string, typeof ShoppingCart> = {
@@ -65,13 +81,12 @@ function formatCurrency(n: number) {
 export default function ExpensesPage() {
   const { toast, confirm } = useUI();
 
-  const [search, setSearch] = useState("");
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
 
-  const { data: expenses, loading, error, refetch } = useExpenses(currentMonth);
+  const { data: expenses, loading } = useExpenses(currentMonth);
   const user = useUser();
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
@@ -85,14 +100,10 @@ export default function ExpensesPage() {
     note: "",
     date: "",
   });
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (showMobileSearch && searchRef.current) {
-      searchRef.current.focus();
-    }
-  }, [showMobileSearch]);
+  const [filters, setFilters] = useState<TransactionFilters>({ ...EMPTY_FILTERS });
+  const [groupBy, setGroupBy] = useState<GroupKey>("date");
+  const groupOptions = useMemo(() => groupOptionsFor("expense"), []);
 
   const changeMonth = (offset: number) => {
     const [year, month] = currentMonth.split("-").map(Number);
@@ -100,18 +111,26 @@ export default function ExpensesPage() {
     setCurrentMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
   };
 
-  const expenseList = expenses as Expense[] | undefined;
-  const filteredExpenses = useMemo(() => {
-    return (expenseList || []).filter(
-      (exp: Expense) =>
-        exp.subcategory.toLowerCase().includes(search.toLowerCase()) ||
-        (exp.note && exp.note.toLowerCase().includes(search.toLowerCase()))
-    );
-  }, [expenseList, search]);
+  const expenseList = useMemo<Expense[]>(
+    () => (expenses as Expense[] | undefined) ?? [],
+    [expenses]
+  );
 
-  const monthTotal = useMemo(() => {
-    return filteredExpenses.reduce((s, e) => s + e.amount, 0);
-  }, [filteredExpenses]);
+  // Facets come from the whole month, not the filtered set, so the dropdowns
+  // keep offering values that the current filter selection excludes.
+  const facets = useMemo(() => collectFacets(expenseList), [expenseList]);
+
+  const filteredExpenses = useMemo(
+    () => applyFilters(expenseList, filters),
+    [expenseList, filters]
+  );
+
+  const groups = useMemo(
+    () => groupTransactions(filteredExpenses, groupBy, "expense"),
+    [filteredExpenses, groupBy]
+  );
+
+  const monthTotal = useMemo(() => sumAmount(filteredExpenses), [filteredExpenses]);
 
   function openDetail(expense: Expense) {
     setSelectedExpense(expense);
@@ -160,8 +179,8 @@ export default function ExpensesPage() {
       });
       toast.success("Expense updated");
       closeDetail();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to update");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -183,8 +202,8 @@ export default function ExpensesPage() {
       await user.deleteExpense(selectedExpense.id);
       toast.success("Transaction deleted");
       closeDetail();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to delete");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete");
       setDeleting(false);
     }
   }
@@ -196,6 +215,7 @@ export default function ExpensesPage() {
 
   const needsTotal = filteredExpenses.filter((e) => e.category === "Needs").reduce((s, e) => s + e.amount, 0);
   const wantsTotal = filteredExpenses.filter((e) => e.category === "Wants").reduce((s, e) => s + e.amount, 0);
+  const filtersActive = isFilterActive(filters);
 
   return (
     <div className="mx-auto space-y-4 pb-24 px-4">
@@ -217,49 +237,41 @@ export default function ExpensesPage() {
           </button>
         </div>
 
-        {/* Search + Nav */}
+        {/* Month nav + grouping */}
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-surface border border-border-subtle rounded-xl overflow-hidden flex-shrink-0">
-            <button onClick={() => changeMonth(-1)} className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
+            <button onClick={() => changeMonth(-1)} aria-label="Previous month" className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
               <ChevronLeft size={16} />
             </button>
-            <button onClick={() => changeMonth(1)} className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
+            <button onClick={() => changeMonth(1)} aria-label="Next month" className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
               <ChevronRight size={16} />
             </button>
           </div>
 
-          <div className="flex-1 min-w-0">
-            {showMobileSearch ? (
-              <div className="flex items-center gap-2">
-                <input
-                  ref={searchRef}
-                  type="text"
-                  placeholder="Search..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-sm outline-none focus:border-primary-500 transition-colors"
-                />
-                <button onClick={() => { setSearch(""); setShowMobileSearch(false); }} className="p-2 text-muted hover:text-foreground">
-                  <X size={16} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowMobileSearch(true)}
-                className="w-full flex items-center gap-2 bg-surface border border-border-subtle rounded-xl px-3 py-2 text-sm text-muted hover:text-foreground hover:border-border-hover transition-colors text-left"
-              >
-                <Search size={14} />
-                <span className="truncate">{search || "Search..."}</span>
-              </button>
-            )}
-          </div>
+          <span className="text-xs font-semibold text-muted whitespace-nowrap px-1 flex-1">
+            {monthName}
+          </span>
 
-          <span className="text-xs font-semibold text-muted whitespace-nowrap px-1">{monthName}</span>
+          <GroupByControl
+            value={groupBy}
+            options={groupOptions}
+            onChange={setGroupBy}
+            groupCount={groups.length}
+          />
         </div>
       </div>
 
+      {/* Search + filters */}
+      <TransactionFilterBar
+        filters={filters}
+        onChange={setFilters}
+        facets={facets}
+        kind="expense"
+        resultCount={filteredExpenses.length}
+      />
+
       {/* Needs vs Wants mini bar */}
-      {(filteredExpenses.length > 0 && !search) && (
+      {filteredExpenses.length > 0 && (
         <div className="flex items-center gap-2 px-1">
           <div className="flex-1 h-1.5 rounded-full bg-surface-variant overflow-hidden flex">
             {needsTotal + wantsTotal > 0 && (
@@ -276,8 +288,8 @@ export default function ExpensesPage() {
             )}
           </div>
           <div className="flex items-center gap-3 text-[10px] font-medium text-muted">
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary-500" /> Needs</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-tertiary-500" /> Wants</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary-500" /> Needs {formatCurrency(needsTotal)}</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-tertiary-500" /> Wants {formatCurrency(wantsTotal)}</span>
           </div>
         </div>
       )}
@@ -294,12 +306,21 @@ export default function ExpensesPage() {
             <Receipt size={24} className="text-muted" />
           </div>
           <p className="text-sm font-semibold text-foreground mb-1">
-            {search ? "No matching transactions" : "No expenses yet"}
+            {filtersActive ? "No matching transactions" : "No expenses yet"}
           </p>
           <p className="text-xs text-muted mb-5 max-w-[220px]">
-            {search ? "Try a different search term" : "Tap the button above to add your first expense"}
+            {filtersActive
+              ? "No expenses match your filters. Try widening the date or amount range."
+              : "Tap the button above to add your first expense"}
           </p>
-          {!search && (
+          {filtersActive ? (
+            <button
+              onClick={() => setFilters({ ...EMPTY_FILTERS })}
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 text-white text-sm font-semibold rounded-xl"
+            >
+              <X size={16} /> Clear filters
+            </button>
+          ) : (
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("open-add-expense"))}
               className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 text-white text-sm font-semibold rounded-xl"
@@ -309,69 +330,64 @@ export default function ExpensesPage() {
           )}
         </div>
       ) : (
-        <div className="space-y-2">
-          {(() => {
-            const groups: Record<string, Expense[]> = {};
-            filteredExpenses.forEach((exp) => {
-              const key = exp.date.split("T")[0];
-              if (!groups[key]) groups[key] = [];
-              groups[key].push(exp);
-            });
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <section key={group.key} className="space-y-1.5">
+              <header className="sticky top-0 z-10 flex items-center justify-between bg-background/90 px-1 py-2 backdrop-blur-sm">
+                <span className="text-xs font-semibold text-muted">{group.label}</span>
+                <span className="text-xs font-semibold text-foreground tabular-nums">
+                  {formatCurrency(group.total)}
+                  <span className="ml-1.5 font-normal text-muted">
+                    {group.count} item{group.count === 1 ? "" : "s"}
+                  </span>
+                </span>
+              </header>
 
-            return Object.entries(groups).map(([dateKey, items]) => {
-              const dayTotal = items.reduce((s, e) => s + e.amount, 0);
-              const d = new Date(dateKey);
-              const isToday = d.toDateString() === new Date().toDateString();
-              const isYesterday = d.toDateString() === new Date(Date.now() - 86400000).toDateString();
-              const label = isToday ? "Today" : isYesterday ? "Yesterday" : d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+              <div className="space-y-1.5">
+                {group.items.map((expense) => {
+                  const Icon = getCategoryIcon(expense.subcategory);
+                  return (
+                    <motion.button
+                      key={expense.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      onClick={() => openDetail(expense)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border-subtle hover:border-border-hover hover:bg-surface-variant/30 transition-all text-left active:scale-[0.98]"
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        expense.category === "Needs" ? "bg-primary-500/10 text-primary-500" : "bg-tertiary-500/10 text-tertiary-500"
+                      }`}>
+                        <Icon size={16} />
+                      </div>
 
-              return (
-                <div key={dateKey}>
-                  <div className="flex items-center justify-between px-1 py-2">
-                    <span className="text-xs font-semibold text-muted">{label}</span>
-                    <span className="text-xs font-semibold text-foreground">{formatCurrency(dayTotal)}</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {items.map((expense) => {
-                      const Icon = getCategoryIcon(expense.subcategory);
-                      return (
-                        <motion.button
-                          key={expense.id}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          onClick={() => openDetail(expense)}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border-subtle hover:border-border-hover hover:bg-surface-variant/30 transition-all text-left active:scale-[0.98]"
-                        >
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            expense.category === "Needs" ? "bg-primary-500/10 text-primary-500" : "bg-tertiary-500/10 text-tertiary-500"
-                          }`}>
-                            <Icon size={16} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold text-foreground truncate">{expense.subcategory}</span>
-                              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${
-                                expense.category === "Needs" ? "bg-primary-500/10 text-primary-500" : "bg-tertiary-500/10 text-tertiary-500"
-                              }`}>
-                                {expense.category}
-                              </span>
-                            </div>
-                            {expense.note && (
-                              <p className="text-xs text-muted truncate mt-0.5">{expense.note}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className="text-sm font-bold text-foreground tabular-nums">{formatCurrency(expense.amount)}</span>
-                            <Pencil size={12} className="text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            });
-          })()}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold text-foreground truncate">
+                            {expense.subcategory}
+                          </span>
+                          {groupBy !== "category" && (
+                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${
+                              expense.category === "Needs" ? "bg-primary-500/10 text-primary-500" : "bg-tertiary-500/10 text-tertiary-500"
+                            }`}>
+                              {expense.category}
+                            </span>
+                          )}
+                          <EntrySourceBadge value={expense.entrySource} />
+                        </div>
+                        {expense.note && (
+                          <p className="text-xs text-muted truncate mt-0.5">{expense.note}</p>
+                        )}
+                      </div>
+
+                      <span className="text-sm font-bold text-foreground tabular-nums flex-shrink-0">
+                        {formatCurrency(expense.amount)}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
@@ -410,7 +426,13 @@ export default function ExpensesPage() {
                     <div className="w-10 h-10 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
                       <Pencil size={18} />
                     </div>
-                    <h2 className="text-lg font-bold text-foreground">Edit Transaction</h2>
+                    <div>
+                      <h2 className="text-lg font-bold text-foreground">Edit Transaction</h2>
+                      <EntrySourceBadge
+                        value={selectedExpense?.entrySource}
+                        className="mt-0.5"
+                      />
+                    </div>
                   </div>
                   <button onClick={closeDetail} className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95">
                     <X size={18} />
@@ -440,7 +462,9 @@ export default function ExpensesPage() {
                     {["Needs", "Wants"].map((type) => (
                       <button
                         key={type}
-                        onClick={() => setForm({ ...form, category: type })}
+                        onClick={() =>
+                          setForm({ ...form, category: type, subcategory: "" })
+                        }
                         className={`py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                           form.category === type
                             ? "bg-primary-500 text-white shadow-sm"
@@ -458,12 +482,12 @@ export default function ExpensesPage() {
                 <div className="mb-6">
                   <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Subcategory</label>
                   <div className="relative">
-                    <Tag size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-                    <input
-                      type="text"
+                    <Tag size={16} className="absolute left-4 top-4 text-muted pointer-events-none z-10" />
+                    <SubcategoryPicker
+                      type={form.category}
                       value={form.subcategory}
-                      onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
-                      className="w-full bg-background border border-border-subtle rounded-xl py-3.5 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:border-primary-500 transition-colors"
+                      onChange={(name) => setForm({ ...form, subcategory: name })}
+                      size="sm"
                     />
                   </div>
                 </div>

@@ -4,6 +4,7 @@ import { getAuthenticatedUserId } from "@/lib/internal-api-auth";
 import { withErrorNotification } from "@/lib/api-error-handler";
 import { checkUserRateLimit } from "@/lib/rateLimit";
 import { validateOrigin } from "@/lib/csrf";
+import { resolveEntrySource } from "@/lib/transaction-source.server";
 
 // GET - Fetch all expenses for the logged-in user
 export const GET = withErrorNotification(async (request: Request) => {
@@ -18,11 +19,17 @@ export const GET = withErrorNotification(async (request: Request) => {
   const fromDate = searchParams.get("fromDate");
   const toDate = searchParams.get("toDate");
 
-  const whereClause: any = { userId };
+  const whereClause: {
+    userId: string;
+    date?: { gte?: Date; lte?: Date };
+    category?: string;
+  } = { userId };
 
   if (fromDate || toDate) {
     whereClause.date = {};
-    if (fromDate) whereClause.date.gte = new Date(fromDate);
+    if (fromDate) {
+      whereClause.date.gte = new Date(fromDate);
+    }
     if (toDate) {
       const end = new Date(toDate);
       end.setHours(23, 59, 59, 999);
@@ -63,7 +70,13 @@ export const POST = withErrorNotification(async (request: Request) => {
   if (rateLimitResult) return rateLimitResult;
 
   const body = await request.json();
-  const { amount, category, subcategory, note, date } = body;
+  const { amount, category, subcategory, note, date } = body as {
+    amount?: number;
+    category?: string;
+    subcategory?: string;
+    note?: string;
+    date?: string;
+  };
 
   if (!amount || !category || !subcategory || !date) {
     return NextResponse.json(
@@ -83,6 +96,11 @@ export const POST = withErrorNotification(async (request: Request) => {
       subcategory,
       note: note || null,
       date: new Date(date),
+      // Provenance is derived from the caller: a browser form write is MANUAL,
+      // while Sage's server-to-server call through lib/chat/v1/api-gateway
+      // carries the verified internal header and is SAGE. Never read this from
+      // the body.
+      entrySource: resolveEntrySource(request),
       userId,
     },
   });

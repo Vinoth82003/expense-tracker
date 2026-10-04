@@ -5,7 +5,6 @@ import {
   useContext,
   useState,
   useCallback,
-  useRef,
   useEffect,
   ReactNode,
 } from "react";
@@ -172,53 +171,54 @@ const DataContext = createContext<DataContextValue | null>(null);
 // ──────────────── Provider ────────────────
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const storeRef = useRef(new CacheStore());
+  // Held in state rather than a ref: the store is created once and never
+  // replaced, and the provider exposes it through context, which means it has
+  // to be read during render.
+  const [store] = useState(() => new CacheStore());
 
   useEffect(() => {
     const interval = setInterval(() => {
-      storeRef.current.sweep();
+      store.sweep();
     }, STALE_EVICT_INTERVAL);
     return () => clearInterval(interval);
-  }, []);
+  }, [store]);
 
-  const fetchCached = useCallback(function <T>(
-    this: unknown,
-    key: string,
-    fetcher: () => Promise<T>,
-    ttl: number = TTL.DEFAULT
-  ): Promise<T> {
-    const cached = storeRef.current.get<T>(key);
-    if (cached !== null) return Promise.resolve(cached);
+  const fetchCached = useCallback(
+    <T,>(key: string, fetcher: () => Promise<T>, ttl: number = TTL.DEFAULT): Promise<T> => {
+      const cached = store.get<T>(key);
+      if (cached !== null) return Promise.resolve(cached);
 
-    const inflight = storeRef.current.getPending<T>(key);
-    if (inflight !== null) return inflight;
+      const inflight = store.getPending<T>(key);
+      if (inflight !== null) return inflight;
 
-    const promise = fetcher()
-      .then((data) => {
-        storeRef.current.set(key, data, ttl);
-        storeRef.current.deletePending(key);
-        return data;
-      })
-      .catch((err) => {
-        storeRef.current.deletePending(key);
-        throw err;
-      });
+      const promise = fetcher()
+        .then((data) => {
+          store.set(key, data, ttl);
+          store.deletePending(key);
+          return data;
+        })
+        .catch((err) => {
+          store.deletePending(key);
+          throw err;
+        });
 
-    storeRef.current.setPending(key, promise);
-    return promise;
-  } as <T>(key: string, fetcher: () => Promise<T>, ttl?: number) => Promise<T>, []);
+      store.setPending(key, promise);
+      return promise;
+    },
+    [store]
+  );
 
   const invalidate = useCallback((key: string) => {
-    storeRef.current.delete(key);
-  }, []);
+    store.delete(key);
+  }, [store]);
 
   const invalidateMatching = useCallback((prefix: string) => {
-    storeRef.current.deleteMatching(prefix);
-  }, []);
+    store.deleteMatching(prefix);
+  }, [store]);
 
   const invalidateAll = useCallback(() => {
-    storeRef.current.clear();
-  }, []);
+    store.clear();
+  }, [store]);
 
   const mutate = useCallback(async (opts: MutationOptions) => {
     const res = await fetch(opts.url, {
@@ -231,24 +231,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (opts.invalidate) {
       opts.invalidate.forEach((key) => {
         if (key.endsWith("::*")) {
-          storeRef.current.deleteMatching(key.slice(0, -3));
+          store.deleteMatching(key.slice(0, -3));
         } else {
-          storeRef.current.delete(key);
+          store.delete(key);
         }
       });
     }
 
     return data;
-  }, []);
+  }, [store]);
 
   const subscribe = useCallback((listener: Listener) => {
-    return storeRef.current.subscribe(listener);
-  }, []);
+    return store.subscribe(listener);
+  }, [store]);
 
   return (
     <DataContext.Provider
       value={{
-        cacheStore: storeRef.current,
+        cacheStore: store,
         fetchCached,
         invalidate,
         invalidateMatching,
@@ -272,8 +272,18 @@ export function useData() {
 
 // ──────────────── Domain Hooks ────────────────
 
-type CurrencyData = { id?: string; amount: number; category: string; subcategory: string; note: string | null; date: string }[];
-type CategoryData = { id: string; name: string; type: string }[];
+type CurrencyData = { id?: string; amount: number; category: string; subcategory: string; note: string | null; date: string; entrySource?: string | null }[];
+type CategoryData = {
+  id: string;
+  name: string;
+  type: string;
+  isDefault?: boolean;
+  /** null for system (shared) categories. */
+  userId?: string | null;
+  isSystem?: boolean;
+  /** This user's hide/unhide preference. */
+  hidden?: boolean;
+}[];
 
 /**
  * Returns a counter that increments whenever the cache entry for `key` (or any
@@ -295,6 +305,28 @@ function useCacheRefresh(key: string, subscribe: DataContextValue["subscribe"]):
   return refresh;
 }
 
+/**
+ * Reset a `{ data, loading, error }` slice back to its loading shape whenever the
+ * cache key it describes changes.
+ *
+ * This happens during render rather than inside the fetching effect. React
+ * re-runs the component immediately without committing when state is adjusted
+ * mid-render, so the UI still flips to `loading: true` in the same paint — but
+ * without the extra state update that an effect-based reset would schedule.
+ */
+function useResetOnKeyChange<S extends { loading: boolean }>(
+  key: string,
+  setState: (update: (prev: S) => S) => void,
+  reset: S
+) {
+  const [trackedKey, setTrackedKey] = useState(key);
+
+  if (trackedKey !== key) {
+    setTrackedKey(key);
+    setState(() => reset);
+  }
+}
+
 export function useExpenses(month: string) {
   const { fetchCached, invalidate, subscribe } = useData();
   const key = expenseListKey(month);
@@ -305,10 +337,11 @@ export function useExpenses(month: string) {
     error: string | null;
   }>({ data: null, loading: true, error: null });
   const refresh = useCacheRefresh(key, subscribe);
+  useResetOnKeyChange(key, setState, { data: null, loading: true, error: null });
 
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: null }));
+    
 
     fetchCached<{ expenses: CurrencyData }>(
       key,
@@ -349,10 +382,11 @@ export function useIncome(month: string) {
     error: string | null;
   }>({ data: null, loading: true, error: null });
   const refresh = useCacheRefresh(key, subscribe);
+  useResetOnKeyChange(key, setState, { data: null, loading: true, error: null });
 
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: null }));
+    
 
     fetchCached<{ incomes: CurrencyData }>(
       key,
@@ -389,16 +423,18 @@ export function useCategories() {
   const refresh = useCacheRefresh(key, subscribe);
 
   const [state, setState] = useState<{
-    data: { globalCategories: CategoryData; userCategories: CategoryData } | null;
+    data: { categories: CategoryData } | null;
     loading: boolean;
     error: string | null;
   }>({ data: null, loading: true, error: null });
 
+  useResetOnKeyChange(key, setState, { data: null, loading: true, error: null });
+
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: null }));
+    
 
-    fetchCached<{ globalCategories: CategoryData; userCategories: CategoryData }>(
+    fetchCached<{ categories: CategoryData }>(
       key,
       () => fetch("/api/categories").then(handleResponse),
       TTL.CATEGORIES
@@ -436,9 +472,11 @@ export function useNotifications() {
     error: string | null;
   }>({ data: null, loading: true, error: null });
 
+  useResetOnKeyChange(key, setState, { data: null, loading: true, error: null });
+
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: null }));
+    
 
     fetchCached<{ notifications: NotificationItem[]; unreadCount: number }>(
       key,
@@ -501,9 +539,11 @@ export function useGroups() {
     error: string | null;
   }>({ data: null, loading: true, error: null });
 
+  useResetOnKeyChange(key, setState, { data: null, loading: true, error: null });
+
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: null }));
+    
 
     fetchCached<GroupItem[]>(
       key,
@@ -539,10 +579,12 @@ export function useGroup(id: string) {
     error: string | null;
   }>({ data: null, loading: true, error: null });
 
+  useResetOnKeyChange(key, setState, { data: null, loading: true, error: null });
+
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: null }));
+    
 
     fetchCached<GroupItem & { members: GroupItem["members"] }>(
       key,
@@ -578,9 +620,11 @@ export function useSettings() {
     error: string | null;
   }>({ data: null, loading: true, error: null });
 
+  useResetOnKeyChange(key, setState, { data: null, loading: true, error: null });
+
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true, error: null }));
+    
 
     fetchCached<{ expenseMode: string; monthlyLimit: number }>(
       key,
@@ -681,6 +725,17 @@ export function useMutations() {
     [mutate]
   );
 
+  const setCategoryVisibility = useCallback(
+    (id: string, hidden: boolean) =>
+      mutate({
+        url: `/api/categories/${id}/visibility`,
+        method: "PUT",
+        body: { hidden },
+        invalidate: ["categories"],
+      }),
+    [mutate]
+  );
+
   const markNotificationRead = useCallback(
     (id: string) =>
       mutate({ url: "/api/user/notifications/mark-read", method: "POST", body: { notificationId: id }, invalidate: ["notifications"] }),
@@ -734,6 +789,7 @@ export function useMutations() {
     createCategory,
     updateCategory,
     deleteCategory,
+    setCategoryVisibility,
     markNotificationRead,
     markAllNotificationsRead,
     deleteNotification,

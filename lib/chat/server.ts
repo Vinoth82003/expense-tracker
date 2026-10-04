@@ -4,6 +4,7 @@ import { BudgetDetails, ExpenseDetails, DateRange } from "./intent";
 import { validateBudgetDetails, validateExpenseDetails, validateIncomeDetails } from "./validators";
 import { endOfDay, endOfMonth, format, startOfDay, startOfMonth } from "date-fns";
 import { scoreCategories as categoryScoreCategories, SPORTS_KEYWORDS } from "./categories";
+import { ENTRY_SOURCE } from "@/lib/transaction-source";
 
 // ─── Category helpers ────────────────────────────────────────────────────────
 
@@ -283,6 +284,7 @@ export async function createExpense(userId: string, details: ExpenseDetails) {
       subcategory,
       note,
       date,
+      entrySource: ENTRY_SOURCE.SAGE,
       userId,
     },
   });
@@ -320,6 +322,7 @@ export async function createIncome(userId: string, details: ExpenseDetails) {
       source,
       note,
       date,
+      entrySource: ENTRY_SOURCE.SAGE,
       userId,
     },
   });

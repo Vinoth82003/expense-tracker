@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useIncome } from "@/context/DataContext";
 import { useUser } from "@/context/UserContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search,
   Plus,
   ChevronLeft,
   ChevronRight,
@@ -24,6 +23,20 @@ import {
   Save,
 } from "lucide-react";
 import { useUI } from "@/context/UIContext";
+import EntrySourceBadge from "@/components/transactions/EntrySourceBadge";
+import TransactionFilterBar from "@/components/transactions/TransactionFilterBar";
+import GroupByControl from "@/components/transactions/GroupByControl";
+import {
+  EMPTY_FILTERS,
+  applyFilters,
+  collectFacets,
+  groupOptionsFor,
+  groupTransactions,
+  isFilterActive,
+  sumAmount,
+  type GroupKey,
+  type TransactionFilters,
+} from "@/lib/transaction-grouping";
 
 interface Income {
   id: string;
@@ -31,6 +44,8 @@ interface Income {
   source: string;
   note: string | null;
   date: string;
+  /** "MANUAL" | "SAGE"; absent on rows written before the field existed. */
+  entrySource?: string | null;
 }
 
 const SOURCE_ICONS: Record<string, typeof Banknote> = {
@@ -60,13 +75,12 @@ const INCOME_SOURCES = [
 export default function IncomePage() {
   const { toast, confirm } = useUI();
 
-  const [search, setSearch] = useState("");
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
 
-  const { data: incomes, loading, error, refetch } = useIncome(currentMonth);
+  const { data: incomes, loading } = useIncome(currentMonth);
   const user = useUser();
 
   const [selectedIncome, setSelectedIncome] = useState<Income | null>(null);
@@ -79,14 +93,10 @@ export default function IncomePage() {
     note: "",
     date: "",
   });
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (showMobileSearch && searchRef.current) {
-      searchRef.current.focus();
-    }
-  }, [showMobileSearch]);
+  const [filters, setFilters] = useState<TransactionFilters>({ ...EMPTY_FILTERS });
+  const [groupBy, setGroupBy] = useState<GroupKey>("date");
+  const groupOptions = useMemo(() => groupOptionsFor("income"), []);
 
   const changeMonth = (offset: number) => {
     const [year, month] = currentMonth.split("-").map(Number);
@@ -94,18 +104,24 @@ export default function IncomePage() {
     setCurrentMonth(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
   };
 
-  const incomeList = (incomes as unknown as Income[] | undefined) || [];
-  const filteredIncomes = useMemo(() => {
-    return incomeList.filter(
-      (inc) =>
-        inc.source.toLowerCase().includes(search.toLowerCase()) ||
-        (inc.note && inc.note.toLowerCase().includes(search.toLowerCase()))
-    );
-  }, [incomeList, search]);
+  const incomeList = useMemo<Income[]>(
+    () => (incomes as unknown as Income[] | undefined) ?? [],
+    [incomes]
+  );
 
-  const monthTotal = useMemo(() => {
-    return filteredIncomes.reduce((s, i) => s + i.amount, 0);
-  }, [filteredIncomes]);
+  const facets = useMemo(() => collectFacets(incomeList), [incomeList]);
+
+  const filteredIncomes = useMemo(
+    () => applyFilters(incomeList, filters),
+    [incomeList, filters]
+  );
+
+  const groups = useMemo(
+    () => groupTransactions(filteredIncomes, groupBy, "income"),
+    [filteredIncomes, groupBy]
+  );
+
+  const monthTotal = useMemo(() => sumAmount(filteredIncomes), [filteredIncomes]);
 
   function openDetail(income: Income) {
     setSelectedIncome(income);
@@ -140,8 +156,8 @@ export default function IncomePage() {
       });
       toast.success("Income updated");
       closeDetail();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to update");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update");
     } finally {
       setSaving(false);
     }
@@ -163,8 +179,8 @@ export default function IncomePage() {
       await user.deleteIncome(selectedIncome.id);
       toast.success("Income deleted");
       closeDetail();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to delete");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete");
       setDeleting(false);
     }
   }
@@ -173,6 +189,8 @@ export default function IncomePage() {
     month: "long",
     year: "numeric",
   });
+
+  const filtersActive = isFilterActive(filters);
 
   return (
     <div className="mx-auto space-y-4 pb-24 px-4">
@@ -203,46 +221,38 @@ export default function IncomePage() {
           </button>
         </div>
 
-        {/* Search + Nav */}
+        {/* Month nav + grouping */}
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-surface border border-border-subtle rounded-xl overflow-hidden flex-shrink-0">
-            <button onClick={() => changeMonth(-1)} className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
+            <button onClick={() => changeMonth(-1)} aria-label="Previous month" className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
               <ChevronLeft size={16} />
             </button>
-            <button onClick={() => changeMonth(1)} className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
+            <button onClick={() => changeMonth(1)} aria-label="Next month" className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
               <ChevronRight size={16} />
             </button>
           </div>
 
-          <div className="flex-1 min-w-0">
-            {showMobileSearch ? (
-              <div className="flex items-center gap-2">
-                <input
-                  ref={searchRef}
-                  type="text"
-                  placeholder="Search..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-surface border border-border-subtle rounded-xl px-3 py-2 text-sm outline-none focus:border-success transition-colors"
-                />
-                <button onClick={() => { setSearch(""); setShowMobileSearch(false); }} className="p-2 text-muted hover:text-foreground">
-                  <X size={16} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowMobileSearch(true)}
-                className="w-full flex items-center gap-2 bg-surface border border-border-subtle rounded-xl px-3 py-2 text-sm text-muted hover:text-foreground hover:border-border-hover transition-colors text-left"
-              >
-                <Search size={14} />
-                <span className="truncate">{search || "Search..."}</span>
-              </button>
-            )}
-          </div>
+          <span className="text-xs font-semibold text-muted whitespace-nowrap px-1 flex-1">
+            {monthName}
+          </span>
 
-          <span className="text-xs font-semibold text-muted whitespace-nowrap px-1">{monthName}</span>
+          <GroupByControl
+            value={groupBy}
+            options={groupOptions}
+            onChange={setGroupBy}
+            groupCount={groups.length}
+          />
         </div>
       </div>
+
+      {/* Search + filters */}
+      <TransactionFilterBar
+        filters={filters}
+        onChange={setFilters}
+        facets={facets}
+        kind="income"
+        resultCount={filteredIncomes.length}
+      />
 
       {/* Income List */}
       {loading ? (
@@ -256,12 +266,21 @@ export default function IncomePage() {
             <Receipt size={24} className="text-muted" />
           </div>
           <p className="text-sm font-semibold text-foreground mb-1">
-            {search ? "No matching income" : "No income yet"}
+            {filtersActive ? "No matching income" : "No income yet"}
           </p>
           <p className="text-xs text-muted mb-5 max-w-[220px]">
-            {search ? "Try a different search term" : "Track your earnings to see your financial growth"}
+            {filtersActive
+              ? "No income matches your filters. Try widening the date or amount range."
+              : "Track your earnings to see your financial growth"}
           </p>
-          {!search && (
+          {filtersActive ? (
+            <button
+              onClick={() => setFilters({ ...EMPTY_FILTERS })}
+              className="flex items-center gap-1.5 px-4 py-2 bg-success text-white text-sm font-semibold rounded-xl"
+            >
+              <X size={16} /> Clear filters
+            </button>
+          ) : (
             <button
               onClick={() => {
                 setSelectedIncome(null);
@@ -275,65 +294,56 @@ export default function IncomePage() {
           )}
         </div>
       ) : (
-        <div className="space-y-2">
-          {(() => {
-            const groups: Record<string, Income[]> = {};
-            filteredIncomes.forEach((inc) => {
-              const key = inc.date.split("T")[0];
-              if (!groups[key]) groups[key] = [];
-              groups[key].push(inc);
-            });
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <section key={group.key} className="space-y-1.5">
+              <header className="sticky top-0 z-10 flex items-center justify-between bg-background/90 px-1 py-2 backdrop-blur-sm">
+                <span className="text-xs font-semibold text-muted">{group.label}</span>
+                <span className="text-xs font-semibold text-success tabular-nums">
+                  {formatCurrency(group.total)}
+                  <span className="ml-1.5 font-normal text-muted">
+                    {group.count} item{group.count === 1 ? "" : "s"}
+                  </span>
+                </span>
+              </header>
 
-            return Object.entries(groups).map(([dateKey, items]) => {
-              const dayTotal = items.reduce((s, i) => s + i.amount, 0);
-              const d = new Date(dateKey);
-              const isToday = d.toDateString() === new Date().toDateString();
-              const isYesterday = d.toDateString() === new Date(Date.now() - 86400000).toDateString();
-              const label = isToday ? "Today" : isYesterday ? "Yesterday" : d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
-
-              return (
-                <div key={dateKey}>
-                  <div className="flex items-center justify-between px-1 py-2">
-                    <span className="text-xs font-semibold text-muted">{label}</span>
-                    <span className="text-xs font-semibold text-success">{formatCurrency(dayTotal)}</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {items.map((income) => {
-                      const Icon = getSourceIcon(income.source);
-                      return (
-                        <motion.button
-                          key={income.id}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          onClick={() => openDetail(income)}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border-subtle hover:border-border-hover hover:bg-surface-variant/30 transition-all text-left active:scale-[0.98]"
-                        >
-                          <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center flex-shrink-0">
-                            <Icon size={16} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold text-foreground truncate">{income.source}</span>
-                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-success/10 text-success">
-                                Income
-                              </span>
-                            </div>
-                            {income.note && (
-                              <p className="text-xs text-muted truncate mt-0.5">{income.note}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <span className="text-sm font-bold text-success tabular-nums">{formatCurrency(income.amount)}</span>
-                            <Pencil size={12} className="text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            });
-          })()}
+              <div className="space-y-1.5">
+                {group.items.map((income) => {
+                  const Icon = getSourceIcon(income.source);
+                  return (
+                    <motion.button
+                      key={income.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      onClick={() => openDetail(income)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border-subtle hover:border-border-hover hover:bg-surface-variant/30 transition-all text-left active:scale-[0.98]"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center flex-shrink-0">
+                        <Icon size={16} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold text-foreground truncate">{income.source}</span>
+                          {groupBy !== "source" && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md bg-success/10 text-success">
+                              {income.source}
+                            </span>
+                          )}
+                          <EntrySourceBadge value={income.entrySource} />
+                        </div>
+                        {income.note && (
+                          <p className="text-xs text-muted truncate mt-0.5">{income.note}</p>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold text-success tabular-nums flex-shrink-0">
+                        {formatCurrency(income.amount)}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
@@ -374,7 +384,13 @@ export default function IncomePage() {
                       <div className="w-10 h-10 rounded-xl bg-success/10 text-success flex items-center justify-center">
                         <Pencil size={18} />
                       </div>
-                      <h2 className="text-lg font-bold text-foreground">Edit Income</h2>
+                      <div>
+                        <h2 className="text-lg font-bold text-foreground">Edit Income</h2>
+                        <EntrySourceBadge
+                          value={selectedIncome?.entrySource}
+                          className="mt-0.5"
+                        />
+                      </div>
                     </div>
                     <button onClick={closeDetail} className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95">
                       <X size={18} />
@@ -565,8 +581,8 @@ export default function IncomePage() {
                         });
                         toast.success("Income recorded!");
                         closeDetail();
-                      } catch (e: any) {
-                        toast.error(e.message || "Failed to save");
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : "Failed to save");
                       } finally {
                         setSaving(false);
                       }
