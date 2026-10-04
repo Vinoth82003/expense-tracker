@@ -291,10 +291,15 @@ export default function ReportsPage() {
 
     window.addEventListener('expenseAdded', handleRefresh);
     window.addEventListener('incomeAdded', handleRefresh);
-    
+    // Sage reports a whole multi-transaction message under one batch event.
+    window.addEventListener('batchTransactionsAdded', handleRefresh);
+    window.addEventListener('budgetUpdated', handleRefresh);
+
     return () => {
       window.removeEventListener('expenseAdded', handleRefresh);
       window.removeEventListener('incomeAdded', handleRefresh);
+      window.removeEventListener('batchTransactionsAdded', handleRefresh);
+      window.removeEventListener('budgetUpdated', handleRefresh);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, currentMonth, currentDay, currentWeekStart, dateRange, contextExpenses, contextIncomes, contextPrevExpenses, contextLoading]);

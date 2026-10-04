@@ -23,7 +23,13 @@ interface PendingPromise<T> {
   ts: number;
 }
 
-type Listener = () => void;
+/**
+ * Cache subscribers are notified when a cache entry is INVALIDATED, and receive
+ * the invalidated key (or prefix, or "*" for a full flush). They are NOT notified
+ * when an entry is written — otherwise a subscriber would re-trigger the very
+ * fetch that produced the write.
+ */
+type Listener = (prefix: string) => void;
 
 interface MutationOptions {
   url: string;
@@ -73,7 +79,7 @@ async function handleResponse(res: Response) {
 
 // ──────────────── Cache Store ────────────────
 
-class CacheStore {
+export class CacheStore {
   private map = new Map<string, CacheEntry<unknown>>();
   private listeners = new Set<Listener>();
   private pending = new Map<string, PendingPromise<unknown>>();
@@ -90,24 +96,35 @@ class CacheStore {
 
   set<T>(key: string, data: T, ttl: number) {
     this.map.set(key, { data, ts: Date.now(), ttl });
-    this.notify();
   }
 
   delete(key: string) {
     this.map.delete(key);
-    this.notify();
+    this.notify(key);
   }
 
   deleteMatching(prefix: string) {
     this.map.forEach((_, key) => {
       if (matchPrefix(key, prefix)) this.map.delete(key);
     });
-    this.notify();
+    this.notify(prefix);
   }
 
   clear() {
     this.map.clear();
-    this.notify();
+    this.notify("*");
+  }
+
+  /**
+   * Memory hygiene only: evicts expired entries WITHOUT notifying subscribers.
+   * An eviction is not a data change, so mounted consumers must not refetch
+   * because of it — they revalidate on their own TTL when they next fetch.
+   */
+  sweep() {
+    const now = Date.now();
+    this.map.forEach((entry, key) => {
+      if (now - entry.ts > entry.ttl) this.map.delete(key);
+    });
   }
 
   getPending<T>(key: string): Promise<T> | null {
@@ -133,8 +150,8 @@ class CacheStore {
     return () => this.listeners.delete(listener);
   }
 
-  private notify() {
-    this.listeners.forEach((fn) => fn());
+  private notify(prefix: string) {
+    this.listeners.forEach((fn) => fn(prefix));
   }
 }
 
@@ -159,7 +176,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      storeRef.current.clear();
+      storeRef.current.sweep();
     }, STALE_EVICT_INTERVAL);
     return () => clearInterval(interval);
   }, []);
@@ -258,20 +275,36 @@ export function useData() {
 type CurrencyData = { id?: string; amount: number; category: string; subcategory: string; note: string | null; date: string }[];
 type CategoryData = { id: string; name: string; type: string }[];
 
+/**
+ * Returns a counter that increments whenever the cache entry for `key` (or any
+ * prefix covering it) is invalidated. Include it in a fetching effect's
+ * dependency list so mounted consumers refetch immediately after a write
+ * performed elsewhere (e.g. UserContext optimistic updates from chat/Sage).
+ */
+function useCacheRefresh(key: string, subscribe: DataContextValue["subscribe"]): number {
+  const [refresh, setRefresh] = useState(0);
+
+  useEffect(() => {
+    return subscribe((prefix) => {
+      if (prefix === "*" || matchPrefix(key, prefix)) {
+        setRefresh((r) => r + 1);
+      }
+    });
+  }, [subscribe, key]);
+
+  return refresh;
+}
+
 export function useExpenses(month: string) {
   const { fetchCached, invalidate, subscribe } = useData();
   const key = expenseListKey(month);
-
-  useEffect(() => {
-    const unsub = subscribe(() => {});
-    return unsub;
-  }, [subscribe]);
 
   const [state, setState] = useState<{
     data: CurrencyData | null;
     loading: boolean;
     error: string | null;
   }>({ data: null, loading: true, error: null });
+  const refresh = useCacheRefresh(key, subscribe);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,7 +325,7 @@ export function useExpenses(month: string) {
     return () => {
       cancelled = true;
     };
-  }, [month, key, fetchCached]);
+  }, [month, key, fetchCached, refresh]);
 
   const refetch = useCallback(() => {
     invalidate(key);
@@ -310,16 +343,12 @@ export function useIncome(month: string) {
   const { fetchCached, invalidate, subscribe } = useData();
   const key = incomeListKey(month);
 
-  useEffect(() => {
-    const unsub = subscribe(() => {});
-    return unsub;
-  }, [subscribe]);
-
   const [state, setState] = useState<{
     data: CurrencyData | null;
     loading: boolean;
     error: string | null;
   }>({ data: null, loading: true, error: null });
+  const refresh = useCacheRefresh(key, subscribe);
 
   useEffect(() => {
     let cancelled = false;
@@ -340,7 +369,7 @@ export function useIncome(month: string) {
     return () => {
       cancelled = true;
     };
-  }, [month, key, fetchCached]);
+  }, [month, key, fetchCached, refresh]);
 
   const refetch = useCallback(() => {
     invalidate(key);
@@ -357,11 +386,7 @@ export function useIncome(month: string) {
 export function useCategories() {
   const { fetchCached, invalidate, subscribe } = useData();
   const key = "categories";
-
-  useEffect(() => {
-    const unsub = subscribe(() => {});
-    return unsub;
-  }, [subscribe]);
+  const refresh = useCacheRefresh(key, subscribe);
 
   const [state, setState] = useState<{
     data: { globalCategories: CategoryData; userCategories: CategoryData } | null;
@@ -388,7 +413,7 @@ export function useCategories() {
     return () => {
       cancelled = true;
     };
-  }, [key, fetchCached]);
+  }, [key, fetchCached, refresh]);
 
   const refetch = useCallback(() => {
     invalidate(key);
@@ -403,11 +428,7 @@ type NotificationItem = { id: string; subject: string; body: string; createdAt: 
 export function useNotifications() {
   const { fetchCached, invalidate, subscribe } = useData();
   const key = "notifications";
-
-  useEffect(() => {
-    const unsub = subscribe(() => {});
-    return unsub;
-  }, [subscribe]);
+  const refresh = useCacheRefresh(key, subscribe);
 
   const [state, setState] = useState<{
     data: { notifications: NotificationItem[]; unreadCount: number } | null;
@@ -434,7 +455,7 @@ export function useNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [key, fetchCached]);
+  }, [key, fetchCached, refresh]);
 
   const refetch = useCallback(() => {
     invalidate(key);
@@ -472,11 +493,7 @@ type GroupItem = {
 export function useGroups() {
   const { fetchCached, invalidate, subscribe } = useData();
   const key = "groups";
-
-  useEffect(() => {
-    const unsub = subscribe(() => {});
-    return unsub;
-  }, [subscribe]);
+  const refresh = useCacheRefresh(key, subscribe);
 
   const [state, setState] = useState<{
     data: GroupItem[] | null;
@@ -501,7 +518,7 @@ export function useGroups() {
       });
 
     return () => { cancelled = true; };
-  }, [key, fetchCached]);
+  }, [key, fetchCached, refresh]);
 
   const refetch = useCallback(() => {
     invalidate(key);
@@ -514,11 +531,7 @@ export function useGroups() {
 export function useGroup(id: string) {
   const { fetchCached, invalidate, subscribe } = useData();
   const key = cacheKey("group", id);
-
-  useEffect(() => {
-    const unsub = subscribe(() => {});
-    return unsub;
-  }, [subscribe]);
+  const refresh = useCacheRefresh(key, subscribe);
 
   const [state, setState] = useState<{
     data: GroupItem & { members: GroupItem["members"] } | null;
@@ -544,7 +557,7 @@ export function useGroup(id: string) {
       });
 
     return () => { cancelled = true; };
-  }, [id, key, fetchCached]);
+  }, [id, key, fetchCached, refresh]);
 
   const refetch = useCallback(() => {
     invalidate(key);
@@ -557,11 +570,7 @@ export function useGroup(id: string) {
 export function useSettings() {
   const { fetchCached, invalidate, subscribe, mutate } = useData();
   const key = "user-settings";
-
-  useEffect(() => {
-    const unsub = subscribe(() => {});
-    return unsub;
-  }, [subscribe]);
+  const refresh = useCacheRefresh(key, subscribe);
 
   const [state, setState] = useState<{
     data: { expenseMode: string; monthlyLimit: number } | null;
@@ -588,7 +597,7 @@ export function useSettings() {
     return () => {
       cancelled = true;
     };
-  }, [key, fetchCached]);
+  }, [key, fetchCached, refresh]);
 
   const updateSettings = useCallback(
     async (settings: { expenseMode?: string; monthlyLimit?: number }) => {

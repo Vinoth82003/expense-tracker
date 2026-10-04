@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { useSession } from "next-auth/react";
 import { useData, expenseListKey, incomeListKey } from "./DataContext";
+import { mergeById, splitByMonth } from "@/lib/chat/batchSync";
 
 /** next-auth's session user type does not carry expenseMode. */
 type SessionUser = { expenseMode?: string } & Record<string, unknown>;
@@ -225,16 +226,35 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Batch counterpart of `insert`: merges a whole list in one state update
+    // per bucket instead of one update per record, dropping duplicates by id.
+    const insertMany = <T extends Expense | Income>(
+      items: T[] | undefined,
+      setList: React.Dispatch<React.SetStateAction<T[]>>,
+      setPrevList: React.Dispatch<React.SetStateAction<T[]>>,
+    ): boolean => {
+      if (!Array.isArray(items) || items.length === 0) return false;
+      const { current, previous } = splitByMonth(items);
+      if (current.length) setList((prevList) => mergeById(prevList, current));
+      if (previous.length) setPrevList((prevList) => mergeById(prevList, previous));
+      return current.length > 0 || previous.length > 0;
+    };
+
     const handleExpenseAdded = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail) insert(detail, setExpenses, setPrevExpenses);
       else fetchData();
+      // The insert above only patches this context's local lists. The list pages
+      // read DataContext's cache, so it must be invalidated too or they keep
+      // rendering the pre-write snapshot until a manual refresh.
+      invalidateMatching("expenses");
     };
 
     const handleIncomeAdded = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail) insert(detail, setIncomes, setPrevIncomes);
       else fetchData();
+      invalidateMatching("income");
     };
 
     const handleBudgetUpdated = (e: Event) => {
@@ -245,17 +265,57 @@ export function UserProvider({ children }: { children: ReactNode }) {
       } else {
         fetchData();
       }
+      invalidateMatching("budget");
+    };
+
+    // Sage logs several transactions from one message and reports them under a
+    // single batch event, so the single-record handlers above never fire. Its
+    // payload is also a different shape: { expenses[], incomes[], budget }.
+    // Without this the dashboard kept showing pre-chat totals until a refresh.
+    const handleBatchTransactionsAdded = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) {
+        fetchData();
+        invalidateMatching("expenses");
+        invalidateMatching("income");
+        invalidateMatching("budget");
+        return;
+      }
+      const { expenses, incomes, budget } = detail;
+      const touched =
+        insertMany(expenses, setExpenses, setPrevExpenses) ||
+        insertMany(incomes, setIncomes, setPrevIncomes);
+
+      // Every bucket a batch touched must drop its cached copy, otherwise the
+      // expenses/income pages stay on the pre-batch snapshot.
+      if (expenses?.length) invalidateMatching("expenses");
+      if (incomes?.length) invalidateMatching("income");
+
+      if (budget && typeof budget.amount === "number") {
+        setMonthlyLimit(budget.amount);
+        setExpenseMode("limit");
+        invalidateMatching("budget");
+        return;
+      }
+      if (!touched) {
+        fetchData();
+        invalidateMatching("expenses");
+        invalidateMatching("income");
+        invalidateMatching("budget");
+      }
     };
 
     window.addEventListener("expenseAdded", handleExpenseAdded);
     window.addEventListener("incomeAdded", handleIncomeAdded);
     window.addEventListener("budgetUpdated", handleBudgetUpdated);
+    window.addEventListener("batchTransactionsAdded", handleBatchTransactionsAdded);
     return () => {
       window.removeEventListener("expenseAdded", handleExpenseAdded);
       window.removeEventListener("incomeAdded", handleIncomeAdded);
       window.removeEventListener("budgetUpdated", handleBudgetUpdated);
+      window.removeEventListener("batchTransactionsAdded", handleBatchTransactionsAdded);
     };
-  }, [session, fetchData]);
+  }, [session, fetchData, invalidateMatching]);
 
   const restore = useCallback(() => {
     setExpenses(snapshot.current.expenses);

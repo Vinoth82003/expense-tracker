@@ -259,5 +259,7 @@ describe("VULN-021: CSP tightened", () => {
     const { default: config } = await import("@/next.config");
     const headersConfig = (config as any)?.headers;
     expect(headersConfig).toBeDefined();
-  });
+    // Importing next.config pulls in the whole config chain; the default 5s
+    // budget is not enough when the suite runs fully parallel.
+  }, 20_000);
 });
