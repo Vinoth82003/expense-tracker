@@ -86,6 +86,7 @@ export default function AdminTransactionsPage() {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
+        search,
         category: selectedCategory,
         flagged: flaggedOnly.toString(),
         minAmount,
@@ -106,7 +107,7 @@ export default function AdminTransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, page, selectedCategory, flaggedOnly, minAmount, maxAmount, dateFrom, dateTo]);
+  }, [activeTab, page, search, selectedCategory, flaggedOnly, minAmount, maxAmount, dateFrom, dateTo]);
 
   const fetchChartData = async () => {
     try {
@@ -117,9 +118,16 @@ export default function AdminTransactionsPage() {
     }
   };
 
+  // Debounced so typing a name/email doesn't fire a query per keystroke.
   useEffect(() => {
-    fetchData();
+    const timer = setTimeout(fetchData, 300);
+    return () => clearTimeout(timer);
   }, [fetchData]);
+
+  // Any filter change invalidates the current page offset.
+  useEffect(() => {
+    setPage(1);
+  }, [search, selectedCategory, flaggedOnly, minAmount, maxAmount, dateFrom, dateTo, activeTab]);
 
   useEffect(() => {
     if (isChartOpen) fetchChartData();
@@ -127,6 +135,7 @@ export default function AdminTransactionsPage() {
 
   const openDetail = async (tx: Transaction) => {
     setSelectedTx(tx);
+    setTxContext(null);
     setIsDrawerOpen(true);
     try {
       const res = await fetch(`/api/admin/transactions/${tx.id}/context?type=${activeTab}`);
@@ -210,9 +219,22 @@ export default function AdminTransactionsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]" size={16} />
             <input 
               type="text" 
-              placeholder="Search user, note, or category..."
-              className="w-full pl-10 pr-4 py-2.5 bg-[var(--admin-bg-surface-variant)] border-none rounded-xl outline-none text-[var(--admin-text-primary)] placeholder:text-[var(--admin-text-muted)] focus:ring-2 focus:ring-teal-500 transition-all text-sm font-medium"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by user email or name..."
+              aria-label="Search transactions by user email or name"
+              className="w-full pl-10 pr-10 py-2.5 bg-[var(--admin-bg-surface-variant)] border-none rounded-xl outline-none text-[var(--admin-text-primary)] placeholder:text-[var(--admin-text-muted)] focus:ring-2 focus:ring-teal-500 transition-all text-sm font-medium"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] hover:bg-[var(--admin-border)] transition-colors"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
           
           <select 
@@ -321,6 +343,18 @@ export default function AdminTransactionsPage() {
                   </td>
                 </tr>
               ))}
+              {!loading && data.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="py-16 px-6 text-center">
+                    <p className="text-sm font-bold text-[var(--admin-text-primary)]">
+                      No transactions found
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-[var(--admin-text-muted)]">
+                      Try a different user email or name, or clear the filters.
+                    </p>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -328,7 +362,11 @@ export default function AdminTransactionsPage() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-[var(--admin-text-secondary)]">Showing {(page-1)*25 + 1} to {Math.min(page*25, total)} of {total} transactions</p>
+        <p className="text-sm font-medium text-[var(--admin-text-secondary)]">
+          {total === 0
+            ? "No transactions match the current filters"
+            : `Showing ${(page - 1) * 25 + 1} to ${Math.min(page * 25, total)} of ${total} transactions`}
+        </p>
         <div className="flex items-center gap-2">
           <button 
             disabled={page === 1}
