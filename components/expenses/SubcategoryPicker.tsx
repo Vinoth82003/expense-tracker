@@ -20,6 +20,12 @@ interface SubcategoryPickerProps {
   onChange: (name: string) => void;
   invalid?: boolean;
   /**
+   * Id for the underlying `<select>`, so a visible `<label htmlFor>` can be
+   * associated with it. When supplied, the hardcoded `aria-label` below is
+   * dropped — two competing names means the visible label is silently ignored.
+   */
+  id?: string;
+  /**
    * Sizing preset. "lg" matches the add/edit modal fields, "sm" the compact
    * inline detail sheets.
    */
@@ -39,6 +45,7 @@ export default function SubcategoryPicker({
   value,
   onChange,
   invalid = false,
+  id,
   size = "lg",
 }: SubcategoryPickerProps) {
   const [categories, setCategories] = useState<SubcategoryOption[]>([]);
@@ -160,9 +167,10 @@ export default function SubcategoryPicker({
         <>
           <div className="relative">
             <select
+              id={id}
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              aria-label="Subcategory"
+              aria-label={id ? undefined : "Subcategory"}
               aria-invalid={invalid}
               className={`${fieldClass} ${
                 invalid ? "border-error" : "border-border-subtle focus:border-primary-500"

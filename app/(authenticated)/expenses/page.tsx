@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -30,10 +30,14 @@ import {
 import { useUI } from "@/context/UIContext";
 import { useExpenses } from "@/context/DataContext";
 import { useUser } from "@/context/UserContext";
+import { cn } from "@/lib/utils";
 import SubcategoryPicker from "@/components/expenses/SubcategoryPicker";
 import EntrySourceBadge from "@/components/transactions/EntrySourceBadge";
 import TransactionFilterBar from "@/components/transactions/TransactionFilterBar";
 import GroupByControl from "@/components/transactions/GroupByControl";
+import CollapsibleGroup, {
+  ExpandCollapseAll,
+} from "@/components/transactions/CollapsibleGroup";
 import {
   EMPTY_FILTERS,
   applyFilters,
@@ -105,6 +109,20 @@ export default function ExpensesPage() {
   const [groupBy, setGroupBy] = useState<GroupKey>("date");
   const groupOptions = useMemo(() => groupOptionsFor("expense"), []);
 
+  // Per-group open/closed state, keyed by group key. A missing key means
+  // "expanded", so a group that appears later (or after switching the grouping
+  // dimension) starts open instead of arriving silently collapsed.
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const isGroupExpanded = useCallback(
+    (key: string) => expandedGroups[key] ?? true,
+    [expandedGroups]
+  );
+
+  const toggleGroup = useCallback((key: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [key]: !(prev[key] ?? true) }));
+  }, []);
+
   const changeMonth = (offset: number) => {
     const [year, month] = currentMonth.split("-").map(Number);
     const date = new Date(year, month - 1 + offset, 1);
@@ -130,7 +148,39 @@ export default function ExpensesPage() {
     [filteredExpenses, groupBy]
   );
 
+  // Defined after `groups` on purpose: these read it during the first render
+  // pass, so hoisting them above the memo would hit the temporal dead zone.
+  const allExpanded = useMemo(
+    () => groups.every((g) => expandedGroups[g.key] ?? true),
+    [groups, expandedGroups]
+  );
+
+  const toggleAllGroups = useCallback(() => {
+    setExpandedGroups((prev) => {
+      const collapseAll = groups.every((g) => prev[g.key] ?? true);
+      return Object.fromEntries(groups.map((g) => [g.key, !collapseAll]));
+    });
+  }, [groups]);
+
   const monthTotal = useMemo(() => sumAmount(filteredExpenses), [filteredExpenses]);
+
+  // While the edit sheet is open: Escape closes it, and the page behind it must
+  // not scroll away under the overlay.
+  useEffect(() => {
+    if (!showDetail) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeDetail();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showDetail]);
 
   function openDetail(expense: Expense) {
     setSelectedExpense(expense);
@@ -218,39 +268,71 @@ export default function ExpensesPage() {
   const filtersActive = isFilterActive(filters);
 
   return (
-    <div className="mx-auto space-y-4 pb-24 px-4">
-      {/* Sticky Header */}
-      <div className="-mx-4 px-4 pt-2 pb-3">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <div className="text-xl font-bold text-foreground">{formatCurrency(monthTotal)}</div>
-            <div className="text-[11px] text-muted">
-              {filteredExpenses.length} transaction{filteredExpenses.length !== 1 ? "s" : ""}
+    <div className="mx-auto max-w-3xl space-y-5 px-4 pb-24">
+      {/* ------------------------------------------------------------------
+          Header. One clear focal point: what was spent this month. Everything
+          else (count, month, add action) is subordinate to that number, so it
+          is the largest type on the page and nothing competes with it.
+         ------------------------------------------------------------------ */}
+      <header className="sticky top-0 z-20 -mx-4 border-b border-border-subtle bg-background/90 px-4 pb-3 pt-2 backdrop-blur-md">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+              Expenses
+            </p>
+            <div className="mt-0.5 flex items-baseline gap-2">
+              <h1 className="text-2xl font-bold tabular-nums tracking-tight text-foreground">
+                {formatCurrency(monthTotal)}
+              </h1>
             </div>
+            <p className="mt-0.5 text-xs font-medium text-muted" aria-live="polite">
+              {loading
+                ? "Loading…"
+                : `${filteredExpenses.length} transaction${
+                    filteredExpenses.length === 1 ? "" : "s"
+                  }${filtersActive ? " matched" : ""}`}
+            </p>
           </div>
+
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("open-add-expense"))}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-primary-500/20 hover:bg-primary-600 active:scale-95 transition-all"
+            className="flex flex-shrink-0 items-center gap-1.5 rounded-xl bg-primary-500 px-3.5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary-500/20 transition-all hover:bg-primary-600 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <Plus size={16} />
             <span className="hidden sm:inline">Add</span>
+            <span className="sr-only sm:hidden">Add expense</span>
           </button>
         </div>
 
-        {/* Month nav + grouping */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-surface border border-border-subtle rounded-xl overflow-hidden flex-shrink-0">
-            <button onClick={() => changeMonth(-1)} aria-label="Previous month" className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
+        {/* Month navigation. The month is a label for the whole view, so it sits
+            between the stepper and the group control on a single row. */}
+        <div className="mt-3 flex items-center gap-2">
+          <div className="flex flex-shrink-0 items-center overflow-hidden rounded-xl border border-border-subtle bg-surface">
+            <button
+              onClick={() => changeMonth(-1)}
+              aria-label="Previous month"
+              className="p-2 text-muted transition-colors hover:bg-surface-variant hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+            >
               <ChevronLeft size={16} />
             </button>
-            <button onClick={() => changeMonth(1)} aria-label="Next month" className="p-2 text-muted hover:text-foreground hover:bg-surface-variant transition-colors">
+            <button
+              onClick={() => changeMonth(1)}
+              aria-label="Next month"
+              className="border-l border-border-subtle p-2 text-muted transition-colors hover:bg-surface-variant hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500"
+            >
               <ChevronRight size={16} />
             </button>
           </div>
 
-          <span className="text-xs font-semibold text-muted whitespace-nowrap px-1 flex-1">
+          <span className="min-w-0 flex-1 truncate px-1 text-xs font-semibold text-foreground">
             {monthName}
           </span>
+
+          <ExpandCollapseAll
+            allExpanded={allExpanded}
+            onToggleAll={toggleAllGroups}
+            hidden={groups.length < 2}
+          />
 
           <GroupByControl
             value={groupBy}
@@ -259,7 +341,7 @@ export default function ExpensesPage() {
             groupCount={groups.length}
           />
         </div>
-      </div>
+      </header>
 
       {/* Search + filters */}
       <TransactionFilterBar
@@ -270,45 +352,69 @@ export default function ExpensesPage() {
         resultCount={filteredExpenses.length}
       />
 
-      {/* Needs vs Wants mini bar */}
+      {/* Needs vs Wants. Labelled as a figure with a text alternative, since the
+          bar alone is unreadable to anyone who cannot map the two hues. */}
       {filteredExpenses.length > 0 && (
-        <div className="flex items-center gap-2 px-1">
-          <div className="flex-1 h-1.5 rounded-full bg-surface-variant overflow-hidden flex">
+        <section
+          aria-label="Needs versus wants split"
+          className="rounded-2xl border border-border-subtle bg-surface p-3"
+        >
+          <div
+            className="flex h-2 overflow-hidden rounded-full bg-surface-variant"
+            role="img"
+            aria-label={`Needs ${formatCurrency(needsTotal)}, Wants ${formatCurrency(wantsTotal)}`}
+          >
             {needsTotal + wantsTotal > 0 && (
               <>
                 <div
-                  className="h-full bg-primary-500 transition-all"
+                  className="h-full bg-primary-500 transition-all duration-500"
                   style={{ width: `${(needsTotal / (needsTotal + wantsTotal)) * 100}%` }}
                 />
                 <div
-                  className="h-full bg-tertiary-500 transition-all"
+                  className="h-full bg-tertiary-500 transition-all duration-500"
                   style={{ width: `${(wantsTotal / (needsTotal + wantsTotal)) * 100}%` }}
                 />
               </>
             )}
           </div>
-          <div className="flex items-center gap-3 text-[10px] font-medium text-muted">
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-primary-500" /> Needs {formatCurrency(needsTotal)}</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-tertiary-500" /> Wants {formatCurrency(wantsTotal)}</span>
+          <div className="mt-2.5 flex items-center gap-4 text-[11px] font-medium text-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-primary-500" />
+              Needs
+              <span className="font-semibold tabular-nums text-foreground">
+                {formatCurrency(needsTotal)}
+              </span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-tertiary-500" />
+              Wants
+              <span className="font-semibold tabular-nums text-foreground">
+                {formatCurrency(wantsTotal)}
+              </span>
+            </span>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Expense List */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-muted">
-          <Loader2 className="animate-spin mb-3" size={24} />
-          <span className="text-xs font-medium">Loading...</span>
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex flex-col items-center justify-center py-20 text-muted"
+        >
+          <Loader2 className="mb-3 animate-spin" size={24} />
+          <span className="text-xs font-medium">Loading expenses…</span>
         </div>
       ) : filteredExpenses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-surface-variant flex items-center justify-center mb-4">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border-subtle py-20 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-variant">
             <Receipt size={24} className="text-muted" />
           </div>
-          <p className="text-sm font-semibold text-foreground mb-1">
+          <p className="mb-1 text-sm font-semibold text-foreground">
             {filtersActive ? "No matching transactions" : "No expenses yet"}
           </p>
-          <p className="text-xs text-muted mb-5 max-w-[220px]">
+          <p className="mb-5 max-w-[220px] text-xs text-muted">
             {filtersActive
               ? "No expenses match your filters. Try widening the date or amount range."
               : "Tap the button above to add your first expense"}
@@ -316,77 +422,84 @@ export default function ExpensesPage() {
           {filtersActive ? (
             <button
               onClick={() => setFilters({ ...EMPTY_FILTERS })}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 text-white text-sm font-semibold rounded-xl"
+              className="flex items-center gap-1.5 rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >
               <X size={16} /> Clear filters
             </button>
           ) : (
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("open-add-expense"))}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 text-white text-sm font-semibold rounded-xl"
+              className="flex items-center gap-1.5 rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >
               <Plus size={16} /> Add Expense
             </button>
           )}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {groups.map((group) => (
-            <section key={group.key} className="space-y-1.5">
-              <header className="sticky top-0 z-10 flex items-center justify-between bg-background/90 px-1 py-2 backdrop-blur-sm">
-                <span className="text-xs font-semibold text-muted">{group.label}</span>
-                <span className="text-xs font-semibold text-foreground tabular-nums">
-                  {formatCurrency(group.total)}
-                  <span className="ml-1.5 font-normal text-muted">
-                    {group.count} item{group.count === 1 ? "" : "s"}
-                  </span>
-                </span>
-              </header>
-
-              <div className="space-y-1.5">
-                {group.items.map((expense) => {
-                  const Icon = getCategoryIcon(expense.subcategory);
-                  return (
-                    <motion.button
-                      key={expense.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
+            <CollapsibleGroup
+              key={group.key}
+              groupKey={group.key}
+              label={group.label}
+              totalLabel={formatCurrency(group.total)}
+              countLabel={`${group.count} item${group.count === 1 ? "" : "s"}`}
+              expanded={isGroupExpanded(group.key)}
+              onToggle={() => toggleGroup(group.key)}
+            >
+              {group.items.map((expense) => {
+                const Icon = getCategoryIcon(expense.subcategory);
+                return (
+                  <li key={expense.id}>
+                    <button
                       onClick={() => openDetail(expense)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-surface border border-border-subtle hover:border-border-hover hover:bg-surface-variant/30 transition-all text-left active:scale-[0.98]"
+                      className="group flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-variant/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 active:bg-surface-variant/60"
                     >
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        expense.category === "Needs" ? "bg-primary-500/10 text-primary-500" : "bg-tertiary-500/10 text-tertiary-500"
-                      }`}>
+                      <div
+                        className={cn(
+                          "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl",
+                          expense.category === "Needs"
+                            ? "bg-primary-500/10 text-primary-500"
+                            : "bg-tertiary-500/10 text-tertiary-500"
+                        )}
+                      >
                         <Icon size={16} />
                       </div>
 
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-semibold text-foreground truncate">
+                          <span className="truncate text-sm font-semibold text-foreground">
                             {expense.subcategory}
                           </span>
                           {groupBy !== "category" && (
-                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${
-                              expense.category === "Needs" ? "bg-primary-500/10 text-primary-500" : "bg-tertiary-500/10 text-tertiary-500"
-                            }`}>
+                            <span
+                              className={cn(
+                                "flex-shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-semibold",
+                                expense.category === "Needs"
+                                  ? "bg-primary-500/10 text-primary-500"
+                                  : "bg-tertiary-500/10 text-tertiary-500"
+                              )}
+                            >
                               {expense.category}
                             </span>
                           )}
                           <EntrySourceBadge value={expense.entrySource} />
                         </div>
-                        {expense.note && (
-                          <p className="text-xs text-muted truncate mt-0.5">{expense.note}</p>
-                        )}
+                        {/* When grouping by date the group header already carries
+                            it, so the row falls back to the note alone. */}
+                        {groupBy === "date" && expense.note ? (
+                          <p className="mt-0.5 truncate text-xs text-muted">{expense.note}</p>
+                        ) : null}
                       </div>
 
-                      <span className="text-sm font-bold text-foreground tabular-nums flex-shrink-0">
+                      <span className="flex-shrink-0 text-sm font-bold tabular-nums text-foreground">
                         {formatCurrency(expense.amount)}
                       </span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </section>
+                    </button>
+                  </li>
+                );
+              })}
+            </CollapsibleGroup>
           ))}
         </div>
       )}
@@ -409,6 +522,9 @@ export default function ExpensesPage() {
             />
 
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="edit-transaction-title"
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
@@ -427,25 +543,31 @@ export default function ExpensesPage() {
                       <Pencil size={18} />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-foreground">Edit Transaction</h2>
+                      <h2 id="edit-transaction-title" className="text-lg font-bold text-foreground">Edit Transaction</h2>
                       <EntrySourceBadge
                         value={selectedExpense?.entrySource}
                         className="mt-0.5"
                       />
                     </div>
                   </div>
-                  <button onClick={closeDetail} className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95">
+                  <button
+                    onClick={closeDetail}
+                    aria-label="Close edit transaction"
+                    className="w-9 h-9 rounded-xl bg-surface-variant flex items-center justify-center text-muted hover:text-foreground transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                  >
                     <X size={18} />
                   </button>
                 </div>
 
                 {/* Amount */}
                 <div className="mb-6">
-                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Amount</label>
+                  <label htmlFor="edit-amount" className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Amount</label>
                   <div className="relative">
                     <IndianRupee size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
                     <input
+                      id="edit-amount"
                       type="number"
+                      inputMode="decimal"
                       min="0"
                       step="0.01"
                       value={form.amount}
@@ -455,21 +577,30 @@ export default function ExpensesPage() {
                   </div>
                 </div>
 
-                {/* Category Toggle */}
+                {/* Needs/Wants. A radiogroup rather than two buttons: this is one
+                    choice with two options, so assistive tech should say so. */}
                 <div className="mb-6">
-                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Category</label>
-                  <div className="grid grid-cols-2 gap-2 p-1 bg-surface-variant rounded-xl">
+                  <div
+                    role="radiogroup"
+                    aria-label="Category"
+                    className="grid grid-cols-2 gap-2 p-1 bg-surface-variant rounded-xl"
+                  >
                     {["Needs", "Wants"].map((type) => (
                       <button
                         key={type}
+                        type="button"
+                        role="radio"
+                        aria-checked={form.category === type}
                         onClick={() =>
                           setForm({ ...form, category: type, subcategory: "" })
                         }
-                        className={`py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                        className={cn(
+                          "py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
                           form.category === type
                             ? "bg-primary-500 text-white shadow-sm"
                             : "text-muted hover:text-foreground"
-                        }`}
+                        )}
                       >
                         {type === "Needs" ? <ShoppingCart size={14} /> : <Sparkles size={14} />}
                         {type}
@@ -480,10 +611,11 @@ export default function ExpensesPage() {
 
                 {/* Subcategory */}
                 <div className="mb-6">
-                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Subcategory</label>
+                  <label htmlFor="edit-subcategory" className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Subcategory</label>
                   <div className="relative">
                     <Tag size={16} className="absolute left-4 top-4 text-muted pointer-events-none z-10" />
                     <SubcategoryPicker
+                      id="edit-subcategory"
                       type={form.category}
                       value={form.subcategory}
                       onChange={(name) => setForm({ ...form, subcategory: name })}
@@ -494,10 +626,11 @@ export default function ExpensesPage() {
 
                 {/* Date */}
                 <div className="mb-6">
-                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Date</label>
+                  <label htmlFor="edit-date" className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Date</label>
                   <div className="relative">
                     <Calendar size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
                     <input
+                      id="edit-date"
                       type="date"
                       value={form.date}
                       onChange={(e) => setForm({ ...form, date: e.target.value })}
@@ -508,8 +641,9 @@ export default function ExpensesPage() {
 
                 {/* Note */}
                 <div className="mb-6">
-                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Note</label>
+                  <label htmlFor="edit-note" className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-2 block">Note</label>
                   <textarea
+                    id="edit-note"
                     value={form.note}
                     onChange={(e) => setForm({ ...form, note: e.target.value })}
                     rows={2}
@@ -546,7 +680,8 @@ export default function ExpensesPage() {
       {/* FAB for mobile */}
       <button
         onClick={() => window.dispatchEvent(new CustomEvent("open-add-expense"))}
-        className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white shadow-xl shadow-primary-500/30 flex items-center justify-center active:scale-90 transition-transform z-20"
+        aria-label="Add expense"
+        className="sm:hidden fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary-500 text-white shadow-xl shadow-primary-500/30 flex items-center justify-center active:scale-90 transition-transform z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
       >
         <Plus size={28} />
       </button>
