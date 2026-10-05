@@ -343,30 +343,42 @@ export async function createIncome(userId: string, details: ExpenseDetails) {
   };
 }
 
-export async function updateBudget(userId: string, details: BudgetDetails) {
+export async function updateBudget(
+  userId: string,
+  details: BudgetDetails,
+  options: { approveExpenseMode?: boolean } = {},
+) {
   const validation = validateBudgetDetails(details);
   if (!validation.valid) {
     return { success: false, message: validation.message };
   }
 
   const budget = validation.details;
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      expenseMode: "limit",
-      monthlyLimit: budget.amount,
-    },
-  });
+  // Setting a limit and switching the account into budget mode are two
+  // different decisions. This used to do both unconditionally, so a user in
+  // free mode who merely logged a budget silently started being judged against
+  // it. The mode only moves when the caller has actually asked the user and
+  // they said yes — see lib/chat/v2/validation.ts, which owns that consent.
+  const data: { monthlyLimit: number; expenseMode?: "limit" } = {
+    monthlyLimit: budget.amount,
+  };
+  if (options.approveExpenseMode) {
+    data.expenseMode = "limit";
+  }
+
+  await prisma.user.update({ where: { id: userId }, data });
 
   await logger.info("Chat updated budget", { userId, amount: budget.amount }, "API", undefined, userId);
 
   return {
     success: true,
-    message: `Your monthly budget has been set to ${formatCurrency(budget.amount)}.`,
-    eventType: "budgetUpdated",
+    message: options.approveExpenseMode
+      ? `You're now in Budget mode — your monthly budget has been set to ${formatCurrency(budget.amount)}.`
+      : `Your monthly budget has been set to ${formatCurrency(budget.amount)}. You're still in Free mode — switch to Budget mode any time to track your spending against it.`,
+    eventType: "budgetUpdated" as const,
     data: {
       limit: budget.amount,
-      expenseMode: "limit"
+      ...(options.approveExpenseMode ? { expenseMode: "limit" as const } : {}),
     },
   };
 }

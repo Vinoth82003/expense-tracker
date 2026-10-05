@@ -1,9 +1,11 @@
 import { describe, expect, it, vi, beforeEach, type Mock } from "vitest";
 
 // Verifies the Sage v2 LLM-first pipeline end to end through /api/chat:
-// extractFinancialIntent -> executeOperationsBatch / executeQuery.
-// The extractor and executor themselves are unit-tested in
-// tests/sage-v2-batch-extractor.test.ts and tests/sage-v2-batch-executor.test.ts.
+// extractFinancialIntent -> startValidation (missing-field prompts) ->
+// executeOperationsBatch / executeQuery.
+// The extractor, executor and validation module are themselves unit-tested in
+// tests/sage-v2-batch-extractor.test.ts, tests/sage-v2-batch-executor.test.ts
+// and tests/chat-validation.test.ts — this file only asserts the wiring.
 
 vi.mock("next-auth", () => ({ getServerSession: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), error: vi.fn() } }));
@@ -39,11 +41,15 @@ const {
   mockExtractFinancialIntent,
   mockExecuteOperationsBatch,
   mockExecuteQuery,
+  mockStartValidation,
+  mockHandleValidationFollowUp,
 } = vi.hoisted(() => ({
   mockCheckAiAccess: vi.fn(),
   mockExtractFinancialIntent: vi.fn(),
   mockExecuteOperationsBatch: vi.fn(),
   mockExecuteQuery: vi.fn(),
+  mockStartValidation: vi.fn(),
+  mockHandleValidationFollowUp: vi.fn(),
 }));
 
 vi.mock("@/lib/ai/access", () => ({ checkAiAccess: mockCheckAiAccess }));
@@ -54,6 +60,16 @@ vi.mock("@/lib/chat/v2/batch-executor", () => ({
   executeOperationsBatch: mockExecuteOperationsBatch,
   executeQuery: mockExecuteQuery,
 }));
+vi.mock("@/lib/chat/v2/validation", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/chat/v2/validation")>(
+    "@/lib/chat/v2/validation",
+  );
+  return {
+    ...actual,
+    startValidation: mockStartValidation,
+    handleValidationFollowUp: mockHandleValidationFollowUp,
+  };
+});
 
 const { POST } = await import("../app/api/chat/route");
 const { getServerSession } = await import("next-auth");
@@ -91,7 +107,7 @@ beforeEach(() => {
 });
 
 describe("Chat API — Sage v2 multi-transaction batch", () => {
-  it("executes a three-transaction message as one atomic batch", async () => {
+  it("routes a transaction batch through validation instead of writing immediately", async () => {
     const operations = [
       { kind: "EXPENSE", amount: 3000, subcategory: "Groceries" },
       { kind: "EXPENSE", amount: 2000, subcategory: "Rent" },
@@ -102,23 +118,30 @@ describe("Chat API — Sage v2 multi-transaction batch", () => {
       reply: "Logged 3 expenses totaling ₹6,000.",
       operations,
     });
+mockStartValidation.mockResolvedValue({
+      reply: "What date were these on?",
+      success: false,
+      status: "prompt",
+      followUp: { type: "validation_followup", payload: { options: [] } },
+      context: { validation: { session: { id: "s1" } } },
+    });
 
-    const response = await POST(postRequest("3000 on grocery, 2000 on rent, 1000 on food"));
+const response = await POST(postRequest("3000 on grocery, 2000 on rent, 1000 on food"));
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.success).toBe(true);
-    expect(body.reply).toMatch(/3 expenses/);
-    expect(body.operations).toHaveLength(3);
-    expect(body.eventType).toBe("batchTransactionsAdded");
-    // Exactly one executor call — the whole batch is one transaction.
-    expect(mockExecuteOperationsBatch).toHaveBeenCalledTimes(1);
-    expect(mockExecuteOperationsBatch).toHaveBeenCalledWith(
+    expect(body.success).toBe(false);
+    expect(body.validationStatus).toBe("prompt");
+    expect(body.followUp.type).toBe("validation_followup");
+// The executor must not run until the session is complete.
+    expect(mockExecuteOperationsBatch).not.toHaveBeenCalled();
+    // The raw message, not the extractor's prose: deterministic date detection
+    // reads the user's original words, so the model's phrasing cannot lose a date.
+    expect(mockStartValidation).toHaveBeenCalledWith(
       TEST_USER_ID,
       operations,
-      "Logged 3 expenses totaling ₹6,000.",
+      "3000 on grocery, 2000 on rent, 1000 on food",
     );
-    expect(mockExecuteQuery).not.toHaveBeenCalled();
   });
 
   it("passes the user's available categories into the extractor prompt", async () => {
@@ -237,4 +260,53 @@ describe("Chat API — Sage v2 multi-transaction batch", () => {
 
     expect(mockExtractFinancialIntent).not.toHaveBeenCalled();
   });
+
+  it("answers a validation prompt without re-running the extractor", async () => {
+    // The draft already exists in the session; a date answer must not be
+    // re-parsed as a fresh message.
+mockHandleValidationFollowUp.mockResolvedValue({
+      reply: "Logged 3 expenses totaling ₹6,000.",
+      success: true,
+      status: "executed",
+      operations: [{ id: "e1" }],
+      eventType: "batchTransactionsAdded",
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          details: { sessionId: "s1", actionId: "pick-date", value: "2026-03-05" },
+          intentType: "validation_followup",
+          message: "2026-03-05",
+          context: { validation: { session: { id: "s1", userId: TEST_USER_ID, missing: [], operations: [] } } },
+        }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(body.success).toBe(true);
+    expect(body.validationStatus).toBe("executed");
+    expect(mockExtractFinancialIntent).not.toHaveBeenCalled();
+    expect(mockHandleValidationFollowUp).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not answer a validation prompt that carries no session", async () => {
+    // Without a session there is no draft to amend — refusing is correct, since
+    // inventing one could write a half-filled transaction.
+    await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          details: { actionId: "pick-date", value: "2026-03-05" },
+          intentType: "validation_followup",
+        }),
+      }),
+    );
+
+    expect(mockHandleValidationFollowUp).not.toHaveBeenCalled();
+  });
 });
+

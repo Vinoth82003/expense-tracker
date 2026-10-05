@@ -13,10 +13,21 @@ export interface BatchExecutionResult {
   data?: any;
 }
 
+export interface BatchExecutionOptions {
+  /**
+   * Set only after the user has explicitly agreed to switch from free mode into
+   * budget mode. Without it a budget write updates the limit but leaves the
+   * user's mode alone — Sage must never flip a free-mode user into budget mode
+   * as a side effect of logging a number.
+   */
+  approvedBudgetMode?: boolean;
+}
+
 export async function executeOperationsBatch(
   userId: string,
   operations: ParsedOperation[],
-  customReply?: string
+  customReply?: string,
+  options: BatchExecutionOptions = {},
 ): Promise<BatchExecutionResult> {
   const expensesToCreate = operations.filter((op) => op.kind === "EXPENSE");
   const incomesToCreate = operations.filter((op) => op.kind === "INCOME");
@@ -63,9 +74,15 @@ export async function executeOperationsBatch(
         update: { amount: bg.amount },
         create: { userId, month, amount: bg.amount },
       });
+      // expenseMode is only touched on an explicit yes. A free-mode user who
+      // asks for a budget gets the limit saved without being silently moved
+      // into budget mode — that switch is theirs to make, via the prompt.
       await tx.user.update({
         where: { id: userId },
-        data: { monthlyLimit: bg.amount, expenseMode: "limit" },
+        data: {
+          monthlyLimit: bg.amount,
+          ...(options.approvedBudgetMode ? { expenseMode: "limit" } : {}),
+        },
       });
     }
 

@@ -313,6 +313,15 @@ input[type="number"] {
   to   { opacity: 1; transform: translateX(0) scale(1); }
 }
 
+/* Each rotating progress line cross-fades in, so a long wait still reads as
+   forward motion rather than a single stalled line. */
+@keyframes processing-step-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.processing-step-in { animation: processing-step-in 0.35s ease-out both; }
+
 .chat-dot-1 { animation: dot-bounce 1.2s ease-in-out infinite; }
 .chat-dot-2 { animation: dot-bounce 1.2s ease-in-out 0.2s infinite; }
 .chat-dot-3 { animation: dot-bounce 1.2s ease-in-out 0.4s infinite; }

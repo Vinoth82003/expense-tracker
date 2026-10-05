@@ -17,57 +17,28 @@ import {
 import { useRouter } from "next/navigation";
 import { sendChatMessage } from "@/lib/chat/service";
 import { ChatMessage } from "@/lib/chat/types";
+import { buildProcessingTimeline } from "@/lib/chat/loading-messages";
+import { parseInlineLinks } from "@/lib/chat/v2/inline-links";
+import {
+  SUGGESTED_PROMPT_COUNT,
+  pickSuggestedPrompts,
+  type SuggestedPromptSpec,
+} from "@/lib/chat/suggested-prompts";
 
 interface ChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const ALL_PROMPTS = [
-  // Expenses
-  "Add ₹250 for taxi today.",
-  "Spent ₹1200 on groceries yesterday.",
-  "Paid ₹500 for dinner last night.",
-  "Log ₹300 for petrol.",
-  // Income
-  "Got my salary of ₹45000 today.",
-  "Received ₹2000 as a gift.",
-  "Add income of ₹5000 from freelance work.",
-  // Budget
-  "Set my monthly budget to ₹25000.",
-  "Update my budget to ₹30000.",
-  // Queries — spending
-  "How much did I spend this month?",
-  "Show my expenses for this month.",
-  "What did I spend on food this month?",
-  "How much did I spend on transport?",
-  // Queries — income
-  "Show my income this month.",
-  "How much income did I receive?",
-  // Queries — insights
-  "Give me financial insights.",
-  "How can I save more money?",
-  "Give me savings advice.",
-  // Queries — comparison
-  "How has my spending changed compared to last month?",
-  "Compare this month vs last month.",
-  // Queries — categories
-  "What are my top spending categories?",
-  "Show category breakdown for this month.",
-];
+/**
+ * Matches the `intentType` the /api/chat validation endpoint expects. Sent
+ * alongside the session id so the route can advance a pending draft without
+ * re-parsing the button press as free text.
+ */
+const VALIDATION_INTENT = "validation_followup";
 
-function shuffleArray<T>(arr: T[]): T[] {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
-}
-
-function pickRandom<T>(arr: T[], count: number): T[] {
-  return shuffleArray(arr).slice(0, count);
-}
+/** How long each progress line stays on screen before the next one appears. */
+const PROCESSING_STEP_MS = 1500;
 
 const initialMessages: ChatMessage[] = [
   {
@@ -87,8 +58,11 @@ function dispatchSyncEvent(eventType?: string, detail?: any) {
 }
 
 /**
- * Helper component to render simple markdown formatting: bold text (**text**)
- * and styled bullet lists (line breaks with •).
+ * Helper component to render simple markdown formatting: bold text (**text**),
+ * inline links ([label](/path)), and styled bullet lists (lines starting •).
+ *
+ * Sage's success replies link straight into the transaction history, so link
+ * support is part of the reply contract rather than an extra.
  */
 function FormattedMessageText({ text }: { text: string }) {
   if (!text) return null;
@@ -101,17 +75,19 @@ function FormattedMessageText({ text }: { text: string }) {
         const isBullet = line.trim().startsWith("•");
         const cleanLine = isBullet ? line.trim().substring(1).trim() : line;
 
-        // Simple parse for bold formatting (**bold**)
+        // Split on bold first, then resolve links inside each fragment, so
+        // **bold [link](/x)** renders as one bold anchor rather than falling
+        // apart at the first delimiter.
         const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
         const parsedLine = parts.map((part, partIdx) => {
           if (part.startsWith("**") && part.endsWith("**")) {
             return (
               <strong key={partIdx} className="font-extrabold text-foreground">
-                {part.slice(2, -2)}
+                {renderInlineLinks(part.slice(2, -2), partIdx)}
               </strong>
             );
           }
-          return part;
+          return renderInlineLinks(part, partIdx);
         });
 
         if (isBullet) {
@@ -140,6 +116,33 @@ function FormattedMessageText({ text }: { text: string }) {
   );
 }
 
+/**
+ * Renders `[label](/href)` as an anchor. Anything that is not a same-origin,
+ * root-relative path stays as plain text — Sage's copy is model-authored, so
+ * hrefs are validated here rather than trusted into the DOM.
+ */
+function renderInlineLinks(text: string, keyBase: number | string) {
+  if (!text.includes("[")) return text;
+
+  return parseInlineLinks(text).map((segment, idx) => {
+    if (segment.type === "text") return segment.value;
+
+    // A non-internal or protocol-relative target degrades to its own label
+    // rather than becoming a live link out of the app.
+    if (!segment.internal) return segment.label;
+
+    return (
+      <a
+        key={`${keyBase}-link-${idx}`}
+        href={segment.href}
+        className="font-bold text-primary-500 underline decoration-primary-500/40 underline-offset-2 hover:text-primary-600"
+      >
+        {segment.label}
+      </a>
+    );
+  });
+}
+
 export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -158,17 +161,25 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   >("analyzing");
   const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [shuffledPrompts, setShuffledPrompts] = useState<string[]>(() =>
-    pickRandom(ALL_PROMPTS, 5),
+  /**
+   * Narration queue for the in-flight request. Rebuilt per send from the
+   * user's own words so an expense entry does not report budget work.
+   */
+  const [processingSteps, setProcessingSteps] = useState<string[]>([]);
+  const [processingStepIndex, setProcessingStepIndex] = useState(0);
+  const processingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [shuffledPrompts, setShuffledPrompts] = useState<SuggestedPromptSpec[]>(
+    () => pickSuggestedPrompts(SUGGESTED_PROMPT_COUNT),
   );
 
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Reshuffle suggested prompts when panel opens
+  // Reshuffle suggested prompts when panel opens so each session starts fresh.
   useEffect(() => {
     if (isOpen) {
-      setShuffledPrompts(pickRandom(ALL_PROMPTS, 5));
+      setShuffledPrompts(pickSuggestedPrompts(SUGGESTED_PROMPT_COUNT));
     }
   }, [isOpen]);
 
@@ -189,6 +200,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   }, [isOpen]);
 
   useEffect(() => {
+    // A fresh prompt starts with an empty custom-entry box — a value typed into
+    // a previous prompt must never leak into the next one.
+    setCustomCategoryInput("");
     if (pendingFollowUp?.ui === "v2" && Array.isArray(pendingFollowUp.items)) {
       setSelectedFollowUpItems(
         pendingFollowUp.items
@@ -199,6 +213,15 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     }
     setSelectedFollowUpItems([]);
   }, [pendingFollowUp]);
+
+  // Both timers outlive a single request, so they are cleared on unmount rather
+  // than relying on every request reaching its own stopThinking().
+  useEffect(() => {
+    return () => {
+      if (processingTimerRef.current) clearInterval(processingTimerRef.current);
+      if (stageTimerRef.current) clearTimeout(stageTimerRef.current);
+    };
+  }, []);
 
   const addMessage = (message: ChatMessage) => {
     setMessages((prev) => [...prev, message]);
@@ -224,11 +247,41 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     }, 650);
   };
 
+  /**
+   * Walks the narration queue one line at a time. Capped so a slow response
+   * cannot run past the last line and sit on a stale message — the loop simply
+   * stops advancing once the end is reached.
+   */
+  const startProcessingSteps = (message: string) => {
+    const steps = buildProcessingTimeline(message);
+    setProcessingSteps(steps);
+    setProcessingStepIndex(0);
+    if (processingTimerRef.current) clearInterval(processingTimerRef.current);
+    processingTimerRef.current = setInterval(() => {
+      setProcessingStepIndex((prev) => {
+        if (prev >= steps.length - 1) {
+          if (processingTimerRef.current) {
+            clearInterval(processingTimerRef.current);
+            processingTimerRef.current = null;
+          }
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, PROCESSING_STEP_MS);
+  };
+
   const stopThinking = () => {
     if (stageTimerRef.current) {
       clearTimeout(stageTimerRef.current);
       stageTimerRef.current = null;
     }
+    if (processingTimerRef.current) {
+      clearInterval(processingTimerRef.current);
+      processingTimerRef.current = null;
+    }
+    setProcessingSteps([]);
+    setProcessingStepIndex(0);
   };
 
   const sendMessage = async () => {
@@ -247,6 +300,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setError(null);
     setIsLoading(true);
     startThinking();
+    startProcessingSteps(trimmed);
 
     try {
       const response = await sendChatMessage(
@@ -275,7 +329,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       }
 
       if (response.success === false && response.followUp) {
-        setPendingFollowUp(response.followUp.payload);
+        setPendingFollowUp({
+          ...response.followUp.payload,
+          followUpType: response.followUp.type,
+        });
       } else {
         setPendingFollowUp(null);
       }
@@ -292,6 +349,15 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     setError(null);
     setCustomCategoryInput("");
     startThinking();
+    // Narrate the request being *completed*, not the wording of the prompt.
+    // Classifying the helper text ("Type a name and tap Save.") would queue the
+    // insight narration for what is really a transaction write.
+    const lastUserText = [...messages]
+      .reverse()
+      .find((m: ChatMessage) => m.role === "user")?.text;
+    startProcessingSteps(
+      lastUserText || pendingFollowUp?.helperText || pendingFollowUp?.prompt || "",
+    );
     try {
       const response = await sendChatMessage(
         undefined,
@@ -317,7 +383,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         // Dispatch sync event for real-time dashboard update
         dispatchSyncEvent((response as any).eventType, (response as any).data);
       } else if (response.followUp) {
-        setPendingFollowUp(response.followUp.payload);
+        setPendingFollowUp({
+          ...response.followUp.payload,
+          followUpType: response.followUp.type,
+        });
       } else {
         setPendingFollowUp(null);
         setSelectedFollowUpItems([]);
@@ -342,6 +411,11 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     inputRef.current?.focus();
   };
 
+  /** Draws a new random set of suggestions without waiting for a reopen. */
+  const refreshPrompts = () => {
+    setShuffledPrompts(pickSuggestedPrompts(SUGGESTED_PROMPT_COUNT));
+  };
+
   const sendV2FollowUp = async (
     actionId: string,
     value?: string,
@@ -356,6 +430,40 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         selectedIds,
       },
       "v2_followup",
+    );
+  };
+
+  /**
+   * Answers a missing-field prompt. Routed through its own intent type so the
+   * server advances the stored draft instead of re-interpreting the button
+   * press as a new message.
+   */
+  const sendValidationFollowUp = async (actionId: string, value?: string) => {
+    if (!pendingFollowUp?.sessionId) return;
+    await sendFollowUp(
+      {
+        sessionId: pendingFollowUp.sessionId,
+        actionId,
+        value,
+      },
+      VALIDATION_INTENT,
+    );
+  };
+
+  /**
+   * A quick action's id doubles as its intent for the validation flow: the
+   * server pre-fills `value` for the Today/Yesterday shortcuts, and an id with
+   * a `field:value` shape carries the chosen option.
+   */
+  const sendPromptOption = async (option: any) => {
+    if (pendingFollowUp?.followUpType === VALIDATION_INTENT) {
+      await sendValidationFollowUp(option.id, option.value);
+      return;
+    }
+    await sendV2FollowUp(
+      option.id,
+      option.value,
+      option.id === "move-selected" ? selectedFollowUpItems : undefined,
     );
   };
 
@@ -472,28 +580,51 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/10 to-violet-600/10 text-primary-600 border border-primary-500/10">
                     <Sparkles size={14} />
                   </div>
-                  <div className="flex items-center gap-2.5 rounded-2xl bg-surface-variant/80 px-4 py-3 border border-border-subtle/50 chat-msg-ai">
-                    <span className="text-xs font-semibold text-muted flex items-center gap-1.5">
-                      {thinkingStage === "understanding" ? (
-                        <>
-                          🧠 Understanding that...
-                          <span className="flex items-center gap-0.5">
-                            <span className="chat-dot-1 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
-                            <span className="chat-dot-2 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
-                            <span className="chat-dot-3 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                  <div className="flex flex-col gap-1.5 rounded-2xl bg-surface-variant/80 px-4 py-3 border border-border-subtle/50 chat-msg-ai">
+                    {/* Acknowledgement line, then a tailored walk through the
+                        work the current request actually needs. */}
+                    {processingSteps.length > 0 ? (
+                      <>
+                        <span className="text-xs font-semibold text-muted flex items-center gap-1.5">
+                          {processingSteps[0]}
+                        </span>
+                        {processingStepIndex > 0 && (
+                          <span
+                            key={processingStepIndex}
+                            className="text-xs font-bold text-foreground flex items-center gap-1.5 processing-step-in"
+                          >
+                            {processingSteps[processingStepIndex]}
+                            <span className="flex items-center gap-0.5">
+                              <span className="chat-dot-1 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                              <span className="chat-dot-2 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                              <span className="chat-dot-3 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                            </span>
                           </span>
-                        </>
-                      ) : (
-                        <>
-                          🤔 Analyzing your data...
-                          <span className="flex items-center gap-0.5">
-                            <span className="chat-dot-1 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
-                            <span className="chat-dot-2 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
-                            <span className="chat-dot-3 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
-                          </span>
-                        </>
-                      )}
-                    </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs font-semibold text-muted flex items-center gap-1.5">
+                        {thinkingStage === "understanding" ? (
+                          <>
+                            🧠 Understanding that...
+                            <span className="flex items-center gap-0.5">
+                              <span className="chat-dot-1 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                              <span className="chat-dot-2 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                              <span className="chat-dot-3 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            🤔 Analyzing your data...
+                            <span className="flex items-center gap-0.5">
+                              <span className="chat-dot-1 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                              <span className="chat-dot-2 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                              <span className="chat-dot-3 h-1.5 w-1.5 rounded-full bg-primary-500 block" />
+                            </span>
+                          </>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -601,18 +732,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                               return (
                                 <button
                                   key={option.id}
-                                  onClick={() =>
-                                    sendV2FollowUp(
-                                      option.id,
-                                      option.value,
-                                      option.id === "move-selected"
-                                        ? selectedFollowUpItems
-                                        : undefined,
-                                    )
-                                  }
+                                  onClick={() => sendPromptOption(option)}
                                   className={`rounded-xl px-3 py-2 text-xs font-bold transition-all active:scale-95 ${
                                     isDanger
-                                      ? "bg-rose-500/10 border border-rose-500/20 text-rose-600"
+                                      ? "bg-rose-500/10 border border-rose-500/20 text-rose-600 hover:bg-rose-500/15"
                                       : isPrimary
                                         ? "bg-primary-500 text-white hover:bg-primary-600 shadow-sm"
                                         : "bg-surface-variant border border-border-subtle text-foreground hover:bg-border-hover"
@@ -624,17 +747,75 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                             })}
                         </div>
 
-                        {pendingFollowUp.allowDateInput ? (
-                          <input
-                            type="date"
-                            max={pendingFollowUp.maxDate}
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                sendV2FollowUp("pick-date", e.target.value);
+                        {/* Free-text answer for a custom subcategory. Rendered
+                            only when the server asked for one — the value is
+                            sent through the same action-based handler as the
+                            buttons above. */}
+                        {pendingFollowUp.allowTextInput ? (
+                          <form
+                            className="flex gap-2"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const typed = customCategoryInput.trim();
+                              if (!typed) return;
+                              if (pendingFollowUp.followUpType === VALIDATION_INTENT) {
+                                sendValidationFollowUp(
+                                  pendingFollowUp.customTextActionId ||
+                                    "custom-subcategory",
+                                  typed,
+                                );
+                              } else {
+                                sendFollowUp({
+                                  ...pendingFollowUp.details,
+                                  category: typed,
+                                  createCategory: true,
+                                });
                               }
                             }}
-                            className="w-full rounded-xl border border-border-subtle bg-surface px-3 py-2 text-xs font-semibold text-foreground outline-none focus:border-primary-500"
-                          />
+                          >
+                            <input
+                              type="text"
+                              value={customCategoryInput}
+                              onChange={(e) =>
+                                setCustomCategoryInput(e.target.value)
+                              }
+                              placeholder={
+                                pendingFollowUp.textInputPlaceholder ||
+                                "Or enter a custom category name…"
+                              }
+                              className="flex-1 rounded-xl border border-border-subtle bg-surface px-3 py-2 text-xs text-foreground outline-none focus:border-primary-500"
+                            />
+                            <button
+                              type="submit"
+                              disabled={!customCategoryInput.trim()}
+                              className="rounded-xl bg-primary-500/10 border border-primary-500/20 px-3 py-2 text-xs font-bold text-primary-600 hover:bg-primary-500/20 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+                          </form>
+                        ) : null}
+
+                        {pendingFollowUp.allowDateInput ? (
+                          <div className="relative">
+                            <Calendar
+                              size={13}
+                              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                            />
+                            <input
+                              type="date"
+                              aria-label="Pick another date"
+                              max={pendingFollowUp.maxDate}
+                              onChange={(e) => {
+                                if (!e.target.value) return;
+                                if (pendingFollowUp.followUpType === VALIDATION_INTENT) {
+                                  sendValidationFollowUp("pick-date", e.target.value);
+                                } else {
+                                  sendV2FollowUp("pick-date", e.target.value);
+                                }
+                              }}
+                              className="w-full rounded-xl border border-border-subtle bg-surface pl-8 pr-3 py-2 text-xs font-semibold text-foreground outline-none focus:border-primary-500"
+                            />
+                          </div>
                         ) : null}
                       </div>
                     ) : pendingFollowUp.missing === "date" ? (
@@ -836,23 +1017,37 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             <div className="border-t border-border-subtle p-4 bg-surface animate-fade-in">
               {/* Collapsible Suggested Prompts — PERSISTENT, never auto-hidden */}
               <div className="mb-2">
-                <button
-                  onClick={() => setShowSuggestions((prev) => !prev)}
-                  className="flex items-center gap-1.5 text-[10px] font-black tracking-widest uppercase text-muted hover:text-foreground transition-all"
-                  aria-label={
-                    showSuggestions
-                      ? "Hide suggested prompts"
-                      : "Show suggested prompts"
-                  }
-                >
-                  Suggested prompts
-                  {/* ChevronUp = currently visible (click to collapse), ChevronDown = hidden (click to expand) */}
-                  {showSuggestions ? (
-                    <ChevronUp size={12} />
-                  ) : (
-                    <ChevronDown size={12} />
-                  )}
-                </button>
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setShowSuggestions((prev) => !prev)}
+                    className="flex items-center gap-1.5 text-[10px] font-black tracking-widest uppercase text-muted hover:text-foreground transition-all"
+                    aria-label={
+                      showSuggestions
+                        ? "Hide suggested prompts"
+                        : "Show suggested prompts"
+                    }
+                  >
+                    Suggested prompts
+                    {/* ChevronUp = currently visible (click to collapse), ChevronDown = hidden (click to expand) */}
+                    {showSuggestions ? (
+                      <ChevronUp size={12} />
+                    ) : (
+                      <ChevronDown size={12} />
+                    )}
+                  </button>
+
+                  {/* Fresh random set on demand, same behaviour as reopening
+                      the panel. */}
+                  <button
+                    onClick={refreshPrompts}
+                    className="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[10px] font-black tracking-widest uppercase text-muted hover:bg-surface-variant hover:text-primary-500 transition-all active:scale-95"
+                    aria-label="Refresh suggested prompts"
+                    title="Refresh suggested prompts"
+                  >
+                    <RefreshCw size={11} />
+                    Refresh
+                  </button>
+                </div>
 
                 <AnimatePresence initial={false}>
                   {showSuggestions && (
@@ -867,11 +1062,12 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                       <div className="flex flex-col gap-2 mt-2">
                         {shuffledPrompts.map((prompt) => (
                           <button
-                            key={prompt}
-                            onClick={() => handlePromptClick(prompt)}
-                            className="rounded-xl border border-border-subtle bg-surface px-3.5 py-2 text-left text-xs font-semibold text-foreground/80 hover:border-primary-500 hover:text-foreground active:bg-surface-variant transition-all"
+                            key={prompt.id}
+                            onClick={() => handlePromptClick(prompt.text)}
+                            disabled={isLoading}
+                            className="rounded-xl border border-border-subtle bg-surface px-3.5 py-2 text-left text-xs font-semibold text-foreground/80 hover:border-primary-500 hover:text-foreground active:bg-surface-variant transition-all disabled:opacity-50"
                           >
-                            {prompt}
+                            {prompt.text}
                           </button>
                         ))}
                       </div>

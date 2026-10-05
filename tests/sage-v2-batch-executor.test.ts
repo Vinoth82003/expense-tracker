@@ -172,6 +172,30 @@ describe("executeOperationsBatch — budget update", () => {
     });
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: "u1" },
+      data: { monthlyLimit: 30000 },
+    });
+  });
+
+  it("never flips expenseMode without an explicit approval", async () => {
+    // The reported bug: logging a budget silently moved a free-mode user into
+    // budget mode. The mode is the user's choice, so the executor must not
+    // touch it unless the prompt was answered with a yes.
+    await executeOperationsBatch("u1", [{ kind: "BUDGET_UPDATE", amount: 30000 }]);
+
+    const data = (mockUserUpdate.mock.calls[0][0] as any).data;
+    expect(data).not.toHaveProperty("expenseMode");
+  });
+
+  it("switches into budget mode once the user has approved it", async () => {
+    await executeOperationsBatch(
+      "u1",
+      [{ kind: "BUDGET_UPDATE", amount: 30000 }],
+      undefined,
+      { approvedBudgetMode: true },
+    );
+
+    expect(mockUserUpdate).toHaveBeenCalledWith({
+      where: { id: "u1" },
       data: { monthlyLimit: 30000, expenseMode: "limit" },
     });
   });

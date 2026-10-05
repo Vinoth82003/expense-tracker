@@ -27,6 +27,11 @@ export type ChatAPIResponse = {
   operations?: any[];
   data?: any;
   context?: any; // Allow passing back context state
+  /**
+   * Where a multi-transaction request ended up: still collecting a missing
+   * field, written, or abandoned by the user.
+   */
+  validationStatus?: "prompt" | "executed" | "cancelled";
   confidence?: {
     intent: string;
     score: number;

@@ -21,7 +21,13 @@ import { maybeGroqNLU } from "@/lib/chat/ai/nlu";
 import { answerFreeFormQuestion } from "@/lib/chat/ai/freeform";
 import { fetchCategories } from "@/lib/chat/v1/api-gateway";
 import { extractFinancialIntent } from "@/lib/chat/v2/batch-extractor";
-import { executeOperationsBatch, executeQuery } from "@/lib/chat/v2/batch-executor";
+import { executeQuery } from "@/lib/chat/v2/batch-executor";
+import {
+  VALIDATION_INTENT,
+  handleValidationFollowUp,
+  readValidationSession,
+  startValidation,
+} from "@/lib/chat/v2/validation";
 
 // V1 imports kept for test compatibility — no longer used in production V2 path
 
@@ -112,6 +118,39 @@ export async function POST(request: Request) {
       }
     }
 
+    // Missing-field recovery. Runs before the extractor so a pending prompt is
+    // answered by the button/date the user actually pressed rather than being
+    // re-parsed as free text, and before any writer so a prompt can never
+    // double-apply a batch.
+    if (body?.intentType === VALIDATION_INTENT) {
+      const validationSession = readValidationSession(body?.context, userId);
+      if (!validationSession) {
+        return NextResponse.json({
+          reply:
+            "I've lost track of that request, so I've stopped here — nothing was saved. How can I help you with your finances today?",
+          success: false,
+          context: { validation: { session: null } },
+        });
+      }
+
+      const outcome = await handleValidationFollowUp(
+        userId,
+        validationSession,
+        body?.details?.actionId,
+        body?.details?.value,
+      );
+
+      return NextResponse.json({
+        reply: outcome.reply,
+        success: outcome.success,
+        eventType: outcome.eventType,
+        data: outcome.data,
+        followUp: outcome.followUp,
+        context: outcome.context,
+        validationStatus: outcome.status,
+      });
+    }
+
     // Sage v2: Production Multi-Transaction LLM Extractor & Executor
     if (!isMocked && !body?.details && !body?.intentType && !body?.context?.v2?.session && message) {
       const userCats = await prisma.category.findMany({
@@ -139,13 +178,32 @@ export async function POST(request: Request) {
       }
 
       if (extraction.type === "TRANSACTION_BATCH" && extraction.operations?.length) {
-        const batchRes = await executeOperationsBatch(userId, extraction.operations, extraction.reply);
+        // Validation owns persistence: it decides whether the batch is complete
+        // enough to write, prompts for whatever is missing, and is the only path
+        // that reaches the executor for a multi-transaction message.
+        const outcome = await startValidation(
+          userId,
+          extraction.operations,
+          message,
+        );
+
+        if (outcome.status === "prompt" || outcome.status === "cancelled") {
+          return NextResponse.json({
+            reply: outcome.reply,
+            success: false,
+            followUp: outcome.followUp,
+            context: outcome.context,
+            validationStatus: outcome.status,
+          });
+        }
+
         return NextResponse.json({
-          reply: batchRes.reply,
+          reply: outcome.reply,
           success: true,
-          eventType: batchRes.eventType,
-          data: batchRes.data,
+          eventType: outcome.eventType,
+          data: outcome.data,
           operations: extraction.operations,
+          validationStatus: outcome.status,
         });
       } else if (extraction.type === "QUERY" && extraction.queryKind) {
         const queryReply = await executeQuery(userId, extraction.queryKind, extraction.queryParam);

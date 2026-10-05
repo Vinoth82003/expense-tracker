@@ -105,7 +105,10 @@ describe("extractFinancialIntent — multi-transaction batches", () => {
     expect(kinds.filter((k) => k === "INCOME")).toHaveLength(2);
   });
 
-  it("defaults a missing date to today in YYYY-MM-DD", async () => {
+  it("leaves the date null when the user never stated one", async () => {
+    // The extractor must not invent a date. Inventing one is what let a
+    // dateless entry reach the ledger as "today"; the validation layer prompts
+    // for the date instead, and null is the signal that it should.
     groqReturns({
       type: "TRANSACTION_BATCH",
       reply: "ok",
@@ -113,10 +116,35 @@ describe("extractFinancialIntent — multi-transaction batches", () => {
     });
 
     const res = await extractFinancialIntent("spent 500 on food", "u1");
-    const today = new Date();
-    const expected = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-    expect(res.operations![0].date).toBe(expected);
+    expect(res.operations![0].date).toBeNull();
+  });
+
+  it("keeps a date the user actually stated", async () => {
+    groqReturns({
+      type: "TRANSACTION_BATCH",
+      reply: "ok",
+      operations: [{ kind: "EXPENSE", amount: 500, subcategory: "Food", date: "2023-08-15" }],
+    });
+
+    const res = await extractFinancialIntent(
+      "spent 500 on food on 2023-08-15",
+      "u1",
+    );
+
+    expect(res.operations![0].date).toBe("2023-08-15");
+  });
+
+  it("discards a malformed date rather than passing it through", async () => {
+    groqReturns({
+      type: "TRANSACTION_BATCH",
+      reply: "ok",
+      operations: [{ kind: "EXPENSE", amount: 500, subcategory: "Food", date: "15 Aug" }],
+    });
+
+    const res = await extractFinancialIntent("spent 500 on food", "u1");
+
+    expect(res.operations![0].date).toBeNull();
   });
 });
 
@@ -140,7 +168,9 @@ describe("extractFinancialIntent — output sanitisation", () => {
     expect(res.operations![0].amount).toBe(500);
   });
 
-  it("coerces an unrecognised expense category to Needs", async () => {
+  it("leaves an unrecognised expense category null so it gets asked", async () => {
+    // Defaulting to "Needs" would file the expense in the wrong bucket without
+    // the user ever being told. Null routes it to the category prompt.
     groqReturns({
       type: "TRANSACTION_BATCH",
       reply: "ok",
@@ -148,10 +178,21 @@ describe("extractFinancialIntent — output sanitisation", () => {
     });
 
     const res = await extractFinancialIntent("spent 100", "u1");
-    expect(res.operations![0].category).toBe("Needs");
+    expect(res.operations![0].category).toBeNull();
   });
 
-  it("coerces an unrecognised income source to Others", async () => {
+  it("keeps a recognised expense category", async () => {
+    groqReturns({
+      type: "TRANSACTION_BATCH",
+      reply: "ok",
+      operations: [{ kind: "EXPENSE", amount: 100, category: "Wants" }],
+    });
+
+    const res = await extractFinancialIntent("spent 100", "u1");
+    expect(res.operations![0].category).toBe("Wants");
+  });
+
+  it("leaves an unrecognised income source null instead of assuming Salary", async () => {
     groqReturns({
       type: "TRANSACTION_BATCH",
       reply: "ok",
@@ -159,7 +200,29 @@ describe("extractFinancialIntent — output sanitisation", () => {
     });
 
     const res = await extractFinancialIntent("got 900", "u1");
-    expect(res.operations![0].source).toBe("Others");
+    expect(res.operations![0].source).toBeNull();
+  });
+
+  it("keeps a recognised income source", async () => {
+    groqReturns({
+      type: "TRANSACTION_BATCH",
+      reply: "ok",
+      operations: [{ kind: "INCOME", amount: 900, source: "Gift" }],
+    });
+
+    const res = await extractFinancialIntent("got 900 as a gift", "u1");
+    expect(res.operations![0].source).toBe("Gift");
+  });
+
+  it("leaves a missing subcategory null rather than defaulting to Other", async () => {
+    groqReturns({
+      type: "TRANSACTION_BATCH",
+      reply: "ok",
+      operations: [{ kind: "EXPENSE", amount: 300, category: "Needs" }],
+    });
+
+    const res = await extractFinancialIntent("spent 300", "u1");
+    expect(res.operations![0].subcategory).toBeNull();
   });
 
   it("discards unknown operation kinds", async () => {
