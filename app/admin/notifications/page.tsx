@@ -894,14 +894,18 @@ function AdminNotificationsPageContent() {
                             ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
                             : log.status === "PROCESSING"
                               ? "bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
-                              : "bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400"
+                              : log.status === "PARTIAL"
+                                ? "bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
+                                : "bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400"
                         }`}
                       >
                         {log.status === "SUCCESS"
                           ? "✓ Success"
                           : log.status === "PROCESSING"
                             ? "⋯ Processing"
-                            : "✗ Failed"}
+                            : log.status === "PARTIAL"
+                              ? "◐ Partial"
+                              : "✗ Failed"}
                       </span>
                     </td>
                     <td className="py-4 px-8 text-xs font-bold text-[var(--admin-text-secondary)]">

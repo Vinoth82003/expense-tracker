@@ -10,6 +10,7 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
+    "verify:smtp": "node scripts/verify-smtp.mjs",
     "desktop:start": "npm --prefix desktop run start",
     "desktop:build": "npm --prefix desktop install && npm --prefix desktop run dist",
     "desktop:build:win": "npm --prefix desktop install && npm --prefix desktop run dist:win",

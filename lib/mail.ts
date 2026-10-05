@@ -1,30 +1,223 @@
 import nodemailer from "nodemailer";
-import SMTPTransport from "nodemailer/lib/smtp-transport";
+import type { Transporter } from "nodemailer";
+import type SMTPPool from "nodemailer/lib/smtp-pool";
 import { logger } from "./logger";
 import { appUrl } from "./site-url";
 
 /**
- * Creates a fresh non-pooled SMTP transporter for each send.
- * Pooled connections time out on Gmail after ~60s of idle,
- * causing "Connection timeout" on the 3rd+ email in a burst.
- * A fresh connection per email is more reliable for low-volume bulk sends.
+ * SMTP TRANSPORT
+ *
+ * nodemailer only reuses connections when the transport is created with
+ * `pool: true`. A plain SMTPTransport builds a brand-new TCP + TLS + AUTH
+ * handshake for *every* `sendMail()` call, which is exactly what a bulk send
+ * punishes: a campaign produces hundreds of handshakes in a burst, the provider
+ * throttles them, and sends fail with "Connection timeout". That is the root
+ * cause of the production 500 on `POST /api/admin/notifications/send`.
+ *
+ * So: ONE pooled, rate-limited transporter shared by every send, closed shortly
+ * after it goes idle. That keeps the connection warm across a campaign while
+ * still releasing it between sends. Gmail drops connections left idle for ~60s,
+ * so the pool is recycled well inside that window.
  */
-const createTransporter = () => {
-  const options: SMTPTransport.Options = {
+const envInt = (value: string | undefined, fallback: number): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+/** Pool settings (maxConnections / rateLimit) live on the pool transport's options. */
+type SmtpOptions = SMTPPool.Options;
+
+const DEFAULT_SMTP_PORT = 587;
+
+/**
+ * How long the pool may sit unused before it is closed — and whether it is closed
+ * at all.
+ *
+ * DEFAULT IS 0 = NEVER CLOSE, and that is deliberate. `close()` is terminal for a
+ * nodemailer pool: it sets `_closed = true`, after which `SMTPPool.send()` returns
+ * false *without invoking its callback*. A send on a closed pool therefore
+ * neither resolves nor rejects — it hangs forever, and BullMQ surfaces it much
+ * later as an opaque "SMTP Error: Connection timeout".
+ *
+ * Recycling the pool on an idle timer raced the very next campaign. Job N
+ * finished, the pool was declared idle and scheduled for close, jobs N+1..
+ * picked up the same cached transporter while it was still open, and the timer
+ * then closed it underneath them. Those sends hung until the socket budget ran
+ * out — which is precisely the production symptom: the first email of a batch
+ * arrives, everything after it times out.
+ *
+ * Holding one pooled transporter for the process lifetime is safe: nodemailer
+ * detects a socket the server has dropped and reopens it, and the process exit
+ * reclaims it anyway. Opt back into recycling with SMTP_POOL_IDLE_MS if you
+ * need the socket released earlier.
+ */
+const POOL_IDLE_CLOSE_MS = Number(process.env.SMTP_POOL_IDLE_MS) || 0;
+
+const buildSmtpOptions = (): SmtpOptions => {
+  const port = Number(process.env.SMTP_PORT) || DEFAULT_SMTP_PORT;
+
+  const missing = (["SMTP_HOST", "SMTP_USER", "SMTP_PASS"] as const).filter(
+    (key) => !process.env[key]
+  );
+  if (missing.length > 0) {
+    // Failing loudly here beats a silent 30s connect timeout per recipient.
+    throw new Error(
+      `SMTP is not configured: missing ${missing.join(", ")}. ` +
+        `Set these in the environment (see .env.example) before sending mail.`
+    );
+  }
+
+  return {
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "465"),
-    secure: process.env.SMTP_PORT === "465",
+    port,
+    // Implicit TLS on 465, STARTTLS otherwise. (Comparing the raw env *string*
+    // to "465" previously meant a whitespace-padded port silently fell back to
+    // an unencrypted plaintext connection.)
+    secure:
+      process.env.SMTP_SECURE !== undefined
+        ? process.env.SMTP_SECURE === "true"
+        : port === 465,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // No pooling – avoids idle connection timeouts on Gmail (default for SMTPTransport)
-    connectionTimeout: 30000, // 30s to connect
-    greetingTimeout: 30000,   // 30s for SMTP greeting
-    socketTimeout: 60000,     // 60s per message
+    pool: true,
+    // 1 by default. Gmail throttles *concurrent sessions* from a single account,
+    // and the symptom is deceptive: it does not reject the extra sends, it stalls
+    // them. Measured against smtp.gmail.com with the real credentials —
+    //   concurrency 5 / 3 conns: p50 6568ms, p90 16357ms
+    //   concurrency 2 / 2 conns: p50 2324ms, p90 16743ms
+    //   concurrency 1 / 1 conn : p50  1812ms, p90   4331ms
+    // At concurrency 5 a stalled send exceeded the 30s connection timeout and
+    // surfaced as "SMTP Error: Connection timeout" — the exact production error,
+    // with no rejection anywhere in the logs to explain it. Serialising trades
+    // throughput (~1.8s/message) for reliability.
+    maxConnections: envInt(process.env.SMTP_MAX_CONNECTIONS, 1),
+    // Recycle each connection rather than holding one open indefinitely.
+    maxMessages: 100,
+    // Ceiling on how fast messages may *start*. A safety valve; with a single
+    // connection and ~1.8s per send the natural rate is already below it.
+    rateLimit: envInt(process.env.SMTP_RATE_LIMIT_PER_SECOND, 2),
+    // Deliberately short. A host that cannot complete TCP+TLS+AUTH quickly is not
+    // going to succeed at all, and these must stay well under the BullMQ worker
+    // `lockDuration` (see lib/queue.ts): when they matched the lock, a stalled
+    // connection expired the job's lock at the same instant, BullMQ re-queued it
+    // as *stalled* instead of retrying it, and the exponential backoff below never
+    // got a chance to engage.
+    connectionTimeout: envInt(process.env.SMTP_CONNECTION_TIMEOUT_MS, 10_000),
+    greetingTimeout: envInt(process.env.SMTP_GREETING_TIMEOUT_MS, 10_000),
+    socketTimeout: envInt(process.env.SMTP_SOCKET_TIMEOUT_MS, 60_000),
   };
-  return nodemailer.createTransport(options);
 };
+
+type CachedTransporter = {
+  signature: string;
+  transporter: Transporter;
+  idleTimer?: ReturnType<typeof setTimeout>;
+  /** Sends currently using this pool. The pool must never be closed while > 0. */
+  inFlight: number;
+};
+
+let cachedTransporter: CachedTransporter | null = null;
+
+const signatureOf = (options: SmtpOptions) =>
+  [options.host, options.port, options.secure, options.auth?.user].join("|");
+
+/**
+ * Non-throwing config check, so a misconfigured deployment fails the individual
+ * send with a readable reason instead of an opaque "Connection timeout".
+ * `buildSmtpOptions()` throws on the same conditions as a backstop.
+ */
+function assertSmtpConfigured(): string | null {
+  const missing = (["SMTP_HOST", "SMTP_USER", "SMTP_PASS"] as const).filter(
+    (key) => !process.env[key]
+  );
+  return missing.length ? `SMTP not configured (missing: ${missing.join(", ")})` : null;
+}
+
+function getTransporter(): Transporter {
+  const options = buildSmtpOptions();
+  const signature = signatureOf(options);
+
+  if (cachedTransporter?.signature === signature) {
+    return cachedTransporter.transporter;
+  }
+
+  // First use, or SMTP settings changed underneath us — drop the old pool.
+  if (cachedTransporter) {
+    if (cachedTransporter.idleTimer) clearTimeout(cachedTransporter.idleTimer);
+    cachedTransporter.transporter.close();
+    cachedTransporter = null;
+  }
+
+  const transporter = nodemailer.createTransport(options);
+  cachedTransporter = { signature, transporter, inFlight: 0 };
+
+  // Pool options are read from the TOP level of the transport config, never from a
+  // `pool: {}` sub-object — nodemailer silently ignores the nested shape and falls
+  // back to 5 connections with no rate limit, which is what reintroduced the
+  // stalling that serialising was meant to prevent. Log what was actually applied
+  // so a silent fallback is visible instead of theoretical.
+  const applied = (transporter as unknown as {
+    transporter?: { options?: Record<string, unknown>; _rateLimit?: { limit?: number } };
+  }).transporter;
+  logger.info(
+    `SMTP pool created: ${options.host}:${options.port} secure=${options.secure} ` +
+      `maxConnections=${applied?.options?.maxConnections} maxMessages=${applied?.options?.maxMessages} ` +
+      `rateLimit=${applied?._rateLimit?.limit} connectionTimeout=${options.connectionTimeout} ` +
+      `greetingTimeout=${options.greetingTimeout} socketTimeout=${options.socketTimeout} ` +
+      `idleCloseMs=${POOL_IDLE_CLOSE_MS}`,
+    null,
+    "MAIL"
+  );
+
+  transporter.on("idle", () => {
+    if (cachedTransporter?.transporter !== transporter) return;
+    armIdleRelease();
+  });
+
+  /**
+   * Optionally release the pool once it has been idle AND unused for
+   * POOL_IDLE_CLOSE_MS. Disabled by default — see POOL_IDLE_CLOSE_MS for why a
+   * timed close is unsafe. The cache is always dropped *before* closing, so even
+   * when enabled the next send builds a fresh pool rather than reusing a dead one.
+   */
+  function armIdleRelease(): void {
+    if (POOL_IDLE_CLOSE_MS <= 0) return;
+    const entry = cachedTransporter;
+    if (!entry || entry.transporter !== transporter) return;
+    if (entry.idleTimer) clearTimeout(entry.idleTimer);
+
+    const timer = setTimeout(() => {
+      if (cachedTransporter !== entry) return;
+
+      // Closing a pool mid-send kills the in-flight SMTP socket and surfaces as a
+      // bogus connection timeout, so the close waits until the pool is both idle
+      // *and* unused. At low send rates the pool would otherwise be torn down
+      // between messages and every send would pay a fresh handshake.
+      if (entry.inFlight > 0) {
+        logger.info(
+          `Deferring idle SMTP pool release — ${entry.inFlight} send(s) still in flight`,
+          null,
+          "MAIL"
+        );
+        // Must re-arm: this timer has already fired, and `idle` only fires again
+        // when the pool drains, so without this the pool is never released.
+        armIdleRelease();
+        return;
+      }
+
+      cachedTransporter = null;
+      logger.info("Releasing idle SMTP connection pool", null, "MAIL");
+      entry.transporter.close();
+    }, POOL_IDLE_CLOSE_MS);
+
+    timer.unref?.();
+    entry.idleTimer = timer;
+  }
+
+  return transporter;
+}
 
 /**
  * Replaces placeholders like {userName}, {date}, etc. in a string
@@ -379,9 +572,43 @@ export const sendAdminApiErrorNotification = async (
   return sendEmail(ADMIN_EMAIL, subject, wrapLayout(content, ADMIN_EMAIL));
 };
 
+/**
+ * Fire-and-forget logging.
+ *
+ * `logger.*` writes to MongoDB, and a Mongo operation that cannot select a server
+ * blocks for `serverSelectionTimeoutMS` (30s by default) before failing. Awaiting
+ * it inside the send path therefore put a 30s database stall in front of every
+ * email — and, because the success log is written *after* the message is already
+ * delivered, a stalled log could fail a job whose email had in fact been sent,
+ * which then got retried and delivered twice.
+ *
+ * Observability must never be able to fail or delay delivery, so these are
+ * deliberately not awaited and their rejections are swallowed.
+ */
+const logAsync = (
+  level: "info" | "warn" | "error",
+  message: string,
+  details?: Record<string, unknown>
+): void => {
+  try {
+    void Promise.resolve(logger[level](message, details ?? null, "MAIL")).catch(() => {});
+  } catch {
+    /* never let logging break a send */
+  }
+};
+
 export const sendEmail = async (to: string, subject: string, html: string) => {
-  // Fresh transporter per send — avoids Gmail idle-pool connection timeouts
-  const transporter = createTransporter();
+  const configError = assertSmtpConfigured();
+  if (configError) {
+    logAsync("error", `Cannot send email: ${configError}`, { to, subject });
+    return { success: false, error: configError };
+  }
+
+  // Shared, rate-limited pool - see getTransporter(). Not closed per send;
+  // it releases itself once idle and unused.
+  const transporter = getTransporter();
+  if (cachedTransporter) cachedTransporter.inFlight += 1;
+  const startedAt = Date.now();
 
   try {
     const info = await transporter.sendMail({
@@ -391,13 +618,21 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
       html,
     });
 
-    await logger.info(`Email sent successfully: ${subject}`, { to, messageId: info.messageId }, "MAIL");
+    logAsync("info", `Email sent successfully: ${subject}`, {
+      to,
+      messageId: info.messageId,
+      durationMs: Date.now() - startedAt,
+    });
     return { success: true, messageId: info.messageId };
   } catch (err: any) {
-    await logger.error(`SMTP error sending email: ${err.message}`, { to, subject }, "MAIL");
+    logAsync("error", `SMTP error sending email: ${err.message}`, {
+      to,
+      subject,
+      durationMs: Date.now() - startedAt,
+      code: err?.code,
+    });
     return { success: false, error: err.message };
   } finally {
-    // Close the connection cleanly after each send
-    transporter.close();
+    if (cachedTransporter) cachedTransporter.inFlight -= 1;
   }
 };
