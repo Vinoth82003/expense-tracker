@@ -11,7 +11,13 @@ import React, {
 } from "react";
 import { useSession } from "next-auth/react";
 import { useData, expenseListKey, incomeListKey } from "./DataContext";
-import { mergeById, splitByMonth } from "@/lib/chat/batchSync";
+import {
+  mergeById,
+  monthKeyOf,
+  normalizeSyncPayload,
+  splitByMonth,
+  SYNC_EVENTS,
+} from "@/lib/chat/batchSync";
 
 /** next-auth's session user type does not carry expenseMode. */
 type SessionUser = { expenseMode?: string } & Record<string, unknown>;
@@ -80,11 +86,6 @@ interface UserContextValue {
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
 
-const monthKeyOf = (date: string | Date) => {
-  const d = new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-};
-
 const byDateDesc = (a: Expense | Income, b: Expense | Income) =>
   new Date(b.date).getTime() - new Date(a.date).getTime();
 
@@ -135,185 +136,170 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return { totalSpent, totalIncome, netBalance, dailyAverage, remaining };
   }, [expenses, incomes, monthlyLimit]);
 
-  const fetchData = useCallback(async () => {
-    if (!session) return;
+  /**
+   * Reads this month + last month and the monthly budget.
+   *
+   * `bypassCache` exists because the list reads go through `fetchCached`, which
+   * returns a still-warm entry (30s TTL) instead of hitting the network. That
+   * is right for the mount-time load and wrong for a recovery re-read after a
+   * write: it would hand back the exact pre-write snapshot the caller is trying
+   * to replace, so a "refresh" would look like it succeeded while changing
+   * nothing. Anything that must observe the latest server state asks for it.
+   */
+  const fetchData = useCallback(
+    async (opts?: { bypassCache?: boolean }) => {
+      if (!session) return;
 
-    try {
-      const now = new Date();
-      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const prevMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
-
-      const [expData, incData, budgetData, prevExpData, prevIncData] = await Promise.all([
-        fetchCached<{ expenses: Expense[] }>(
-          expenseListKey(month),
-          () => fetch(`/api/expenses?month=${month}`).then((r) => r.json()),
-        ),
-        fetchCached<{ incomes: Income[] }>(
-          incomeListKey(month),
-          () => fetch(`/api/income?month=${month}`).then((r) => r.json()),
-        ),
-        fetch(`/api/budget?month=${month}`).then((r) => r.json()),
-        fetchCached<{ expenses: Expense[] }>(
-          expenseListKey(prevMonth),
-          () => fetch(`/api/expenses?month=${prevMonth}`).then((r) => r.json()),
-        ),
-        fetchCached<{ incomes: Income[] }>(
-          incomeListKey(prevMonth),
-          () => fetch(`/api/income?month=${prevMonth}`).then((r) => r.json()),
-        ),
-      ]);
-
-      const nextExpenses = expData.expenses || [];
-      const nextIncomes = incData.incomes || [];
-      const nextPrevExpenses = prevExpData.expenses || [];
-      const nextPrevIncomes = prevIncData.incomes || [];
-
-      snapshot.current = {
-        expenses: nextExpenses,
-        incomes: nextIncomes,
-        prevExpenses: nextPrevExpenses,
-        prevIncomes: nextPrevIncomes,
-      };
-
-      setExpenses(nextExpenses);
-      setIncomes(nextIncomes);
-      setPrevExpenses(nextPrevExpenses);
-      setPrevIncomes(nextPrevIncomes);
-      setMonthlyLimit(budgetData.limit || 0);
-
-      if (session.user) {
-        setExpenseMode(
-          (session.user as SessionUser).expenseMode || "no-limit",
-        );
+      if (opts?.bypassCache) {
+        // Invalidated before the reads below, which is what makes them miss.
+        invalidateMatching("expenses");
+        invalidateMatching("income");
       }
-    } catch (error) {
-      console.error("Failed to fetch user data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [session, fetchCached]);
+
+      try {
+        const now = new Date();
+        const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const prevMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+
+        const [expData, incData, budgetData, prevExpData, prevIncData] = await Promise.all([
+          fetchCached<{ expenses: Expense[] }>(
+            expenseListKey(month),
+            () => fetch(`/api/expenses?month=${month}`).then((r) => r.json()),
+          ),
+          fetchCached<{ incomes: Income[] }>(
+            incomeListKey(month),
+            () => fetch(`/api/income?month=${month}`).then((r) => r.json()),
+          ),
+          fetch(`/api/budget?month=${month}`).then((r) => r.json()),
+          fetchCached<{ expenses: Expense[] }>(
+            expenseListKey(prevMonth),
+            () => fetch(`/api/expenses?month=${prevMonth}`).then((r) => r.json()),
+          ),
+          fetchCached<{ incomes: Income[] }>(
+            incomeListKey(prevMonth),
+            () => fetch(`/api/income?month=${prevMonth}`).then((r) => r.json()),
+          ),
+        ]);
+
+        const nextExpenses = expData.expenses || [];
+        const nextIncomes = incData.incomes || [];
+        const nextPrevExpenses = prevExpData.expenses || [];
+        const nextPrevIncomes = prevIncData.incomes || [];
+
+        snapshot.current = {
+          expenses: nextExpenses,
+          incomes: nextIncomes,
+          prevExpenses: nextPrevExpenses,
+          prevIncomes: nextPrevIncomes,
+        };
+
+        setExpenses(nextExpenses);
+        setIncomes(nextIncomes);
+        setPrevExpenses(nextPrevExpenses);
+        setPrevIncomes(nextPrevIncomes);
+        setMonthlyLimit(budgetData.limit || 0);
+
+        if (session.user) {
+          setExpenseMode(
+            (session.user as SessionUser).expenseMode || "no-limit",
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [session, fetchCached, invalidateMatching]
+  );
 
   useEffect(() => {
     if (!session) return;
     fetchData();
 
-    // The modals dispatch these after a successful write; keep the existing
-    // event contract so they stay in sync without a round trip.
-    const insert = <T extends Expense | Income>(
-      detail: T,
-      setList: React.Dispatch<React.SetStateAction<T[]>>,
-      setPrevList: React.Dispatch<React.SetStateAction<T[]>>,
-    ) => {
-      const now = new Date();
-      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-      const prevMonth = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
-      const target = monthKeyOf(detail.date);
-
-      if (target === month) {
-        setList((prevList) =>
-          prevList.some((x) => x.id === detail.id)
-            ? prevList
-            : [detail, ...prevList].sort((a, b) => byDateDesc(a, b)),
-        );
-      } else if (target === prevMonth) {
-        setPrevList((prevList) =>
-          prevList.some((x) => x.id === detail.id)
-            ? prevList
-            : [detail, ...prevList].sort((a, b) => byDateDesc(a, b)),
-        );
-      }
-    };
-
-    // Batch counterpart of `insert`: merges a whole list in one state update
-    // per bucket instead of one update per record, dropping duplicates by id.
+    // Batch merge: folds a whole list in with one state update per month
+    // bucket instead of one update per record, dropping duplicates by id.
+    // Returns whether anything actually landed, so the caller can tell a
+    // genuine no-op from a record that fell outside the tracked two months.
     const insertMany = <T extends Expense | Income>(
-      items: T[] | undefined,
+      items: readonly Record<string, unknown>[] | undefined,
       setList: React.Dispatch<React.SetStateAction<T[]>>,
       setPrevList: React.Dispatch<React.SetStateAction<T[]>>,
     ): boolean => {
       if (!Array.isArray(items) || items.length === 0) return false;
-      const { current, previous } = splitByMonth(items);
+      const typed = items as unknown as T[];
+      const { current, previous } = splitByMonth(typed);
       if (current.length) setList((prevList) => mergeById(prevList, current));
       if (previous.length) setPrevList((prevList) => mergeById(prevList, previous));
       return current.length > 0 || previous.length > 0;
     };
 
-    const handleExpenseAdded = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail) insert(detail, setExpenses, setPrevExpenses);
-      else fetchData();
-      // The insert above only patches this context's local lists. The list pages
-      // read DataContext's cache, so it must be invalidated too or they keep
-      // rendering the pre-write snapshot until a manual refresh.
-      invalidateMatching("expenses");
+    /**
+     * Recovery path for a payload we cannot apply: drop every cached list and
+     * re-read. `fetchData` performs the invalidation itself, and it has to happen
+     * before its own reads — the reverse order silently returns the warm
+     * pre-write snapshot.
+     */
+    const refetchFromServer = () => {
+      void fetchData({ bypassCache: true });
     };
 
-    const handleIncomeAdded = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail) insert(detail, setIncomes, setPrevIncomes);
-      else fetchData();
-      invalidateMatching("income");
-    };
+    /**
+     * Single entry point for every chat/Sage write event.
+     *
+     * The event name alone does not describe the payload — the batch executor
+     * emits `expenseAdded`/`incomeAdded`/`budgetUpdated` while still sending the
+     * full `{ expenses[], incomes[], budget }` envelope, and the older paths send
+     * the bare row under the same names. Each handler used to assume its own
+     * shape, so a single-expense Sage message merged nothing and the write only
+     * surfaced via a cache-invalidated re-fetch — the visible "lag".
+     * `normalizeSyncPayload` collapses all shapes, so a write lands in local
+     * state in the same tick it is dispatched, exactly like a manual add.
+     */
+    const applySync = (e: Event) => {
+      const sync = normalizeSyncPayload(e.type, (e as CustomEvent).detail);
 
-    const handleBudgetUpdated = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail) {
-        if (typeof detail.limit === "number") setMonthlyLimit(detail.limit);
-        if (detail.expenseMode) setExpenseMode(detail.expenseMode);
-      } else {
-        fetchData();
-      }
-      invalidateMatching("budget");
-    };
-
-    // Sage logs several transactions from one message and reports them under a
-    // single batch event, so the single-record handlers above never fire. Its
-    // payload is also a different shape: { expenses[], incomes[], budget }.
-    // Without this the dashboard kept showing pre-chat totals until a refresh.
-    const handleBatchTransactionsAdded = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (!detail) {
-        fetchData();
-        invalidateMatching("expenses");
-        invalidateMatching("income");
-        invalidateMatching("budget");
+      if (!sync) {
+        // Nothing usable in the payload — re-read rather than sit on stale state.
+        refetchFromServer();
         return;
       }
-      const { expenses, incomes, budget } = detail;
-      const touched =
-        insertMany(expenses, setExpenses, setPrevExpenses) ||
-        insertMany(incomes, setIncomes, setPrevIncomes);
 
-      // Every bucket a batch touched must drop its cached copy, otherwise the
-      // expenses/income pages stay on the pre-batch snapshot.
-      if (expenses?.length) invalidateMatching("expenses");
-      if (incomes?.length) invalidateMatching("income");
+      const landed =
+        insertMany(sync.expenses, setExpenses, setPrevExpenses) ||
+        insertMany(sync.incomes, setIncomes, setPrevIncomes);
 
-      if (budget && typeof budget.amount === "number") {
-        setMonthlyLimit(budget.amount);
-        setExpenseMode("limit");
-        invalidateMatching("budget");
-        return;
+      if (sync.budgetAmount !== undefined) {
+        setMonthlyLimit(sync.budgetAmount);
+        // A budget write always implies the limit is being enforced; only an
+        // explicit mode in the payload may say otherwise.
+        setExpenseMode(sync.expenseMode ?? "limit");
       }
-      if (!touched) {
-        fetchData();
-        invalidateMatching("expenses");
-        invalidateMatching("income");
-        invalidateMatching("budget");
-      }
+
+      // The merges above only patch this context's local lists. The list pages
+      // read DataContext's cache, so every bucket the write touched must drop
+      // its cached copy or they keep rendering the pre-write snapshot.
+      if (sync.expenses.length) invalidateMatching("expenses");
+      if (sync.incomes.length) invalidateMatching("income");
+      if (sync.budgetAmount !== undefined) invalidateMatching("budget");
+
+      // Records can arrive dated outside the two months this context tracks (or
+      // with an unparseable date). Nothing landed, so a re-read is the only way
+      // those become visible.
+      if (!landed && sync.budgetAmount === undefined) refetchFromServer();
     };
 
-    window.addEventListener("expenseAdded", handleExpenseAdded);
-    window.addEventListener("incomeAdded", handleIncomeAdded);
-    window.addEventListener("budgetUpdated", handleBudgetUpdated);
-    window.addEventListener("batchTransactionsAdded", handleBatchTransactionsAdded);
+    const listeners = SYNC_EVENTS.map((name) => {
+      const handler = (e: Event) => applySync(e);
+      window.addEventListener(name, handler);
+      return [name, handler] as const;
+    });
+
     return () => {
-      window.removeEventListener("expenseAdded", handleExpenseAdded);
-      window.removeEventListener("incomeAdded", handleIncomeAdded);
-      window.removeEventListener("budgetUpdated", handleBudgetUpdated);
-      window.removeEventListener("batchTransactionsAdded", handleBatchTransactionsAdded);
+      for (const [name, handler] of listeners) {
+        window.removeEventListener(name, handler);
+      }
     };
   }, [session, fetchData, invalidateMatching]);
 
@@ -577,7 +563,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     loading,
     isTogglingMode,
     stats,
-    refreshData: fetchData,
+    // A user-initiated refresh must always observe the server, never the cache.
+    refreshData: () => fetchData({ bypassCache: true }),
     toggleExpenseMode,
     updateBudget,
     addExpense,

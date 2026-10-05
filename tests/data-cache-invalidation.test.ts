@@ -125,32 +125,54 @@ describe("prefix matching reaches the list hooks", () => {
  * /income kept rendering stale cache.
  */
 describe("chat sync handlers invalidate the shared cache", () => {
-  const handlerBody = (source: string, name: string): string => {
-    const start = source.indexOf(`const ${name} = (e: Event) => {`);
-    expect(start, `${name} not found`).toBeGreaterThan(-1);
-    const end = source.indexOf("\n    };", start);
-    return source.slice(start, end);
-  };
-
   const source = read("context/UserContext.tsx");
 
-  it("expenseAdded invalidates the expenses cache", () => {
-    expect(handlerBody(source, "handleExpenseAdded")).toContain('invalidateMatching("expenses")');
+  /** Slices from `const <name> = ` to the next blank-line-separated boundary. */
+  const bodyOf = (name: string): string => {
+    const start = source.indexOf(`const ${name} = `);
+    expect(start, `${name} not found`).toBeGreaterThan(-1);
+    const next = source.indexOf("\n\n  ", start);
+    return source.slice(start, next === -1 ? undefined : next);
+  };
+
+  it("one handler normalizes every event shape before merging", () => {
+    // All four events funnel through `applySync`, so none of them can assume a
+    // payload shape the others don't also accept.
+    const body = bodyOf("applySync");
+    expect(body).toContain("normalizeSyncPayload(");
+    expect(body).not.toContain("detail.date");
+    expect(body).not.toContain("detail.limit");
   });
 
-  it("incomeAdded invalidates the income cache", () => {
-    expect(handlerBody(source, "handleIncomeAdded")).toContain('invalidateMatching("income")');
+  it("invalidates every bucket the write touched", () => {
+    const body = bodyOf("applySync");
+    expect(body).toContain('if (sync.expenses.length) invalidateMatching("expenses")');
+    expect(body).toContain('if (sync.incomes.length) invalidateMatching("income")');
+    expect(body).toContain('if (sync.budgetAmount !== undefined) invalidateMatching("budget")');
   });
 
-  it("budgetUpdated invalidates the budget cache", () => {
-    expect(handlerBody(source, "handleBudgetUpdated")).toContain('invalidateMatching("budget")');
+  it("re-reads from the server when a payload cannot be applied", () => {
+    const body = bodyOf("applySync");
+    expect(body).toContain("if (!sync) {");
+    expect(body).toContain("refetchFromServer();");
+    expect(body).toContain("if (!landed && sync.budgetAmount === undefined) refetchFromServer();");
   });
 
-  it("batchTransactionsAdded invalidates every bucket it touched", () => {
-    const body = handlerBody(source, "handleBatchTransactionsAdded");
-    expect(body).toContain('if (expenses?.length) invalidateMatching("expenses")');
-    expect(body).toContain('if (incomes?.length) invalidateMatching("income")');
-    expect(body).toContain('invalidateMatching("budget")');
+  it("the fallback re-read bypasses the warm cache", () => {
+    // fetchData reads through fetchCached, which returns a still-warm entry for
+    // up to 30s. Invalidating after the read is what let the old fallback hand
+    // back the exact snapshot it was called to replace.
+    expect(bodyOf("refetchFromServer")).toContain("fetchData({ bypassCache: true })");
+
+    const invalidateAt = source.indexOf('invalidateMatching("expenses")');
+    const readAt = source.indexOf("await Promise.all([");
+    expect(invalidateAt).toBeGreaterThan(-1);
+    expect(readAt).toBeGreaterThan(-1);
+    expect(invalidateAt).toBeLessThan(readAt);
+  });
+
+  it("a user-initiated refresh also bypasses the cache", () => {
+    expect(source).toContain("refreshData: () => fetchData({ bypassCache: true })");
   });
 
   it("the sync effect depends on invalidateMatching", () => {
