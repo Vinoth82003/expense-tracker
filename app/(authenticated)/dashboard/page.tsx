@@ -26,7 +26,6 @@ import {
   PiggyBank,
   Target,
   PieChart as PieChartIcon,
-  Settings2,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -34,6 +33,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useDashboard } from "@/context/DashboardContext";
 import { useExpenses, useIncome } from "@/context/DataContext";
+import ModeToggle from "@/components/ui/ModeToggle";
 
 const monthKeyOf = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -229,14 +229,16 @@ const expenses = monthExpenses ?? NO_TRANSACTIONS;
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={toggleExpenseMode}
+          {/* Free Mode / Budget Mode. A switch rather than a button because the
+              control has exactly two persistent states, and a switch makes the
+              current one readable at a glance without being toggled. */}
+          <ModeToggle
+            checked={expenseMode === "limit"}
+            onChange={toggleExpenseMode}
             disabled={isTogglingMode}
-            className="flex items-center gap-2 text-xs font-semibold bg-surface border border-border-subtle px-3 py-2 rounded-xl hover:bg-surface-variant transition-colors disabled:opacity-50"
-          >
-            <Settings2 size={14} className={expenseMode === "limit" ? "text-primary-500" : "text-muted"} />
-            {expenseMode === "limit" ? "Budget Mode" : "Free Mode"}
-          </button>
+            label="Budget mode"
+            labels={{ off: "Free", on: "Budget" }}
+          />
 
           {/* Month navigator */}
           <div className="flex items-center bg-surface border border-border-subtle rounded-xl overflow-hidden">
