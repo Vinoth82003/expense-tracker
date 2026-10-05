@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { verifyAdminToken } from "@/lib/admin-auth";
 import { isAllowedOrigin } from "@/lib/origins";
+import { sanitizeCallbackUrl } from "@/lib/auth-redirect";
 
 function isTrustedInternalRequest(request: NextRequest) {
   const userId = request.headers.get("x-internal-user-id");
@@ -117,7 +118,11 @@ export async function middleware(request: NextRequest) {
   if (protectedPaths.some((p) => pathname.startsWith(p))) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      // Remember where the user was headed so login can return them there.
+      const requested = sanitizeCallbackUrl(pathname + request.nextUrl.search);
+      const loginUrl = new URL("/login", request.url);
+      if (requested) loginUrl.searchParams.set("callbackUrl", requested);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

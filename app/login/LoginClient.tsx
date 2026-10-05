@@ -21,7 +21,13 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function LoginClient({ bridgeTo }: { bridgeTo?: string | null }) {
+export function LoginClient({
+  bridgeTo,
+  callbackUrl,
+}: {
+  bridgeTo?: string | null;
+  callbackUrl?: string | null;
+}) {
   const [isLoading, setIsLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState("");
@@ -34,15 +40,19 @@ export function LoginClient({ bridgeTo }: { bridgeTo?: string | null }) {
 
   // Cross-origin sign-in: after auth completes on this (primary) origin,
   // hop through /bridge so the origin that started sign-in gets a session.
-  const callbackUrl = bridgeTo
-    ? `/bridge?to=${encodeURIComponent(bridgeTo)}`
-    : "/onboarding";
+  // `next` rides along so the sibling can still honour the original
+  // destination once it has minted its own session.
+  const authCallbackUrl = bridgeTo
+    ? `/bridge?to=${encodeURIComponent(bridgeTo)}${
+        callbackUrl ? `&next=${encodeURIComponent(callbackUrl)}` : ""
+      }`
+    : callbackUrl || "/onboarding";
 
   const handleGoogleSignIn = async () => {
     if (!canSubmit) return;
     setIsLoading(true);
     try {
-      await signIn("google", { callbackUrl });
+      await signIn("google", { callbackUrl: authCallbackUrl });
     } catch {
       setIsLoading(false);
     }
@@ -78,6 +88,11 @@ export function LoginClient({ bridgeTo }: { bridgeTo?: string | null }) {
         const session = await sessionRes.json();
         if (session?.user) {
           if (bridgeTo) {
+            router.push(authCallbackUrl);
+            return;
+          }
+          // Return the user to the page that bounced them here, if we know it.
+          if (callbackUrl) {
             router.push(callbackUrl);
             return;
           }

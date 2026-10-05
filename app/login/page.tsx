@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { LoginClient } from "./LoginClient";
 import { SITE_ORIGIN } from "@/lib/site-url";
+import { sanitizeCallbackUrl } from "@/lib/auth-redirect";
 import {
   PRIMARY_APP_ORIGIN,
   isAllowedOrigin,
@@ -71,7 +72,7 @@ function resolveBridgeTo(raw: unknown): string | null {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ bridgeTo?: string }>;
+  searchParams: Promise<{ bridgeTo?: string; callbackUrl?: string }>;
 }) {
   const params = await searchParams;
   const h = await headers();
@@ -79,6 +80,10 @@ export default async function LoginPage({
     h.get("host"),
     h.get("x-forwarded-proto")
   );
+
+  // Where the user was trying to go before they were bounced here. Untrusted
+  // input, so it is sanitised (see lib/auth-redirect.ts).
+  const callbackUrl = sanitizeCallbackUrl(params.callbackUrl);
 
   // Google OAuth is only configured on the primary app origin. Sibling app
   // deployments bounce sign-in there and return through the auth bridge
@@ -89,10 +94,13 @@ export default async function LoginPage({
       bridgeTo = currentOrigin;
     }
 
-    const query = bridgeTo ? `?bridgeTo=${encodeURIComponent(bridgeTo)}` : "";
-    redirect(`${PRIMARY_APP_ORIGIN}/login${query}`);
+    // Carry both hops across to the primary origin.
+    const query = new URLSearchParams();
+    if (bridgeTo) query.set("bridgeTo", bridgeTo);
+    if (callbackUrl) query.set("callbackUrl", callbackUrl);
+    redirect(`${PRIMARY_APP_ORIGIN}/login${query.size ? `?${query.toString()}` : ""}`);
   }
 
   const bridgeTo = resolveBridgeTo(params.bridgeTo);
-  return <LoginClient bridgeTo={bridgeTo} />;
+  return <LoginClient bridgeTo={bridgeTo} callbackUrl={callbackUrl} />;
 }

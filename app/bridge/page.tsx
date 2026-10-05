@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import crypto from "crypto";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sanitizeCallbackUrl } from "@/lib/auth-redirect";
 import {
   isAllowedOrigin,
   currentOriginFromHeaders,
@@ -19,13 +20,15 @@ export const dynamic = "force-dynamic";
 // one-time 60-second ticket bound to the user, and 302s to
 //   <target-origin>/auth/bridge?ticket=<token>
 // where the sibling exchanges it for its own session cookie.
+// `next` carries the user's original destination so the sibling can honour it
+// after the session exists (it is re-sanitised on the receiving end).
 
 const TICKET_TTL_MS = 60 * 1000;
 
 export default async function BridgePage({
   searchParams,
 }: {
-  searchParams: Promise<{ to?: string }>;
+  searchParams: Promise<{ to?: string; next?: string }>;
 }) {
   const params = await searchParams;
   const h = await headers();
@@ -82,5 +85,7 @@ export default async function BridgePage({
     },
   });
 
-  redirect(`${targetOrigin}/auth/bridge?ticket=${token}`);
+  const next = sanitizeCallbackUrl(params.next);
+  const suffix = next ? `&next=${encodeURIComponent(next)}` : "";
+  redirect(`${targetOrigin}/auth/bridge?ticket=${token}${suffix}`);
 }

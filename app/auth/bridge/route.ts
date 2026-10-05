@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { encode } from "next-auth/jwt";
 import { prisma } from "@/lib/prisma";
+import { sanitizeCallbackUrl } from "@/lib/auth-redirect";
 import {
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
@@ -59,7 +60,11 @@ export async function GET(req: NextRequest) {
     maxAge: SESSION_MAX_AGE,
   });
 
-  const destination = record.user.onboarded ? "/dashboard" : "/onboarding";
+  // The origin that sent the user here may have recorded where they were headed.
+  // Re-sanitised here: this URL is attacker-influenced, same as any callbackUrl.
+  const requestedNext = sanitizeCallbackUrl(req.nextUrl.searchParams.get("next"));
+  const destination =
+    requestedNext || (record.user.onboarded ? "/dashboard" : "/onboarding");
   const res = NextResponse.redirect(new URL(destination, req.url));
   res.cookies.set({
     name: SESSION_COOKIE_NAME,
