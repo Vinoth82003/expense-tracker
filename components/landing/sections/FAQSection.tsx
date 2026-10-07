@@ -2,43 +2,14 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, HelpCircle } from "lucide-react";
+import { ChevronDown, HelpCircle, ArrowRight } from "lucide-react";
 import { fadeUp } from "./animations";
+import { resolveSupportEmail } from "@/lib/support-contact";
+import { HOME_FAQS } from "./home-faqs";
+import Link from "next/link";
 
-const faqs = [
-  {
-    q: "What is SpendWise?",
-    a: "SpendWise is a smart expense tracker built for India. It auto-categorizes your expenses, tracks budgets in real time, and gives you AI-powered insights into where your money goes — all from your phone.",
-  },
-  {
-    q: "How does Sage AI work?",
-    a: "Sage AI analyzes your actual transactions to surface spending patterns, detect anomalies, and answer plain-language questions like \"Where did my money go this month?\" Every number it shows comes directly from your tracked data — no guessed or fabricated stats.",
-  },
-  {
-    q: "Is SpendWise free to use?",
-    a: "Yes. SpendWise offers a free plan with core tracking, budgeting, and AI insights. No hidden fees, no credit card required to get started.",
-  },
-  {
-    q: "Is my financial data secure?",
-    a: "Absolutely. We use Google OAuth 2.0 for authentication, encrypt all data in transit, and use secure password hashing. Your data stays in your account — we never share it with third parties.",
-  },
-  {
-    q: "Can teams use SpendWise?",
-    a: "SpendWise is designed for personal finance tracking. For team or business expense management, check out our Groups feature for splitting shared expenses with friends and family.",
-  },
-  {
-    q: "How accurate is the AI?",
-    a: "Sage AI only works with your real transaction data. It doesn't hallucinate numbers or invent categories — every insight, breakdown, and recommendation is grounded in transactions you've actually recorded.",
-  },
-  {
-    q: "How long does setup take?",
-    a: "About 2 minutes. Sign in with Google, and you're ready to start logging expenses. No lengthy onboarding or complex configuration needed.",
-  },
-  {
-    q: "Does SpendWise support recurring expenses?",
-    a: "Currently, SpendWise supports manual expense entry. You can log subscriptions, rent, EMIs, and SIPs as regular expenses and track them in your reports.",
-  },
-];
+// Shared with the homepage FAQPage JSON-LD (see home-faqs.ts / Module 10).
+const faqs = HOME_FAQS;
 
 export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -64,7 +35,10 @@ export function FAQSection() {
           </h2>
           <p className="mx-auto mt-5 max-w-[500px] text-[15px] leading-relaxed text-secondary">
             Everything you need to know about SpendWise. Can&apos;t find what you&apos;re looking for?{" "}
-            <a href="mailto:support@spendwise.app" className="text-primary-600 hover:text-primary-700 font-medium underline underline-offset-2">
+            <a
+              href={`mailto:${resolveSupportEmail()}`}
+              className="text-primary-600 hover:text-primary-700 font-medium underline underline-offset-2"
+            >
               Email us
             </a>
           </p>
@@ -125,6 +99,16 @@ export function FAQSection() {
             );
           })}
         </motion.div>
+
+        <p className="mt-8 text-center">
+          <Link
+            href="/faq"
+            className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-primary-600 hover:text-primary-700 underline underline-offset-2"
+          >
+            Browse all FAQs
+            <ArrowRight size={15} />
+          </Link>
+        </p>
       </div>
     </section>
   );

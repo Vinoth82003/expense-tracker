@@ -18,9 +18,14 @@ const footerGroups: Record<string, FooterLink[]> = {
   Resources: [
     { label: "Documentation", href: "/docs" },
     { label: "FAQ", href: "/faq" },
+    { label: "Reviews", href: "/reviews" },
     { label: "Contact", href: "/contact" },
+    { label: "Press Kit", href: "/press" },
     { label: "System Status", href: "/status" },
+    { label: "All Tools", href: "/tools" },
     { label: "50/30/20 Calculator", href: "/tools/50-30-20-budget-calculator" },
+    { label: "Salary Budget Calculator", href: "/tools/salary-budget-calculator" },
+    { label: "Emergency Fund Calculator", href: "/tools/emergency-fund-calculator" },
   ],
   Compare: [
     { label: "SpendWise vs Walnut", href: "/compare/spendwise-vs-walnut" },

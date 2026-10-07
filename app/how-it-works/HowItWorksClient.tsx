@@ -21,6 +21,7 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { steps } from "./steps";
 function Separator() {
   return (
     <div className="flex justify-center bg-surface">
@@ -37,57 +38,6 @@ const fadeUp: Variants = {
     transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
   },
 };
-
-const steps = [
-  {
-    number: "01",
-    chip: "Getting Started",
-    title: "Create your free account",
-    description:
-      "Sign up with Google or email in seconds. No credit card required, no passwords to remember — just instant access to your personal finance dashboard.",
-    bullets: [
-      "Secure Google OAuth — one tap sign-in",
-      "Email + password option available",
-      "Industry-standard security with encryption in transit",
-    ],
-  },
-  {
-    number: "02",
-    chip: "Daily Use",
-    title: "Log expenses as you spend",
-    description:
-      "Record every transaction the moment it happens. Categorize into Needs and Wants with a single tap — your data stays organized automatically.",
-    bullets: [
-      "Quick expense entry with ₹ support",
-      "Auto-categorize Needs vs Wants",
-      "Track income alongside expenses",
-    ],
-  },
-  {
-    number: "03",
-    chip: "AI Intelligence",
-    title: "Get insights, not just numbers",
-    description:
-      "Sage AI analyzes your spending patterns and surfaces the why behind your money — identifying leaks, overlaps, and opportunities you'd miss on your own.",
-    bullets: [
-      "Behavioral spending pattern detection",
-      "Subscription overlap identification",
-      "Personalized savings recommendations",
-    ],
-  },
-  {
-    number: "04",
-    chip: "Growth",
-    title: "Watch your wealth grow",
-    description:
-      "Visualize progress with real-time dashboards, export Indian financial year reports, and set smart budget limits that alert you before you overspend.",
-    bullets: [
-      "April–March FY reports with ₹ Lakhs/Crores",
-      "Budget alerts at 80% spend threshold",
-      "Downloadable CSV & PDF exports",
-    ],
-  },
-];
 
 /* ─────────── Mockup: Auth Screen ─────────── */
 function AuthMockup() {
@@ -550,8 +500,8 @@ export function HowItWorksClient() {
               </h2>
 
               <p className="text-[15px] md:text-[17px] text-secondary max-w-xl mx-auto leading-relaxed">
-                Join thousands of users who stopped guessing and started
-                growing. Free forever — no credit card needed.
+                Stop guessing and start growing. Free for personal use — no
+                credit card needed.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">

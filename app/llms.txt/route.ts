@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { siteUrl } from "@/lib/site-url";
+import { withStaticGuides } from "@/lib/docs-guides";
 
 export const dynamic = "force-dynamic";
 
@@ -16,28 +17,33 @@ export async function GET(request: NextRequest) {
   // 3. Public Routes Index
   const directories = `## Public Pages Directory\n\n- [Home Page](${baseUrl}): Main landing page detailing the features and setup.\n- [Features Page](${baseUrl}/features): Detailed review of all app capabilities.\n- [How It Works](${baseUrl}/how-it-works): Tutorial on onboarding, budget setup, and PWA installation.\n- [FAQs Page](${baseUrl}/faq): Frequently asked questions on security, pricing, and exports.\n- [Contact Page](${baseUrl}/contact): Feedback submission and customer support.\n- [Status Page](${baseUrl}/status): Real-time application system status and health indicator.\n- [Privacy Policy](${baseUrl}/privacy): Details on data protection and user privacy rights.\n- [Terms of Service](${baseUrl}/terms): Usage terms and legal agreements.\n- [Sitemap](${baseUrl}/sitemap.xml): Search engine index file.\n\n`;
 
-  // 4. Dynamic Documentation
+  // 4. Dynamic Documentation (DB docs merged with repo-owned guides)
   let docsContent = "## Product Documentation & Guides\n\n";
+  const docLine = (doc: { title: string; slug: string; content: string }) => {
+    // Strip markdown elements for a clean snippet
+    const cleanContent = doc.content
+      .replace(/[#*`_\-]/g, "")
+      .replace(/<[^>]*>/g, "")
+      .substring(0, 120)
+      .replace(/\s+/g, " ")
+      .trim();
+    return `- [${doc.title}](${baseUrl}/docs/${doc.slug}): ${cleanContent}...\n`;
+  };
   try {
-    const publishedDocs = await prisma.doc.findMany({
-      where: {
-        status: "PUBLISHED",
-      },
-      orderBy: {
-        order: "asc",
-      },
-    });
+    const publishedDocs = withStaticGuides(
+      await prisma.doc.findMany({
+        where: {
+          status: "PUBLISHED",
+        },
+        orderBy: {
+          order: "asc",
+        },
+      })
+    );
 
     if (publishedDocs.length > 0) {
       publishedDocs.forEach((doc) => {
-        // Strip markdown elements for a clean snippet
-        const cleanContent = doc.content
-          .replace(/[#*`_\-]/g, "")
-          .replace(/<[^>]*>/g, "")
-          .substring(0, 120)
-          .replace(/\s+/g, " ")
-          .trim();
-        docsContent += `- [${doc.title}](${baseUrl}/docs/${doc.slug}): ${cleanContent}...\n`;
+        docsContent += docLine(doc);
       });
     } else {
       docsContent += "- *No documentation articles currently published.*\n";
@@ -45,6 +51,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error loading docs for llms.txt:", error);
     docsContent += "- *Error retrieving current database documentation articles.*\n";
+    // Repo-owned guides (lib/docs-guides.ts) don't need the database.
+    withStaticGuides([]).forEach((doc) => {
+      docsContent += docLine(doc);
+    });
   }
   docsContent += "\n";
 

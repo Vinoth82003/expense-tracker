@@ -270,7 +270,7 @@ export default function OnboardingPage() {
                   </h3>
                   <p className="text-[13px] text-secondary font-medium leading-relaxed">
                     Get a deep breakdown of your spending patterns, anomalies,
-                    and actionable suggestions — powered by Google Gemini.
+                    and actionable suggestions — powered by Google Gemini or Groq.
                   </p>
                 </div>
               </div>
@@ -318,7 +318,7 @@ export default function OnboardingPage() {
             transition={{ delay: 0.5 }}
             className="mt-8 flex flex-wrap items-center justify-center gap-4"
           >
-            {["10,000+ users", "Bank-grade security", "Free forever"].map(
+            {["Free for personal use", "OAuth sign-in", "Export anytime"].map(
               (signal, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Check size={13} className="text-success" strokeWidth={2.5} />

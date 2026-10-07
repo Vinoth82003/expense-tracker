@@ -43,16 +43,16 @@ const features = [
   },
   {
     label: "Setup Time",
-    spendwise: "2 min",
-    spreadsheet: "Hours",
-    apps: "10 min",
+    spendwise: "Minutes",
+    spreadsheet: "Manual",
+    apps: "Varies",
     isText: true,
   },
   {
     label: "Price",
     spendwise: "Free",
     spreadsheet: "Free",
-    apps: "₹500–1500/mo",
+    apps: "Paid tiers",
     isText: true,
   },
 ];

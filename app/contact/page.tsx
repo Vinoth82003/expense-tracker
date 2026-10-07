@@ -1,11 +1,27 @@
 import type { Metadata } from "next";
 import { ContactClient } from "./ContactClient";
 import { SITE_ORIGIN } from "@/lib/site-url";
+import {
+  resolveSupportEmail,
+  resolveSupportPhone,
+} from "@/lib/support-contact";
+
+const supportEmail = resolveSupportEmail();
+const supportPhone = resolveSupportPhone();
+
+function contactDescription(): string {
+  const base = "Get in touch with the SpendWise support team. Send us a message";
+  if (supportPhone) {
+    return `${base}, email ${supportEmail}, or call ${supportPhone}.`;
+  }
+  return `${base} or email ${supportEmail}.`;
+}
+
+const description = contactDescription();
 
 export const metadata: Metadata = {
   title: "Contact Us | SpendWise — AI-Powered Expense Tracker for India",
-  description:
-    "Get in touch with the SpendWise support team. Send us a message, email support@spendwise.app, or call our Indian helpline. We respond within 24 hours.",
+  description,
   keywords: [
     "SpendWise contact",
     "expense tracker support",
@@ -18,8 +34,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Contact Us | SpendWise — AI-Powered Expense Tracker",
-    description:
-      "Get in touch with the SpendWise support team. Send us a message, email support@spendwise.app, or call our Indian helpline.",
+    description,
     url: `${SITE_ORIGIN}/contact`,
     type: "website",
     siteName: "SpendWise",
@@ -35,41 +50,46 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Contact Us | SpendWise — AI-Powered Expense Tracker",
-    description:
-      "Get in touch with the SpendWise support team. Send us a message, email support@spendwise.app, or call our Indian helpline.",
+    description,
     images: ["/og-images/og-contact-dark.png"],
   },
 };
 
+const organizationContact: Record<string, string> = {
+  "@type": "Organization",
+  name: "SpendWise",
+  email: supportEmail,
+  url: SITE_ORIGIN,
+};
+
+if (supportPhone) {
+  organizationContact.telephone = supportPhone;
+}
+
 const contactStructuredData = {
   "@context": "https://schema.org",
   "@type": "ContactPage",
-  "name": "Contact SpendWise",
-  "description": "Get in touch with the SpendWise support team.",
-  "url": `${SITE_ORIGIN}/contact`,
-  "mainEntity": {
-    "@type": "Organization",
-    "name": "SpendWise",
-    "email": "support@spendwise.app",
-    "url": SITE_ORIGIN,
-  },
+  name: "Contact SpendWise",
+  description: "Get in touch with the SpendWise support team.",
+  url: `${SITE_ORIGIN}/contact`,
+  mainEntity: organizationContact,
 };
 
 const breadcrumbStructuredData = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
-  "itemListElement": [
+  itemListElement: [
     {
       "@type": "ListItem",
-      "position": 1,
-      "name": "Home",
-        "item": SITE_ORIGIN,
+      position: 1,
+      name: "Home",
+      item: SITE_ORIGIN,
     },
     {
       "@type": "ListItem",
-      "position": 2,
-      "name": "Contact",
-      "item": `${SITE_ORIGIN}/contact`,
+      position: 2,
+      name: "Contact",
+      item: `${SITE_ORIGIN}/contact`,
     },
   ],
 };

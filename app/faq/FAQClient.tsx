@@ -300,8 +300,8 @@ export function FAQClient({ faqs }: { faqs: FAQItem[] }) {
                   Personalized Support
                 </h3>
                 <p className="text-[13px] text-secondary font-medium leading-relaxed mb-6">
-                  Can&apos;t find what you&apos;re looking for? Our team
-                  typically responds within 24 hours.
+                  Can&apos;t find what you&apos;re looking for? Our team will
+                  get back to you.
                 </p>
                 <Link
                   href="/contact"
@@ -397,7 +397,7 @@ export function FAQClient({ faqs }: { faqs: FAQItem[] }) {
               viewport={{ once: true, margin: "-40px" }}
               className="flex flex-wrap items-center justify-center gap-4"
             >
-              {["No credit card required", "Free forever tier", "Export your data anytime"].map((signal, i) => (
+              {["No credit card required", "Free for personal use", "Export your data anytime"].map((signal, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <Check size={14} className="text-success" strokeWidth={2.5} />
                   <span className="text-[12px] md:text-[13px] font-medium text-muted">

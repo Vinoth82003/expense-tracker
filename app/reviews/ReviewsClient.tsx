@@ -230,8 +230,8 @@ export function ReviewsClient({
               <span className="text-primary-600">Real stories.</span>
             </h1>
             <p className="text-[16px] text-secondary leading-relaxed max-w-[520px] mx-auto">
-              Thousands of Indians trust SpendWise to track expenses, stay on
-              budget, and take control of their finances.
+              Real stories from people across India who track expenses with
+              SpendWise, stay on budget, and take control of their finances.
             </p>
           </motion.div>
         </section>
@@ -329,8 +329,7 @@ export function ReviewsClient({
                   Start your own story
                 </h2>
                 <p className="text-[14px] text-secondary max-w-[500px] mx-auto mb-6">
-                  Join thousands of Indians who have transformed their financial
-                  habits with SpendWise.
+                  Build better financial habits with SpendWise.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-4">
                   <Link

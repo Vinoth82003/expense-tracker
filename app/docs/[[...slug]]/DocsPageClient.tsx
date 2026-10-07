@@ -25,9 +25,19 @@ import { estimateReadingTime, formatDate } from "@/lib/docs-utils";
 interface DocsPageClientProps {
   selectedDoc: Doc | null;
   allDocs: Doc[];
+  /**
+   * Repo-owned guides (lib/docs-guides.ts) have no DB row, so the
+   * /api/docs/[id]/feedback endpoint cannot record a vote for them — hide
+   * the widget instead of showing a button that silently drops the click.
+   */
+  showFeedback?: boolean;
 }
 
-export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
+export function DocsPageClient({
+  selectedDoc,
+  allDocs,
+  showFeedback = true,
+}: DocsPageClientProps) {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState<string | null>(null);
   const [feedbackDone, setFeedbackDone] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
@@ -183,6 +193,7 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
             </div>
 
             {/* ─── Feedback Section ─── */}
+            {showFeedback && (
             <div className="p-8 sm:p-10 rounded-2xl bg-surface-variant border border-border-subtle text-center space-y-6">
               <div className="w-12 h-12 rounded-full bg-primary-500/10 text-primary-600 flex items-center justify-center mx-auto">
                 <MessageCircle size={22} />
@@ -298,6 +309,7 @@ export function DocsPageClient({ selectedDoc, allDocs }: DocsPageClientProps) {
                 </Link>
               </p>
             </div>
+            )}
           </motion.article>
         </div>
 

@@ -78,7 +78,7 @@ const terms = [
     icon: Globe,
     title: "Third-Party Services",
     content:
-      "SpendWise utilizes third-party infrastructure and AI APIs (including Google Accounts, Gemini AI, and Vercel Hosting). Your interactions with these integrations are subject to their respective terms.",
+      "SpendWise utilizes third-party infrastructure and AI APIs (including Google Accounts, Gemini AI, Groq, and Vercel Hosting). Your interactions with these integrations are subject to their respective terms.",
   },
   {
     icon: FileSpreadsheet,

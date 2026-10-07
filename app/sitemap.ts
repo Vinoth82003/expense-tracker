@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { siteUrl } from "@/lib/site-url";
+import { withStaticGuides, STATIC_GUIDES } from "@/lib/docs-guides";
 import type { MetadataRoute } from "next";
 
 // ---------------------------------------------------------------------------
@@ -39,6 +40,7 @@ export const STATIC_ROUTE_LASTMOD: Record<string, string> = {
   "/faq": "2026-09-26",
   "/docs": "2026-07-08",
   "/contact": "2026-07-02",
+  "/press": "2026-10-06",
   "/privacy": "2026-06-01",
   "/terms": "2026-06-01",
   // /status renders live service health, so it is genuinely volatile. It is
@@ -49,7 +51,10 @@ export const STATIC_ROUTE_LASTMOD: Record<string, string> = {
   "/sitemap": "2026-09-26",
   "/compare/spendwise-vs-walnut": "2026-07-18",
   "/compare/spendwise-vs-et-money": "2026-07-18",
-  "/tools/50-30-20-budget-calculator": "2026-08-30",
+  "/tools/50-30-20-budget-calculator": "2026-10-06",
+  "/tools/salary-budget-calculator": "2026-10-06",
+  "/tools/emergency-fund-calculator": "2026-10-06",
+  "/tools": "2026-10-06",
 };
 
 // Fallback for a route with no explicit entry above. Deliberately an old fixed
@@ -86,6 +91,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticRoute(baseUrl, "/faq", "weekly", 0.7),
     staticRoute(baseUrl, "/docs", "weekly", 0.8),
     staticRoute(baseUrl, "/contact", "monthly", 0.6),
+    staticRoute(baseUrl, "/press", "monthly", 0.3),
     staticRoute(baseUrl, "/privacy", "monthly", 0.5),
     staticRoute(baseUrl, "/terms", "monthly", 0.5),
     staticRoute(baseUrl, "/download", "weekly", 0.8),
@@ -93,10 +99,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     staticRoute(baseUrl, "/compare/spendwise-vs-et-money", "monthly", 0.8),
     staticRoute(baseUrl, "/reviews", "weekly", 0.7),
     staticRoute(baseUrl, "/sitemap", "monthly", 0.3),
+    staticRoute(baseUrl, "/tools", "monthly", 0.9),
     staticRoute(baseUrl, "/tools/50-30-20-budget-calculator", "monthly", 0.9),
+    staticRoute(baseUrl, "/tools/salary-budget-calculator", "monthly", 0.9),
+    staticRoute(baseUrl, "/tools/emergency-fund-calculator", "monthly", 0.9),
   ];
 
-  // Fetch dynamic docs from database and add to sitemap
+  // Fetch docs from the database, merged with the repo-owned guides in
+  // lib/docs-guides.ts. The DB wins on slug conflicts; guide lastmod values
+  // are the fixed release dates pinned in that module (never `now`).
   try {
     const publishedDocs = await prisma.doc.findMany({
       where: {
@@ -109,7 +120,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       },
     });
 
-    const dynamicDocsRoutes = publishedDocs.map((doc) => ({
+    const dynamicDocsRoutes = withStaticGuides(publishedDocs).map((doc) => ({
       url: `${baseUrl}/docs/${doc.slug}`,
       // Real per-document timestamps. Falls back to the doc's creation date
       // rather than to `now` for the same reason as above.
@@ -121,7 +132,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return [...staticRoutes, ...dynamicDocsRoutes];
   } catch (error) {
     console.error("Error generating dynamic sitemap routes:", error);
-    // Return static routes if the database fetch fails
-    return staticRoutes;
+    // Guides live in the repository, so they still ship when the database is
+    // down — only the DB-published docs are lost.
+    const guideRoutes = STATIC_GUIDES.map((doc) => ({
+      url: `${baseUrl}/docs/${doc.slug}`,
+      lastModified: doc.updatedAt ?? doc.createdAt ?? FALLBACK_LASTMOD,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    }));
+    return [...staticRoutes, ...guideRoutes];
   }
 }

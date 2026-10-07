@@ -1,0 +1,38 @@
+# SpendWise
+
+> Free AI-powered expense tracker and budget manager built for India.
+
+SpendWise helps people track daily spending, set monthly budgets, and review
+AI-assisted financial insights. It is designed around Indian usage patterns:
+Rupee (₹) as the primary currency, Lakhs/Crores formatting, and an Indian
+financial year (April–March) view.
+
+## Product
+
+- Manual expense and income tracking with Needs/Wants categorization
+- Dynamic budget management and 50/30/20 style analysis
+- AI-assisted spending analysis and natural-language chat input
+- Group expense splitting
+- CSV export and tax-season PDF reports
+- Progressive Web App (PWA) with offline support
+- Free for personal use
+
+## Public pages
+
+- Marketing site: https://thespendwise.vercel.app
+- Features: https://thespendwise.vercel.app/features
+- How it works: https://thespendwise.vercel.app/how-it-works
+- Documentation: https://thespendwise.vercel.app/docs
+- FAQ: https://thespendwise.vercel.app/faq
+- 50/30/20 calculator: https://thespendwise.vercel.app/tools/50-30-20-budget-calculator
+- Contact: https://thespendwise.vercel.app/contact
+
+## Optional
+
+- No affiliate or paid-placement claims are made on this site.
+- Support contact: see https://thespendwise.vercel.app/contact (email/phone come from deployment env)
+
+## Legal
+
+- Privacy: https://thespendwise.vercel.app/privacy
+- Terms: https://thespendwise.vercel.app/terms

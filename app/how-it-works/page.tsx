@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HowItWorksClient } from "./HowItWorksClient";
+import { steps } from "./steps";
 import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
@@ -32,38 +33,20 @@ export const metadata: Metadata = {
   },
 };
 
+// HowTo is built from the shared `steps` array the visible timeline renders
+// (Module 10 parity rule). No schema-level duration estimate — setup time is
+// not a verified measurement, and fabricated durations are a risk.
 const howToStructuredData = {
   "@context": "https://schema.org",
   "@type": "HowTo",
   "name": "How to Track Expenses with SpendWise",
   "description": "A step-by-step guide to tracking your expenses using SpendWise, the expense tracker built for India.",
-  "totalTime": "PT5M",
-  "step": [
-    {
-      "@type": "HowToStep",
-      "name": "Create Your Free Account",
-      "text": "Sign up with Google OAuth or email — no credit card required. Your account is secured with industry-standard encryption.",
-      "position": 1
-    },
-    {
-      "@type": "HowToStep",
-      "name": "Log Your Expenses",
-      "text": "Add expenses manually with a clean, fast interface. SpendWise auto-categorizes into Needs and Wants.",
-      "position": 2
-    },
-    {
-      "@type": "HowToStep",
-      "name": "Get AI Forensic Analysis",
-      "text": "SpendWise's behavioral AI analyzes your spending patterns and provides actionable insights beyond simple categorization.",
-      "position": 3
-    },
-    {
-      "@type": "HowToStep",
-      "name": "Review Indian Financial Year Reports",
-      "text": "View reports aligned to the April–March Indian financial year with Lakhs and Crores formatting for accurate tax planning.",
-      "position": 4
-    }
-  ]
+  "step": steps.map((step, index) => ({
+    "@type": "HowToStep",
+    "name": step.title,
+    "text": [step.description, ...step.bullets].join(". "),
+    "position": index + 1,
+  })),
 };
 
 export default function HowItWorks() {

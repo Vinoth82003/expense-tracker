@@ -69,7 +69,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "SpendWise | Expense Tracker & Budget Manager for India",
     description:
-      "Track, categorize, and visualize your expenses. Built for India, powered by AI. Free forever.",
+      "Track, categorize, and visualize your expenses. Built for India, powered by AI. Free for personal use.",
     type: "website",
     siteName: "SpendWise",
     url: SITE_ORIGIN,
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "SpendWise | Expense Tracker for India",
-    description: "Smart rupee-first expense tracking for every Indian. Free forever.",
+    description: "Smart rupee-first expense tracking for every Indian. Free for personal use.",
     images: ["/og-images/og-home-dark.png"],
   },
   manifest: "/manifest.json",
@@ -97,7 +97,9 @@ export const metadata: Metadata = {
   icons: {
     apple: "/web-app-manifest-192x192.png",
   },
-  // Confirms ownership via the HTML file already in /public
+  // Google Search Console meta verification (meta name="google-site-verification").
+  // HTML-file verification also lives at public/google0fea68fbc5b16c67.html —
+  // keep both if the GSC property still lists them.
   verification: {
     google: "f1afae934a46160c",
   },
@@ -128,8 +130,6 @@ export default function RootLayout({
         {/* DNS prefetch & preconnect for external resources */}
         <link rel="dns-prefetch" href="//www.googletagmanager.com" />
         <link rel="dns-prefetch" href="//www.google-analytics.com" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://accounts.google.com" />
 
         {/* Google Analytics — always present for tag verification */}

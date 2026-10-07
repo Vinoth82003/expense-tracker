@@ -75,7 +75,7 @@ export default function NotFound() {
               className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-foreground text-background font-bold text-lg shadow-xl hover:shadow-2xl transition-all"
             >
               <ArrowLeft size={20} className="text-background" />
-              Back to Dashboard
+              Back to Home
             </Link>
           </motion.div>
           

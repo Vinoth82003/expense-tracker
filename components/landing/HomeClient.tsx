@@ -7,6 +7,7 @@ import { HeroSection } from "./sections/HeroSection";
 import { CounterStats } from "./sections/CounterStats";
 import { ProblemSection } from "./sections/ProblemSection";
 import { FeaturesGrid } from "./sections/FeaturesGrid";
+import { HowItWorksStrip } from "./sections/HowItWorksStrip";
 import { BentoHighlights } from "./sections/BentoHighlights";
 import { AISection } from "./sections/AISection";
 import { ComparisonTable } from "./sections/ComparisonTable";
@@ -45,6 +46,9 @@ export function HomeClient({ stats }: { stats: PublicStatsData }) {
 
         <Separator />
         <FeaturesGrid />
+
+        <Separator />
+        <HowItWorksStrip />
 
         <Separator />
         <div className="bg-surface-variant">

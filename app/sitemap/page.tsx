@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { withStaticGuides } from "@/lib/docs-guides";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import Link from "next/link";
@@ -17,6 +18,7 @@ import {
   Lock,
   Compass,
   Download,
+  Star,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -67,29 +69,39 @@ export default async function SitemapPage() {
     category: string | null;
   }[] = [];
   try {
-    dbDocs = await prisma.doc.findMany({
-      where: { status: "PUBLISHED" },
-      orderBy: { order: "asc" },
-      select: { id: true, title: true, slug: true, category: true },
-    });
+    dbDocs = withStaticGuides(
+      await prisma.doc.findMany({
+        where: { status: "PUBLISHED" },
+        orderBy: { order: "asc" },
+        select: { id: true, title: true, slug: true, category: true },
+      })
+    );
   } catch (error) {
     console.error("Failed to load database docs for sitemap page:", error);
+    // Repo-owned guides don't need the database — keep listing them.
+    dbDocs = withStaticGuides([]);
   }
 
   const publicRoutes = [
     { label: "Home Page", href: "/", desc: "Main landing page and overview of SpendWise.", icon: Home },
     { label: "Features", href: "/features", desc: "Deep dive into budget limits, categories, and tracking.", icon: Compass },
     { label: "How It Works", href: "/how-it-works", desc: "Tutorial on onboarding, PWA setup, and syncing.", icon: Info },
+    { label: "Documentation & Guides", href: "/docs", desc: "Product docs plus budgeting and expense tracking guides.", icon: BookOpen },
     { label: "FAQs", href: "/faq", desc: "Answers to pricing, security, data export, and PWA questions.", icon: HelpCircle },
+    { label: "Reviews", href: "/reviews", desc: "What users say about tracking expenses with SpendWise.", icon: Star },
     { label: "Download App", href: "/download", desc: "Install the SpendWise PWA on your Android, iOS, or desktop device.", icon: Download },
     { label: "Contact Us", href: "/contact", desc: "Get in touch with support or submit user feedback.", icon: Mail },
+    { label: "Press Kit", href: "/press", desc: "Verified product facts, quick facts, and media assets for journalists.", icon: Download },
     { label: "System Status", href: "/status", desc: "Real-time health indicator of database, API, and app servers.", icon: Activity },
   ];
 
   const compareRoutes = [
     { label: "SpendWise vs Walnut", href: "/compare/spendwise-vs-walnut", desc: "Compare SpendWise with Walnut (axio) for UPI expense tracking.", icon: TrendingUp },
     { label: "SpendWise vs ET Money", href: "/compare/spendwise-vs-et-money", desc: "Compare SpendWise with ET Money for personal finance management.", icon: TrendingUp },
+    { label: "All Free Tools", href: "/tools", desc: "Hub of SpendWise calculators — budgeting, salary, and emergency fund.", icon: Coins },
     { label: "50/30/20 Budget Calculator", href: "/tools/50-30-20-budget-calculator", desc: "Free calculator to split your income into Needs, Wants, and Savings.", icon: Coins },
+    { label: "Salary Budget Calculator", href: "/tools/salary-budget-calculator", desc: "Turn take-home pay and commitments into a daily spending allowance.", icon: Coins },
+    { label: "Emergency Fund Calculator", href: "/tools/emergency-fund-calculator", desc: "Size your emergency corpus and the monthly saving it needs.", icon: Coins },
   ];
 
   const legalRoutes = [
@@ -286,7 +298,7 @@ export default async function SitemapPage() {
                 <BookOpen size={20} />
               </div>
               <h2 className="text-[22px] font-bold text-foreground">
-                Product Documentation
+                Documentation &amp; Guides
               </h2>
             </div>
 

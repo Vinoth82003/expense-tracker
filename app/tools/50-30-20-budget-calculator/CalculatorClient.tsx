@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { motion, type Variants } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { SiteBreadcrumbs } from "@/components/seo/SiteBreadcrumbs";
+import { splitByPercent } from "@/lib/calculators";
 import Link from "next/link";
 import {
   IndianRupee,
@@ -101,9 +103,13 @@ export function CalculatorClient() {
     return isNaN(parsed) ? 0 : parsed;
   }, [income]);
 
-  const needs = useMemo(() => (monthlyIncome * needsPct) / 100, [monthlyIncome, needsPct]);
-  const wants = useMemo(() => (monthlyIncome * wantsPct) / 100, [monthlyIncome, wantsPct]);
-  const savings = useMemo(() => (monthlyIncome * savingsPct) / 100, [monthlyIncome, savingsPct]);
+  const split = useMemo(
+    () => splitByPercent(monthlyIncome, needsPct, wantsPct, savingsPct),
+    [monthlyIncome, needsPct, wantsPct, savingsPct]
+  );
+  const needs = split.needs;
+  const wants = split.wants;
+  const savings = split.savings;
   const annualIncome = monthlyIncome * 12;
 
   const reset = () => {
@@ -121,6 +127,14 @@ export function CalculatorClient() {
         {/* ═══════════ HERO ═══════════ */}
         <section className="relative bg-surface-variant/40 py-5 md:py-10 px-5 md:px-10">
           <div className="max-w-7xl mx-auto text-center space-y-5">
+            <div className="flex justify-center">
+              <SiteBreadcrumbs
+                items={[
+                  { label: "Tools", href: "/tools" },
+                  { label: "50/30/20 Budget Calculator" },
+                ]}
+              />
+            </div>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -161,7 +175,10 @@ export function CalculatorClient() {
             <div className="rounded-2xl border border-border-subtle bg-surface shadow-sm p-8 md:p-10 space-y-10">
               {/* Income Input */}
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-muted mb-3">
+                <label
+                  htmlFor="monthly-income"
+                  className="block text-[11px] font-semibold uppercase tracking-wider text-muted mb-3"
+                >
                   Monthly After-Tax Income
                 </label>
                 <div className="relative">
@@ -170,6 +187,7 @@ export function CalculatorClient() {
                     className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
                   />
                   <input
+                    id="monthly-income"
                     type="text"
                     inputMode="decimal"
                     value={income}
@@ -230,6 +248,7 @@ export function CalculatorClient() {
                       </div>
                       <div className="flex items-center gap-2">
                         <button
+                          aria-label={`Decrease ${item.label.toLowerCase()} percentage`}
                           onClick={() => {
                             const setter =
                               item.label === "Needs"
@@ -247,6 +266,7 @@ export function CalculatorClient() {
                           {item.pct}%
                         </span>
                         <button
+                          aria-label={`Increase ${item.label.toLowerCase()} percentage`}
                           onClick={() => {
                             const setter =
                               item.label === "Needs"
@@ -264,6 +284,7 @@ export function CalculatorClient() {
                     </div>
                     <input
                       type="range"
+                      aria-label={`${item.label} percentage`}
                       min={0}
                       max={100}
                       value={item.pct}
@@ -315,7 +336,7 @@ export function CalculatorClient() {
 
               {/* Results */}
               {monthlyIncome > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4" aria-live="polite">
                   {[
                     {
                       label: "Needs",
@@ -578,6 +599,120 @@ export function CalculatorClient() {
               </strong>
               .
             </p>
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* ═══════════ METHODOLOGY & LIMITATIONS ═══════════ */}
+        <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[800px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <h2 className="text-[20px] font-bold text-foreground">
+                How this calculator works
+              </h2>
+              <p className="text-[14px] text-secondary leading-relaxed">
+                Enter your monthly after-tax income. Each amount is{" "}
+                <strong className="text-foreground">
+                  income × percentage ÷ 100
+                </strong>
+                , rounded to the nearest rupee. The default percentages are 50
+                (needs), 30 (wants), and 20 (savings); you can adjust the
+                sliders and the split recalculates with the same formula.
+                Annual figures multiply the monthly amount by 12.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-[20px] font-bold text-foreground">
+                Limitations
+              </h2>
+              <p className="text-[14px] text-secondary leading-relaxed">
+                This is a general-purpose planning tool, not financial advice.
+                The 50/30/20 ratios are a starting point — they may not fit
+                high-rent cities, variable incomes, or family budgets (the{" "}
+                <Link
+                  href="/docs/50-30-20-budgeting-guide"
+                  className="text-primary-600 hover:text-primary-700 font-semibold underline underline-offset-2"
+                >
+                  50/30/20 rule explained for Indian salaries
+                </Link>{" "}
+                covers when to adjust them). The calculator does not account
+                for tax slabs, deductions, or irregular expenses; use your
+                actual take-home pay. Results are computed in your browser and
+                are not stored.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        {/* ═══════════ FAQ (visible content for FAQPage JSON-LD) ═══════════ */}
+        <section className="bg-surface px-5 md:px-10 py-5 md:py-10">
+          <div className="max-w-[800px] mx-auto space-y-8">
+            <h2 className="text-[28px] md:text-[36px] font-bold leading-[1.15] tracking-tight text-foreground">
+              Frequently asked{" "}
+              <span className="text-primary-600">questions.</span>
+            </h2>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-[16px] font-bold text-foreground mb-2">
+                  What is the 50/30/20 budget rule?
+                </h3>
+                <p className="text-[15px] text-secondary leading-relaxed">
+                  The 50/30/20 rule is a simple budgeting framework where you
+                  divide your after-tax income into three categories: 50% for
+                  Needs (rent, groceries, bills), 30% for Wants (entertainment,
+                  dining out, hobbies), and 20% for Savings &amp; Debt
+                  Repayment.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-[16px] font-bold text-foreground mb-2">
+                  How do I calculate my 50/30/20 budget in Indian Rupees?
+                </h3>
+                <p className="text-[15px] text-secondary leading-relaxed">
+                  Enter your monthly after-tax income in the calculator above.
+                  It will automatically split it: 50% for Needs, 30% for Wants,
+                  and 20% for Savings. For example, if your monthly income is
+                  ₹50,000, you should spend ₹25,000 on Needs, ₹15,000 on Wants,
+                  and save ₹10,000.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-[16px] font-bold text-foreground mb-2">
+                  Is the 50/30/20 rule suitable for Indian salaries?
+                </h3>
+                <p className="text-[15px] text-secondary leading-relaxed">
+                  Yes, the 50/30/20 rule works well for Indian salaries.
+                  It&apos;s flexible — if you live in a high-cost city like
+                  Mumbai or Bangalore, you might adjust to 60/20/20. The key is
+                  maintaining at least 20% for savings and investments.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-[16px] font-bold text-foreground mb-2">
+                  What counts as &apos;Needs&apos; in the 50/30/20 rule?
+                </h3>
+                <p className="text-[15px] text-secondary leading-relaxed">
+                  Needs include: rent/EMI, groceries, utilities (electricity,
+                  water, internet), transportation, insurance premiums, minimum
+                  debt payments, and essential medical expenses. These are
+                  expenses you cannot avoid.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-[16px] font-bold text-foreground mb-2">
+                  Can I use this calculator for annual financial year planning?
+                </h3>
+                <p className="text-[15px] text-secondary leading-relaxed">
+                  Yes. Multiply your monthly budget amounts by 12 to get your
+                  annual Indian financial year (April–March) budget. The
+                  calculator also shows your annual breakdown to help with FY
+                  planning and tax-season preparation.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 

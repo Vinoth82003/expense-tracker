@@ -31,6 +31,19 @@ function withCors(request: NextRequest, response: NextResponse) {
   return response;
 }
 
+// Defense-in-depth for every route this middleware matches (see `config.matcher`).
+// None of those paths should ever be indexed: the authenticated shell, admin,
+// auth plumbing and APIs. `(authenticated)/layout.tsx` is a client component and
+// cannot export `Metadata`, so robots.txt alone was the only signal. Search
+// engines that ignore robots.txt (or a future allowlist mistake) still get an
+// explicit X-Robots-Tag on the response itself.
+function withPrivateRobots(response: NextResponse): NextResponse {
+  if (!response.headers.has("X-Robots-Tag")) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+  return response;
+}
+
 // Simple in‑memory rate limiter – suitable for low‑traffic endpoints.
 const rateLimits = new Map<string, { count: number; first: number }>();
 function checkRateLimit(ip: string, key: string, limit: number, windowMs: number) {
@@ -122,7 +135,7 @@ export async function middleware(request: NextRequest) {
       const requested = sanitizeCallbackUrl(pathname + request.nextUrl.search);
       const loginUrl = new URL("/login", request.url);
       if (requested) loginUrl.searchParams.set("callbackUrl", requested);
-      return NextResponse.redirect(loginUrl);
+      return withPrivateRobots(NextResponse.redirect(loginUrl));
     }
   }
 
@@ -159,7 +172,7 @@ export async function middleware(request: NextRequest) {
     const isValidAdmin = adminCookie?.value ? await verifyAdminToken(adminCookie.value) : false;
     if (!isValidAdmin) {
       console.warn(`[SECURITY] Unauthorized admin access attempt to ${pathname} from IP: ${ip}`);
-      return NextResponse.redirect(new URL("/admin/login", request.url));
+      return withPrivateRobots(NextResponse.redirect(new URL("/admin/login", request.url)));
     }
   }
 
@@ -176,9 +189,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return pathname.startsWith("/api")
-    ? withCors(request, NextResponse.next())
-    : NextResponse.next();
+  if (pathname.startsWith("/api")) return withCors(request, NextResponse.next());
+  return withPrivateRobots(NextResponse.next());
 }
 
 export const config = {

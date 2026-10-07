@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CalculatorClient } from "./CalculatorClient";
 import { SITE_ORIGIN } from "@/lib/site-url";
+import { breadcrumbJsonLd } from "@/components/seo/SiteBreadcrumbs";
 
 export const metadata: Metadata = {
   title: "50/30/20 Budget Calculator | Free Indian Expense Planner | SpendWise",
@@ -100,6 +101,12 @@ const faqStructuredData = {
   ]
 };
 
+const breadcrumbStructuredData = breadcrumbJsonLd(SITE_ORIGIN, [
+  { name: "Home", path: "/" },
+  { name: "Tools", path: "/tools" },
+  { name: "50/30/20 Budget Calculator", path: "/tools/50-30-20-budget-calculator" },
+]);
+
 export default function BudgetCalculatorPage() {
   return (
     <>
@@ -110,6 +117,10 @@ export default function BudgetCalculatorPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
       />
       <CalculatorClient />
     </>

@@ -1,45 +1,14 @@
 import { HomeClient } from "@/components/landing/HomeClient";
 import type { PublicStatsData } from "@/components/landing/sections/CounterStats";
+import { HOME_FAQS } from "@/components/landing/sections/home-faqs";
 import { prisma } from "@/lib/prisma";
 import { siteUrl } from "@/lib/site-url";
-
-const defaultFaqs = [
-  {
-    question: "Is SpendWise free to use?",
-    answer: "Yes, SpendWise is completely free for personal use. No hidden fees or premium subscriptions.",
-    category: "General"
-  },
-  {
-    question: "How secure is my data?",
-    answer: "Your data is stored securely. We use OAuth authentication or encrypted password hashing, and all data is encrypted in transit.",
-    category: "Security"
-  },
-  {
-    question: "Can I export my expense data?",
-    answer: "Yes, you can export your expenses to CSV format for tax purposes or personal records.",
-    category: "Features"
-  },
-  {
-    question: "Does it work offline?",
-    answer: "Yes, SpendWise is a PWA that works offline. You can add expenses without internet and sync when online.",
-    category: "Features"
-  },
-  {
-    question: "What currencies does it support?",
-    answer: "SpendWise supports multiple currencies with Rupee (₹) as the primary currency for Indian users.",
-    category: "Features"
-  },
-  {
-    question: "Can I categorize my expenses?",
-    answer: "Yes, expenses are categorized into Needs and Wants with detailed subcategories for better tracking.",
-    category: "Features"
-  }
-];
+import {
+  resolveSupportEmail,
+  resolveSupportPhone,
+} from "@/lib/support-contact";
 
 export default async function Home() {
-  const dbFaqs = await prisma.fAQ.findMany({ orderBy: { order: 'asc' } });
-  const faqs = dbFaqs.length > 0 ? dbFaqs : defaultFaqs;
-
   const stats: PublicStatsData = await (async () => {
     try {
       const [totalUsers, totalExpenses, reviewAgg] = await Promise.all([
@@ -69,11 +38,13 @@ export default async function Home() {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
+    "@id": `${baseUrl}/#softwareapplication`,
     "name": "SpendWise",
-    "description": "India's best expense tracker for tracking daily expenses, setting monthly budgets, and gaining AI-powered financial insights. Built for the Indian financial year (April–March) with Lakhs and Crores formatting.",
+    "description": "Expense tracker and budget manager for tracking daily spending, setting monthly budgets, and gaining AI-powered financial insights. Built for the Indian financial year (April–March) with Lakhs and Crores formatting.",
     "url": baseUrl,
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Web, Mobile PWA",
+    "publisher": { "@id": `${baseUrl}/#organization` },
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -81,7 +52,8 @@ export default async function Home() {
     },
     "creator": {
       "@type": "Person",
-      "name": "Vinoth"
+      "name": "Vinoth S",
+      "url": "https://vinoths.vercel.app/"
     },
     "featureList": [
       "Expense tracking with Needs/Wants categorization",
@@ -94,16 +66,19 @@ export default async function Home() {
       "Tax-season PDF export"
     ]
   };
-    
+
+  // FAQPage is built from HOME_FAQS — the exact list the visible FAQSection
+  // accordion renders. Structured data that describes FAQs not shown on the
+  // page is a manual-action risk (Module 10 parity rule).
   const faqStructuredData = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    "mainEntity": faqs.map(faq => ({
+    "mainEntity": HOME_FAQS.map((faq) => ({
       "@type": "Question",
-      "name": faq.question,
+      "name": faq.q,
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": faq.answer
+        "text": faq.a
       }
     }))
   };
@@ -111,15 +86,31 @@ export default async function Home() {
   const organizationStructuredData = {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${baseUrl}/#organization`,
     "name": "SpendWise",
     "url": baseUrl,
     "logo": `${baseUrl}/web-app-manifest-192x192.png`,
     "description": "Smart AI-powered expense tracker built for India.",
     "contactPoint": {
       "@type": "ContactPoint",
-      "email": "support@spendwise.app",
-      "contactType": "customer service"
+      "email": resolveSupportEmail(),
+      "contactType": "customer service",
+      ...(resolveSupportPhone()
+        ? { telephone: resolveSupportPhone() as string }
+        : {}),
     }
+  };
+
+  // WebSite schema (Module 10). No SearchAction: the marketing site has no
+  // search results page to point it at.
+  const websiteStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${baseUrl}/#website`,
+    "name": "SpendWise",
+    "url": baseUrl,
+    "inLanguage": "en",
+    "publisher": { "@id": `${baseUrl}/#organization` }
   };
 
   return (
@@ -135,6 +126,10 @@ export default async function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
       />
       <HomeClient stats={stats} />
     </>

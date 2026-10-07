@@ -2,19 +2,20 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import type { PublicStatsData } from "@/components/landing/sections/CounterStats";
 import { FeaturesClient } from "./FeaturesClient";
+import { faqs } from "./_data";
 import { SITE_ORIGIN } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "Features | SpendWise — AI-Powered Expense Tracker for India",
   description:
-    "Explore SpendWise features — manual expense & income tracking, AI forensic analysis via Gemini, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
+    "Explore SpendWise features — manual expense & income tracking, AI-powered forensic analysis, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
   alternates: {
     canonical: "/features",
   },
   openGraph: {
     title: "Features | SpendWise — AI-Powered Expense Tracker for India",
     description:
-      "Explore SpendWise features — manual expense & income tracking, AI forensic analysis via Gemini, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
+      "Explore SpendWise features — manual expense & income tracking, AI-powered forensic analysis, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
     url: `${SITE_ORIGIN}/features`,
     images: [
       {
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Features | SpendWise — AI-Powered Expense Tracker for India",
     description:
-      "Explore SpendWise features — manual expense & income tracking, AI forensic analysis via Gemini, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
+      "Explore SpendWise features — manual expense & income tracking, AI-powered forensic analysis, natural language chat input, smart budgeting with 50/30/20 analysis, interactive reports, and group expense splitting.",
     images: ["/og-images/og-features-dark.png"],
   },
 };
@@ -56,7 +57,7 @@ const featureListStructuredData = {
       item: {
         "@type": "HowToStep",
         name: "AI Forensic Analysis",
-        text: "Google Gemini 2.5 Flash generates structured financial reports covering spending patterns, budget burn-rate, income trends, and actionable savings suggestions.",
+        text: "Google Gemini or Groq generates structured financial reports covering spending patterns, budget burn-rate, income trends, and actionable savings suggestions.",
       },
     },
     {
@@ -101,56 +102,16 @@ const featureListStructuredData = {
 const faqStructuredData = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "Does SpendWise auto-detect UPI transactions?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "No. SpendWise is a manual expense tracker — you log transactions yourself. This keeps your bank credentials fully private. You can add expenses quickly via the chat interface by typing naturally.",
-      },
+  // Built from the same `_data.faqs` array the visible FeatureFAQ section
+  // renders (Module 10 parity rule) — never a separate hand-maintained copy.
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.a,
     },
-    {
-      "@type": "Question",
-      name: "How does the AI forensic analysis work?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "SpendWise sends your complete expense and income history to Google Gemini 2.5 Flash, which generates a structured report covering spending patterns, budget advice, income trends, and actionable savings suggestions.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Is my financial data secure?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yes. SpendWise uses Google OAuth 2.0 or email+password authentication with bcrypt hashing. Optional email-based 2FA adds an extra layer. All data is encrypted in transit with strict CSP and XSS protections.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Can I export my data?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yes. You can export all your expenses and income as a CSV file. The AI analysis report can also be downloaded as a PDF.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "How does the chat input work?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "The chat uses intent classification to understand commands like 'add expense 500 for groceries' or 'how much did I spend this month'. It handles multi-turn conversations with auto-categorization.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Can I use SpendWise as a PWA?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yes. SpendWise is a Progressive Web App that you can install on your home screen for a native app experience. It uses a service worker for caching static assets.",
-      },
-    },
-  ],
+  })),
 };
 
 export default async function FeaturesPage() {

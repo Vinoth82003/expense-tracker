@@ -70,8 +70,7 @@ function ReviewerAvatar({ user }: { user: ReviewUser | null }) {
           alt={`${name}'s avatar`}
           width={40}
           height={40}
-          className="w-full h-full object-cover"
-          unoptimized
+          className="w-10 h-10 object-cover"
         />
       </div>
     );

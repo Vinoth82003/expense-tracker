@@ -18,6 +18,7 @@ import { Footer } from "@/components/layout/Footer";
 import { CounterStats } from "@/components/landing/sections/CounterStats";
 import type { PublicStatsData } from "@/components/landing/sections/CounterStats";
 import { fadeUp } from "@/components/landing/sections/animations";
+import { resolveSupportEmail } from "@/lib/support-contact";
 import { features, faqs, comparisonRows } from "./_data";
 
 /* ──────────── Separator ──────────── */
@@ -276,7 +277,7 @@ function FeatureFAQ() {
           <p className="mx-auto mt-5 max-w-[500px] text-[15px] leading-relaxed text-secondary">
             Everything you need to know about SpendWise features.{" "}
             <a
-              href="mailto:support@spendwise.app"
+              href={`mailto:${resolveSupportEmail()}`}
               className="text-primary-600 hover:text-primary-700 font-medium underline underline-offset-2"
             >
               Email us
@@ -345,7 +346,7 @@ function FeatureFAQ() {
 function FinalCTA() {
   const trustSignals = [
     "No credit card required",
-    "Free forever tier",
+    "Free for personal use",
     "Export your data anytime",
   ];
 

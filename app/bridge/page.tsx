@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import crypto from "crypto";
+import type { Metadata } from "next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sanitizeCallbackUrl } from "@/lib/auth-redirect";
@@ -11,6 +12,14 @@ import {
 } from "@/lib/origins";
 
 export const dynamic = "force-dynamic";
+
+// Auth plumbing only. Must never be indexed or linked as a public page.
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 // Cross-origin auth bridge — PRIMARY APP ORIGIN side.
 //

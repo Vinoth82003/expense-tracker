@@ -32,9 +32,9 @@ const features = [
   },
   {
     icon: ShieldCheck,
-    title: "Real data, zero hallucination",
+    title: "Answers from your own data",
     description:
-      "Every number Sage shows comes straight from your tracked transactions. No guessed totals, no fabricated stats — ever.",
+      "Every number Sage shows comes from your tracked transactions — no guessed totals, no invented stats.",
   },
 ];
 

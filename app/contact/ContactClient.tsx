@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -14,41 +14,50 @@ import {
   AlertCircle,
   Loader2,
   Phone,
-  Clock,
   ArrowRight,
   HelpCircle,
   Check,
 } from "lucide-react";
 import { fadeUp } from "@/components/landing/sections/animations";
+import {
+  resolveSupportEmail,
+  resolveSupportPhone,
+  supportPhoneHref,
+} from "@/lib/support-contact";
 
-const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@spendwise.app";
+const supportEmail = resolveSupportEmail();
+const supportPhone = resolveSupportPhone();
 
-const PHONE_PARTS = ["+91", " 93844", " 60843"];
+type ContactChannel = {
+  icon: typeof Mail;
+  label: string;
+  value: string;
+  href: string | null;
+  note: string;
+};
 
-function buildContactChannels(phone: string) {
-  return [
+function buildContactChannels(): ContactChannel[] {
+  const channels: ContactChannel[] = [
     {
       icon: Mail,
       label: "Email Support",
       value: supportEmail,
       href: `mailto:${supportEmail}`,
-      note: "Response within 24 hours",
-    },
-    {
-      icon: Phone,
-      label: "Indian Helpline",
-      value: phone || "Loading...",
-      href: phone ? `tel:${phone.replace(/\s/g, "")}` : null,
-      note: "Available 10 AM – 6 PM IST",
-    },
-    {
-      icon: Clock,
-      label: "Response Time",
-      value: "< 24 Hours",
-      href: null,
-      note: "On all business days",
+      note: "We read every message",
     },
   ];
+
+  if (supportPhone) {
+    channels.push({
+      icon: Phone,
+      label: "Phone Support",
+      value: supportPhone,
+      href: supportPhoneHref(supportPhone),
+      note: "India phone number",
+    });
+  }
+
+  return channels;
 }
 
 function Separator() {
@@ -62,13 +71,8 @@ function Separator() {
 export function ContactClient() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const [phone, setPhone] = useState("");
 
-  useEffect(() => {
-    setPhone(PHONE_PARTS.join(""));
-  }, []);
-
-  const contactChannels = buildContactChannels(phone);
+  const contactChannels = buildContactChannels();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -104,7 +108,7 @@ export function ContactClient() {
   };
 
   const trustSignals = [
-    "24-hour response time",
+    "Email and phone support",
     "No spam, ever",
     "We read every message",
   ];
@@ -265,8 +269,8 @@ export function ContactClient() {
                         Message Sent!
                       </h3>
                       <p className="text-[14px] text-secondary font-medium max-w-xs mx-auto">
-                        We&apos;ve received your message and will get back to you
-                        within 24 hours.
+                        We&apos;ve received your message and will get back to
+                        you.
                       </p>
                     </div>
                     <button
@@ -420,6 +424,15 @@ export function ContactClient() {
                   className="text-primary-600 font-semibold hover:text-primary-700 inline-flex items-center gap-1"
                 >
                   Browse our FAQ <ArrowRight size={14} />
+                </Link>
+              </p>
+              <p className="mt-2 text-[14px] text-secondary font-medium">
+                Journalist or media inquiry?{" "}
+                <Link
+                  href="/press"
+                  className="text-primary-600 font-semibold hover:text-primary-700 inline-flex items-center gap-1"
+                >
+                  See our press kit <ArrowRight size={14} />
                 </Link>
               </p>
             </div>

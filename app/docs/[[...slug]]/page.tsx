@@ -5,6 +5,7 @@ import { verifyAdminSession } from "@/lib/admin-auth";
 import { DocsPageClient } from "@/app/docs/[[...slug]]/DocsPageClient";
 import { DocsListingPage } from "@/components/docs/DocsListingPage";
 import { stripMarkdown, extractExcerpt } from "@/lib/docs-utils";
+import { withStaticGuides, STATIC_GUIDE_SLUGS } from "@/lib/docs-guides";
 import { siteUrl } from "@/lib/site-url";
 import type { Doc } from "@/types/docs";
 
@@ -19,10 +20,14 @@ async function getDocsData(slugParam?: string[]) {
     ? {}
     : { status: "PUBLISHED" };
 
-  const allDocs = await prisma.doc.findMany({
+  const dbDocs = await prisma.doc.findMany({
     where: whereClause,
     orderBy: { order: "asc" },
   });
+
+  // Repo-owned guides (lib/docs-guides.ts) join the same pipeline as DB docs.
+  // DB rows win on slug conflicts; guides are always PUBLISHED.
+  const allDocs = withStaticGuides(dbDocs);
 
   // Docs are single-segment slugs. Only slug[0] was ever consulted, so
   // /docs/getting-started/anything/else silently rendered getting-started —
@@ -49,14 +54,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: "Documentation | SpendWise — AI-Powered Expense Tracker",
       description:
-        "Master SpendWise with comprehensive documentation — get started guides, expense tracking, AI forensic analysis, budgeting, and troubleshooting.",
+        "SpendWise documentation and personal finance guides — get started, budgeting and the 50/30/20 rule, expense tracking, AI forensic analysis, and troubleshooting.",
       alternates: {
         canonical: "/docs",
       },
       openGraph: {
         title: "Documentation | SpendWise — UPI Expense Tracker for India",
         description:
-          "Master SpendWise with comprehensive documentation — get started guides, UPI budget tracking, AI insights, Indian financial year reporting, and troubleshooting.",
+          "SpendWise documentation and personal finance guides — get started, budgeting and the 50/30/20 rule, expense tracking, Indian financial year reporting, and troubleshooting.",
         url: `${baseUrl}/docs`,
         type: "website",
         images: [
@@ -72,7 +77,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         card: "summary_large_image",
         title: "Documentation | SpendWise — UPI Expense Tracker for India",
         description:
-          "Master SpendWise with comprehensive documentation — get started guides, UPI budget tracking, AI insights, Indian financial year reporting, and troubleshooting.",
+          "SpendWise documentation and personal finance guides — get started, budgeting and the 50/30/20 rule, expense tracking, Indian financial year reporting, and troubleshooting.",
         images: ["/og-images/og-docs-dark.png"],
       },
     };
@@ -106,8 +111,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: plainText || `Read about ${selectedDoc.title} in the SpendWise documentation.`,
       url: `${baseUrl}/docs/${selectedDoc.slug}`,
       type: "article",
-      publishedTime: selectedDoc.createdAt?.toString(),
-      modifiedTime: selectedDoc.updatedAt?.toString(),
+      publishedTime: selectedDoc.createdAt
+        ? new Date(selectedDoc.createdAt).toISOString()
+        : undefined,
+      modifiedTime: selectedDoc.updatedAt
+        ? new Date(selectedDoc.updatedAt).toISOString()
+        : undefined,
       images: [
         {
           url: "/og-images/og-docs-dark.png",
@@ -195,6 +204,17 @@ export default async function Page({ params }: PageProps) {
 
   const serializedSelectedDoc = serialize(selectedDoc);
 
+  // Dates only when the document actually carries them. The old fallbacks
+  // (a hardcoded May-2024 date / `new Date()`) fabricated a publication date
+  // for docs missing createdAt and a nondeterministic modification date —
+  // structured data must never invent dates (Module 10).
+  const datePublished = selectedDoc.createdAt
+    ? new Date(selectedDoc.createdAt).toISOString()
+    : undefined;
+  const dateModified = selectedDoc.updatedAt
+    ? new Date(selectedDoc.updatedAt).toISOString()
+    : undefined;
+
   const articleStructuredData = {
     "@context": "https://schema.org",
     "@type": "TechArticle",
@@ -202,8 +222,8 @@ export default async function Page({ params }: PageProps) {
     description: stripMarkdown(selectedDoc.content).slice(0, 150),
     inLanguage: "en",
     mainEntityOfPage: `${baseUrl}/docs/${selectedDoc.slug}`,
-    datePublished: selectedDoc.createdAt?.toISOString() || new Date("2024-05-01").toISOString(),
-    dateModified: selectedDoc.updatedAt?.toISOString() || new Date().toISOString(),
+    ...(datePublished ? { datePublished } : {}),
+    ...(dateModified ? { dateModified } : {}),
     publisher: {
       "@type": "Organization",
       name: "SpendWise",
@@ -240,6 +260,7 @@ export default async function Page({ params }: PageProps) {
       <DocsPageClient
         selectedDoc={serializedSelectedDoc}
         allDocs={serializedAllDocs}
+        showFeedback={!STATIC_GUIDE_SLUGS.has(selectedDoc.slug)}
       />
     </>
   );

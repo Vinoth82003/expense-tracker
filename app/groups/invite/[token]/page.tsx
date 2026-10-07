@@ -212,7 +212,7 @@ export default function InvitePage() {
             )}
 
             <p className="mt-8 text-[11px] font-semibold text-muted uppercase tracking-wider">
-              Join thousands of forensic financial detectives.
+              Invite others to track shared expenses together.
             </p>
           </div>
         </div>

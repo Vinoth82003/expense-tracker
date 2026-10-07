@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CompareClient } from "../CompareClient";
 import { SITE_ORIGIN } from "@/lib/site-url";
+import { breadcrumbJsonLd } from "@/components/seo/SiteBreadcrumbs";
 
 export const metadata: Metadata = {
   title: "SpendWise vs ET Money | Expense Tracker Comparison 2026",
@@ -53,12 +54,22 @@ const comparisonStructuredData = {
   ]
 };
 
+const breadcrumbStructuredData = breadcrumbJsonLd(SITE_ORIGIN, [
+  { name: "Home", path: "/" },
+  { name: "Compare", path: "/sitemap" },
+  { name: "SpendWise vs ET Money", path: "/compare/spendwise-vs-et-money" },
+]);
+
 export default function SpendWiseVsETMoneyPage() {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(comparisonStructuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }}
       />
       <CompareClient
         competitor="ET Money"

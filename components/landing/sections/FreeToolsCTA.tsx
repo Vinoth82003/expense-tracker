@@ -19,6 +19,22 @@ const tools = [
 const resources = [
   {
     icon: BookOpen,
+    title: "How to Make a Monthly Budget",
+    description:
+      "A five-step monthly budgeting routine with a worked example in Rupees — take-home pay, fixed commitments, savings first, and a buffer that survives real life.",
+    href: "/docs/monthly-budgeting-guide",
+    type: "resource" as const,
+  },
+  {
+    icon: FileText,
+    title: "How to Track Your Expenses",
+    description:
+      "A lightweight tracking habit that sticks: record the day it happens, sort into Needs and Wants, and review for ten minutes once a week.",
+    href: "/docs/expense-tracking-guide",
+    type: "resource" as const,
+  },
+  {
+    icon: BookOpen,
     title: "Sage AI — The SpendWise Chatbot",
     description:
       "Learn how SpendWise's built-in AI assistant reads your transactions and answers financial questions in plain language.",

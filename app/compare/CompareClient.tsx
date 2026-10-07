@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { SiteBreadcrumbs } from "@/components/seo/SiteBreadcrumbs";
 import Link from "next/link";
 import {
   Check,
@@ -27,6 +28,8 @@ interface CompareClientProps {
   slug: string;
 }
 
+type CellValue = boolean | "unknown";
+
 const comparisonData: Record<string, {
   intro: string;
   verdict: string;
@@ -35,8 +38,8 @@ const comparisonData: Record<string, {
     category: string;
     items: {
       feature: string;
-      spendwise: string | boolean;
-      competitor: string | boolean;
+      spendwise: CellValue | string;
+      competitor: CellValue | string;
       spendwiseNote?: string;
       competitorNote?: string;
     }[];
@@ -44,9 +47,9 @@ const comparisonData: Record<string, {
   faqs: { q: string; a: string }[];
 }> = {
   Walnut: {
-    intro: "Walnut (now axio) was one of the first SMS-based expense trackers in India, with over 1 crore downloads. But after its rebrand to axio and pivot toward lending, many users report instability and confusion. SpendWise takes a different approach — a web-first, AI-powered expense tracker built specifically around the Indian financial year.",
+    intro: "Walnut (now axio) was one of the first SMS-based expense trackers in India, with over 1 crore downloads. Walnut was acquired and folded into axio, a credit and lending platform, and the original SMS-based expense-tracking experience was wound down during that transition. SpendWise takes a different approach — a web-first, AI-powered expense tracker built specifically around the Indian financial year.",
     verdict: "SpendWise",
-    verdictSummary: "For pure expense tracking with AI insights and Indian FY support, SpendWise is the clearer choice. Walnut/axio has pivoted to lending and its expense tracking has become an afterthought.",
+    verdictSummary: "For pure expense tracking with AI insights and Indian FY support, SpendWise is the clearer choice. axio has pivoted toward credit, and the original Walnut expense-tracking experience was wound down during the transition.",
     features: [
       {
         category: "Core Expense Tracking",
@@ -71,9 +74,9 @@ const comparisonData: Record<string, {
         category: "AI & Intelligence",
         items: [
           { feature: "AI spending analysis", spendwise: "Forensic behavioral analysis", competitor: "Basic categorization", spendwiseNote: "Goes beyond auto-categorization" },
-          { feature: "Anomaly detection", spendwise: true, competitor: false },
-          { feature: "Subscription tracking", spendwise: false, competitor: false },
-          { feature: "Balance forecasting", spendwise: false, competitor: false },
+          { feature: "Anomaly detection", spendwise: true, competitor: "unknown" },
+          { feature: "Subscription tracking", spendwise: true, competitor: "unknown" },
+          { feature: "Balance forecasting", spendwise: true, competitor: "unknown" },
         ],
       },
       {
@@ -82,15 +85,15 @@ const comparisonData: Record<string, {
           { feature: "Web app (no install required)", spendwise: true, competitor: false, spendwiseNote: "PWA with offline support" },
           { feature: "Android app", spendwise: "PWA install", competitor: true },
           { feature: "iOS app", spendwise: "PWA install", competitor: true },
-          { feature: "Desktop app", spendwise: "Electron", competitor: false },
-          { feature: "Offline support", spendwise: true, competitor: false },
+          { feature: "Desktop app", spendwise: "Electron", competitor: "unknown" },
+          { feature: "Offline support", spendwise: true, competitor: "unknown" },
         ],
       },
       {
         category: "Security & Privacy",
         items: [
-          { feature: "OAuth login (Google)", spendwise: true, competitor: true },
-          { feature: "Two-factor authentication", spendwise: true, competitor: false },
+          { feature: "OAuth login (Google)", spendwise: true, competitor: "unknown" },
+          { feature: "Two-factor authentication", spendwise: true, competitor: "unknown" },
           { feature: "Bank-grade encryption", spendwise: true, competitor: true },
           { feature: "No loan cross-selling", spendwise: true, competitor: false, competitorNote: "axio heavily promotes loans" },
           { feature: "Privacy policy", spendwise: "Transparent privacy policy", competitor: "Basic privacy policy" },
@@ -106,7 +109,7 @@ const comparisonData: Record<string, {
       },
     ],
     faqs: [
-      { q: "Is SpendWise better than Walnut for UPI tracking?", a: "Yes. SpendWise provides a manual expense entry interface with AI-powered auto-categorization. Walnut relies on SMS parsing which is less reliable and has had stability issues since the axio rebrand." },
+      { q: "Is SpendWise better than Walnut for UPI tracking?", a: "Yes. SpendWise provides a manual expense entry interface with AI-powered auto-categorization. Walnut relies on SMS parsing, which has had reported sync and export issues in recent reviews, and the original Walnut experience was wound down as the app moved under axio." },
       { q: "Can I import my Walnut data into SpendWise?", a: "Yes. SpendWise supports CSV import. Export your data from Walnut/axio and import it into SpendWise to get started." },
       { q: "Why did Walnut change to axio?", a: "Walnut rebranded to axio to reflect its pivot from expense tracking to a broader lending and credit platform. This shift has left pure expense tracking as a secondary feature." },
       { q: "Does SpendWise support the Indian financial year?", a: "Yes. SpendWise natively supports the April–March Indian financial year with Lakhs/Crores formatting, tax-season PDF exports, and FY-aligned reports. Walnut uses a standard calendar year." },
@@ -121,7 +124,7 @@ const comparisonData: Record<string, {
         category: "Core Expense Tracking",
         items: [
           { feature: "Manual expense entry", spendwise: true, competitor: true },
-          { feature: "UPI transaction tracking", spendwise: "Manual entry with auto-categorization", competitor: "Limited SMS-based" },
+          { feature: "UPI transaction tracking", spendwise: "Manual entry with auto-categorization", competitor: "SMS/notification-based sync" },
           { feature: "Income tracking", spendwise: true, competitor: "Limited" },
           { feature: "Budget management", spendwise: "Dynamic 50/30/20 budgeting", competitor: "Basic budgeting", spendwiseNote: "Needs vs Wants split" },
           { feature: "Multi-currency support", spendwise: true, competitor: "INR only", spendwiseNote: "With Lakhs/Crores formatting" },
@@ -140,9 +143,9 @@ const comparisonData: Record<string, {
         category: "AI & Intelligence",
         items: [
           { feature: "AI spending analysis", spendwise: "Forensic behavioral analysis", competitor: "Basic insights", spendwiseNote: "Behavioral, not just categorization" },
-          { feature: "Anomaly detection", spendwise: true, competitor: false },
-          { feature: "Subscription leak detector", spendwise: true, competitor: false },
-          { feature: "Predictive balance forecasting", spendwise: true, competitor: false },
+          { feature: "Anomaly detection", spendwise: true, competitor: "unknown" },
+          { feature: "Subscription leak detector", spendwise: true, competitor: "unknown" },
+          { feature: "Predictive balance forecasting", spendwise: true, competitor: "unknown" },
           { feature: "Investment recommendations", spendwise: false, competitor: true, competitorNote: "ET Money's core strength" },
         ],
       },
@@ -152,14 +155,14 @@ const comparisonData: Record<string, {
           { feature: "Web app (no install required)", spendwise: true, competitor: false, spendwiseNote: "PWA with offline support" },
           { feature: "Android app", spendwise: "PWA install", competitor: true },
           { feature: "iOS app", spendwise: "PWA install", competitor: true },
-          { feature: "Offline support", spendwise: true, competitor: false },
+          { feature: "Offline support", spendwise: true, competitor: "unknown" },
         ],
       },
       {
         category: "Security & Privacy",
         items: [
-          { feature: "OAuth login (Google)", spendwise: true, competitor: true },
-          { feature: "Two-factor authentication", spendwise: true, competitor: false },
+          { feature: "OAuth login (Google)", spendwise: true, competitor: "unknown" },
+          { feature: "Two-factor authentication", spendwise: true, competitor: "unknown" },
           { feature: "Bank-grade encryption", spendwise: true, competitor: true },
           { feature: "No investment cross-selling", spendwise: true, competitor: false, competitorNote: "ET Money pushes SIPs/mutual funds" },
         ],
@@ -195,6 +198,47 @@ function Separator() {
   );
 }
 
+/**
+ * Renders one comparison-table cell. "unknown" is used for competitor
+ * capabilities with no verifiable public evidence — shown as a neutral
+ * muted label rather than an implied ✗ (see Module 14 competitor audit).
+ */
+function ValueCell({
+  value,
+  note,
+  tone,
+}: {
+  value: CellValue | string;
+  note?: string;
+  tone: "primary" | "secondary";
+}) {
+  if (typeof value === "boolean") {
+    return value ? (
+      <Check size={18} className="mx-auto text-emerald-500" />
+    ) : (
+      <X size={18} className="mx-auto text-red-400" />
+    );
+  }
+  if (value === "unknown") {
+    return (
+      <span className="mx-auto inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
+        <span className="block h-px w-3 bg-current" aria-hidden="true" />
+        Unknown
+      </span>
+    );
+  }
+  return (
+    <div>
+      <span
+        className={`text-xs font-bold ${tone === "primary" ? "text-primary-600" : "text-secondary"}`}
+      >
+        {value}
+      </span>
+      {note && <p className="text-[10px] text-muted mt-0.5">{note}</p>}
+    </div>
+  );
+}
+
 export function CompareClient({ competitor, competitorAlt, slug }: CompareClientProps) {
   const data = comparisonData[competitor] || comparisonData.Walnut;
 
@@ -211,6 +255,14 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
             variants={fadeUp}
             className="text-center mb-20 mt-10"
           >
+            <div className="flex justify-center">
+              <SiteBreadcrumbs
+                items={[
+                  { label: "Compare", href: "/sitemap" },
+                  { label: `SpendWise vs ${competitor}` },
+                ]}
+              />
+            </div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border-subtle bg-surface text-[12px] font-semibold tracking-wider uppercase text-secondary mb-6">
               Comparison
             </div>
@@ -282,50 +334,10 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
                       {item.feature}
                     </div>
                     <div className="text-center">
-                      {typeof item.spendwise === "boolean" ? (
-                        item.spendwise ? (
-                          <Check
-                            size={18}
-                            className="mx-auto text-emerald-500"
-                          />
-                        ) : (
-                          <X size={18} className="mx-auto text-red-400" />
-                        )
-                      ) : (
-                        <div>
-                          <span className="text-xs font-bold text-primary-600">
-                            {item.spendwise}
-                          </span>
-                          {item.spendwiseNote && (
-                            <p className="text-[10px] text-muted mt-0.5">
-                              {item.spendwiseNote}
-                            </p>
-                          )}
-                        </div>
-                      )}
+                      <ValueCell value={item.spendwise} note={item.spendwiseNote} tone="primary" />
                     </div>
                     <div className="text-center">
-                      {typeof item.competitor === "boolean" ? (
-                        item.competitor ? (
-                          <Check
-                            size={18}
-                            className="mx-auto text-emerald-500"
-                          />
-                        ) : (
-                          <X size={18} className="mx-auto text-red-400" />
-                        )
-                      ) : (
-                        <div>
-                          <span className="text-xs font-bold text-secondary">
-                            {item.competitor}
-                          </span>
-                          {item.competitorNote && (
-                            <p className="text-[10px] text-muted mt-0.5">
-                              {item.competitorNote}
-                            </p>
-                          )}
-                        </div>
-                      )}
+                      <ValueCell value={item.competitor} note={item.competitorNote} tone="secondary" />
                     </div>
                   </div>
                 ))}
@@ -345,8 +357,8 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
               Ready to try SpendWise?
             </h2>
             <p className="text-secondary font-medium mb-8 max-w-lg mx-auto">
-              Join thousands of Indians tracking their expenses with AI-powered
-              insights and Indian financial year reporting.
+              Track your expenses with AI-powered insights and Indian
+              financial year reporting.
             </p>
             <Link
               href="/login"
@@ -355,6 +367,25 @@ export function CompareClient({ competitor, competitorAlt, slug }: CompareClient
               Get Started Free <ArrowRight size={18} />
             </Link>
           </motion.section>
+
+          {/* Contextual next step: comparison → free tool / guide */}
+          <p className="text-center text-[14px] text-secondary leading-relaxed max-w-lg mx-auto -mt-8 mb-4">
+            Want the same question answered with your own numbers? Try the{" "}
+            <Link
+              href="/tools/50-30-20-budget-calculator"
+              className="text-primary-600 hover:text-primary-700 font-semibold underline underline-offset-2"
+            >
+              free 50/30/20 budget calculator
+            </Link>{" "}
+            or work through the{" "}
+            <Link
+              href="/docs/monthly-budgeting-guide"
+              className="text-primary-600 hover:text-primary-700 font-semibold underline underline-offset-2"
+            >
+              month-by-month budgeting walkthrough
+            </Link>
+            .
+          </p>
 
           {/* FAQ */}
           <motion.section

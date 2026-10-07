@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     url: `${SITE_ORIGIN}/status`,
     images: [
       {
-        url: "/og-images/og-status-dark.png",
+        url: "/og-images/og-home-dark.png",
         width: 1200,
         height: 630,
         alt: "SpendWise System Status",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     title: "System Status | SpendWise — Expense Tracker for India",
     description:
       "Real-time status of SpendWise services including API, database, authentication, and AI features.",
-    images: ["/og-images/og-status-dark.png"],
+    images: ["/og-images/og-home-dark.png"],
   },
 };
 

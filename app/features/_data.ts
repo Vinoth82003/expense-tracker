@@ -36,7 +36,7 @@ export const features: Feature[] = [
     icon: Brain,
     title: "AI Forensic Analysis",
     description:
-      "Powered by Google Gemini, SpendWise generates a deep financial analysis of your entire transaction history — not just summaries, but actionable forensic insights.",
+      "Using external AI APIs (Google Gemini or Groq), SpendWise generates a deep financial analysis of your entire transaction history — not just summaries, but actionable forensic insights.",
     details: [
       "Spending pattern analysis with anomaly detection and metric cards",
       "Budget burn-rate forecasting with reallocation tips",
@@ -120,7 +120,7 @@ export const faqs: FAQ[] = [
   },
   {
     q: "How does the AI forensic analysis work?",
-    a: "SpendWise sends your complete expense and income history to Google Gemini 2.5 Flash, which generates a structured report covering spending patterns, budget advice, income trends, emergency fund status, and actionable suggestions with estimated savings. Notes are sanitized (emails, phone numbers redacted) before sending.",
+    a: "SpendWise sends your sanitized expense history to an external AI provider (Google Gemini or Groq), which generates a structured report covering spending patterns, budget advice, income trends, emergency fund status, and actionable suggestions with estimated savings. Notes are sanitized (emails, phone numbers redacted) before sending.",
   },
   {
     q: "Can I set per-category budgets?",
@@ -163,5 +163,5 @@ export const comparisonRows: ComparisonRow[] = [
   { feature: "Interactive Charts & Reports", spendwise: true, spreadsheets: "Manual", otherApps: "Basic" },
   { feature: "Budget Alerts (Email)", spendwise: true, spreadsheets: false, otherApps: "Partial" },
   { feature: "PWA Installable App", spendwise: true, spreadsheets: false, otherApps: "Partial" },
-  { feature: "Free Forever", spendwise: true, spreadsheets: true, otherApps: "Partial" },
+  { feature: "Free for personal use", spendwise: true, spreadsheets: true, otherApps: "Partial" },
 ];

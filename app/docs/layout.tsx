@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { DocsLayoutClient } from "@/app/docs/DocsLayoutClient";
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { withStaticGuides } from "@/lib/docs-guides";
 
 export default async function DocsLayout({ children }: { children: React.ReactNode }) {
   const isAdmin = await verifyAdminSession();
@@ -10,10 +11,12 @@ export default async function DocsLayout({ children }: { children: React.ReactNo
     whereClause.status = "PUBLISHED";
   }
 
-  const docs = await prisma.doc.findMany({
-    where: whereClause,
-    orderBy: { order: "asc" }
-  });
+  const docs = withStaticGuides(
+    await prisma.doc.findMany({
+      where: whereClause,
+      orderBy: { order: "asc" }
+    })
+  );
 
   // Serialize dates to avoid serialization errors during Server-to-Client boundary transition
   const serializedDocs = docs.map(doc => ({

@@ -7,7 +7,7 @@ import { fadeUp } from "./animations";
 
 const trustSignals = [
   "No credit card required",
-  "Free forever tier",
+    "Free for personal use",
   "Export your data anytime",
 ];
 

@@ -11,6 +11,7 @@ const ALLOWED_PATHS = [
   "/faq",
   "/docs",
   "/contact",
+  "/press",
   "/privacy",
   "/terms",
   "/status",
@@ -29,6 +30,7 @@ const ALLOWED_PATHS = [
 // URL the app actually serves. The prefix form blocks both.
 const DISALLOWED_PATHS = [
   "/admin",
+  "/bridge",
   "/dashboard",
   "/expenses",
   "/income",
@@ -40,6 +42,7 @@ const DISALLOWED_PATHS = [
   "/feedback",
   "/notifications",
   "/api",
+  "/login",
   "/onboarding",
   "/verify-2fa",
   "/maintenance",

@@ -10,16 +10,16 @@ const baseUrl = siteUrl();
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Customer Reviews | SpendWise — India's #1 Expense Tracker",
+  title: "Customer Reviews | SpendWise — Expense Tracker for India",
   description:
-    "Read authentic reviews from thousands of happy SpendWise users. See why India trusts SpendWise for AI-powered expense tracking, budgeting, and financial insights.",
+    "Read authentic reviews from SpendWise users. See what people say about AI-powered expense tracking, budgeting, and financial insights.",
   alternates: {
     canonical: "/reviews",
   },
   openGraph: {
-    title: "Customer Reviews | SpendWise — India's #1 Expense Tracker",
+    title: "Customer Reviews | SpendWise — Expense Tracker for India",
     description:
-      "Read authentic reviews from thousands of happy SpendWise users. See why India trusts SpendWise for AI-powered expense tracking, budgeting, and financial insights.",
+      "Read authentic reviews from SpendWise users. See what people say about AI-powered expense tracking, budgeting, and financial insights.",
     url: `${baseUrl}/reviews`,
     type: "website",
     images: [
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Customer Reviews | SpendWise",
     description:
-      "Read authentic reviews from thousands of happy SpendWise users.",
+      "Read authentic reviews from SpendWise users about expense tracking and budgeting.",
     images: ["/og-images/og-home-dark.png"],
   },
 };

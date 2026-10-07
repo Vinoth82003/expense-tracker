@@ -78,8 +78,8 @@ export function DocsListingPage({ docs }: Props) {
             <span className="text-primary-600">Master your money.</span>
           </h1>
           <p className="text-[16px] text-secondary leading-relaxed max-w-[520px] mx-auto mb-10">
-            Everything you need to get started, from your first expense to
-            AI-powered forensic analysis and group splitting.
+            Get started with the app, follow practical guides on budgeting and
+            expense tracking, and go deeper with AI-powered forensic analysis.
           </p>
 
           {/* Search */}

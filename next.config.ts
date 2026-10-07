@@ -117,8 +117,30 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Cache static marketing pages
-        source: "/:path(features|how-it-works|faq|download|contact|privacy|terms|docs|compare/*|tools/*)?",
+        // Cache static marketing pages. Explicit route list: the previous
+        // "/:path(...)? " pattern's optional group made it match EVERY
+        // single-segment route (including /login) while missing multi-segment
+        // /tools/* and /compare/* — corrected in Module 12.
+        source:
+          "/(features|how-it-works|faq|download|contact|privacy|terms|docs|reviews|sitemap|sitemap.xml|status|maintenance)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/tools/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+          },
+        ],
+      },
+      {
+        source: "/compare/:path*",
         headers: [
           {
             key: "Cache-Control",
