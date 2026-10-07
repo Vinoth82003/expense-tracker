@@ -4,7 +4,7 @@ import { verifyAdminSession } from "@/lib/admin-auth";
 import { subDays } from "date-fns";
 import { logger } from "@/lib/logger";
 import { sendFeedbackRequestEmail } from "@/lib/mail";
-
+import { createEmailLog } from "@/lib/email-tracking";
 
 export async function POST(req: NextRequest) {
   try {
@@ -98,9 +98,19 @@ export async function POST(req: NextRequest) {
 
     for (const user of users) {
       try {
+        // One EmailLog per recipient, keyed to the Notification created above —
+        // this is what the "auto convert to campaign" flow makes traceable:
+        // opens/clicks land on this row and the admin opened-user list reads it.
+        const trackId = await createEmailLog({
+          campaignId: notification.id,
+          userId: user.id,
+          email: user.email,
+        });
+
         const result = await sendFeedbackRequestEmail(
           user.email,
-          user.name || "User"
+          user.name || "User",
+          trackId
         );
 
         if (result.success) {

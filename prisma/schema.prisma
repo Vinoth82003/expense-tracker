@@ -151,6 +151,22 @@ model PageView {
   @@index([page, createdAt])
 }
 
+// Anonymous first-party pageviews for the public marketing site
+// (thespendwise.vercel.app). No cookies, no PII: sessionId is a random
+// per-tab value kept in sessionStorage. Retention is enforced by the
+// hourly maintenance cron (rows older than SITE_ANALYTICS_RETENTION_DAYS).
+model SitePageView {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  path      String
+  referrer  String?
+  country   String?   // from x-vercel-ip-country / cf-ipcountry when present
+  sessionId String?
+  createdAt DateTime @default(now())
+
+  @@index([path, createdAt])
+  @@index([createdAt])
+}
+
 model UserSession {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
@@ -434,4 +450,21 @@ model AuthTicket {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model EmailLog {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String?   @db.ObjectId
+  userId     String?   @db.ObjectId
+  email      String
+  opened     Boolean   @default(false)
+  openedAt   DateTime?
+  clicked    Boolean   @default(false)
+  clickedAt  DateTime?
+  sentAt     DateTime  @default(now())
+  userAgent  String?
+  ip         String?
+
+  @@index([campaignId, opened])
+  @@index([email])
 }

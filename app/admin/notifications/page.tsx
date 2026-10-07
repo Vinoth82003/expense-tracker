@@ -50,6 +50,21 @@ interface NotificationLog {
   adminName: string;
   createdAt: string;
   body: string;
+  stats?: { opened: number; clicked: number; logged: number };
+}
+
+interface CampaignEngagement {
+  sent: number;
+  opened: number;
+  clicked: number;
+  recipients: {
+    email: string;
+    name: string | null;
+    opened: boolean;
+    openedAt: string | null;
+    clicked: boolean;
+    clickedAt: string | null;
+  }[];
 }
 
 interface Unsubscribe {
@@ -122,6 +137,8 @@ function AdminNotificationsPageContent() {
   const [viewingRecipients, setViewingRecipients] = useState<
     { name: string | null; email: string }[]
   >([]);
+  const [viewingEngagement, setViewingEngagement] =
+    useState<CampaignEngagement | null>(null);
 
   // Unsubscribes State
   const [unsubscribes, setUnsubscribes] = useState<Unsubscribe[]>([]);
@@ -500,6 +517,7 @@ function AdminNotificationsPageContent() {
         const data = await res.json();
         setViewingNotification(data.notification);
         setViewingRecipients(data.recipients);
+        setViewingEngagement(data.engagement ?? null);
       } else {
         alert({
           title: "Error",
@@ -854,6 +872,7 @@ function AdminNotificationsPageContent() {
                 <tr className="bg-[var(--admin-bg-surface-variant)] text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest border-b border-[var(--admin-border-subtle)]">
                   <th className="py-5 px-8">Subject</th>
                   <th className="py-5 px-8">Recipients</th>
+                  <th className="py-5 px-8">Opens</th>
                   <th className="py-5 px-8">Sent At</th>
                   <th className="py-5 px-8">Status</th>
                   <th className="py-5 px-8">Admin</th>
@@ -873,6 +892,18 @@ function AdminNotificationsPageContent() {
                     </td>
                     <td className="py-4 px-8 text-sm font-bold text-[var(--admin-text-secondary)]">
                       {log.recipientCount} users
+                    </td>
+                    <td className="py-4 px-8 text-sm font-bold">
+                      {log.stats && log.stats.logged > 0 ? (
+                        <span className="text-teal-500">
+                          {log.stats.opened}
+                          <span className="text-[var(--admin-text-muted)]">
+                            /{log.stats.logged}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-[var(--admin-text-muted)]">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-8">
                       <div className="flex flex-col">
@@ -1248,7 +1279,10 @@ function AdminNotificationsPageContent() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setViewingNotification(null)}
+                  onClick={() => {
+                    setViewingNotification(null);
+                    setViewingEngagement(null);
+                  }}
                   className="p-2 text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] transition-colors"
                 >
                   <X size={20} />
@@ -1293,6 +1327,82 @@ function AdminNotificationsPageContent() {
                     )}
                   </div>
                 </div>
+                {viewingEngagement && (
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-2 block">
+                      Engagement
+                    </label>
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      {[
+                        {
+                          label: "Sent",
+                          value: viewingEngagement.sent,
+                          color: "text-[var(--admin-text-primary)]",
+                        },
+                        {
+                          label: "Opened",
+                          value: viewingEngagement.opened,
+                          color: "text-teal-500",
+                        },
+                        {
+                          label: "Clicked",
+                          value: viewingEngagement.clicked,
+                          color: "text-teal-500",
+                        },
+                      ].map((s) => (
+                        <div
+                          key={s.label}
+                          className="bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl p-4 text-center"
+                        >
+                          <div className={`text-2xl font-black ${s.color}`}>
+                            {s.value}
+                          </div>
+                          <div className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest mt-1">
+                            {s.label}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-2 block">
+                      Opened by ({viewingEngagement.recipients.filter((r) => r.opened).length})
+                    </label>
+                    <div className="max-h-48 overflow-y-auto border border-[var(--admin-border-subtle)] rounded-xl divide-y divide-[var(--admin-border-subtle)]">
+                      {viewingEngagement.recipients
+                        .filter((r) => r.opened)
+                        .map((r, i) => (
+                          <div
+                            key={i}
+                            className="p-3 text-sm flex items-center justify-between gap-3 bg-[var(--admin-bg-card)]"
+                          >
+                            <div className="min-w-0">
+                              <div className="font-bold text-[var(--admin-text-primary)] truncate">
+                                {r.name || "Unknown"}
+                              </div>
+                              <div className="text-xs text-[var(--admin-text-secondary)] truncate">
+                                {r.email}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-teal-100 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400">
+                                {r.clicked ? "✓ Clicked" : "Opened"}
+                              </span>
+                              {r.openedAt && (
+                                <div className="text-[10px] text-[var(--admin-text-muted)] mt-1">
+                                  {new Date(r.openedAt).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      {viewingEngagement.recipients.filter((r) => r.opened)
+                        .length === 0 && (
+                        <div className="p-4 text-sm text-center text-[var(--admin-text-muted)] italic">
+                          No opens recorded yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

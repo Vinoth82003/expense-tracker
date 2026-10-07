@@ -356,7 +356,7 @@ export const sendBudgetAlertEmail = async (email: string, name: string, spentPer
   return sendEmail(email, subject, wrapLayout(content, email));
 };
 
-export const sendFeedbackRequestEmail = async (email: string, name: string) => {
+export const sendFeedbackRequestEmail = async (email: string, name: string, trackId?: string | null) => {
   const subject = "Help us improve SpendWise! ⭐";
   const content = `
     <h2>Hi ${name || "User"},</h2>
@@ -369,7 +369,12 @@ export const sendFeedbackRequestEmail = async (email: string, name: string) => {
     <p style="margin-top: 30px;">Best Regards,<br/> <strong>The SpendWise Team</strong></p>
   `;
 
-  return sendEmail(email, subject, wrapLayout(content, email));
+  let html = wrapLayout(content, email);
+  if (trackId) {
+    const { injectEmailTracking } = await import("./email-tracking");
+    html = injectEmailTracking(html, trackId);
+  }
+  return sendEmail(email, subject, html);
 };
 
 export const sendGroupInvitationEmail = async (email: string, inviterName: string, groupName: string, inviteLink: string) => {
@@ -517,6 +522,43 @@ export const sendAdminAccountDeletionNotification = async (
       </ul>
     </div>
     <p style="margin-top: 30px;">Best,<br/> <strong>SpendWise System</strong></p>
+  `;
+
+  return sendEmail(ADMIN_EMAIL, subject, wrapLayout(content, ADMIN_EMAIL));
+};
+
+/**
+ * Generic admin digest for the hourly maintenance worker. Sections are
+ * pre-built HTML blocks so the route owns the data logic and this stays dumb.
+ */
+export const sendAdminMaintenanceReport = async (
+  subject: string,
+  intro: string,
+  sections: { heading: string; items: string[] }[]
+) => {
+  if (!ADMIN_EMAIL) {
+    await logger.warn("Admin email not configured – skipping maintenance report", { subject }, "WORKER");
+    return { success: false, error: "Admin email not configured" };
+  }
+
+  const renderedSections = sections
+    .filter((s) => s.items.length > 0)
+    .map(
+      (s) => `
+      <div class="security-box" style="margin-top: 16px;">
+        <p style="margin: 0 0 10px 0; font-weight: bold; color: #111827;">${s.heading}</p>
+        <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #4b5563;">
+          ${s.items.map((item) => `<li style="margin-bottom: 4px;">${item}</li>`).join("")}
+        </ul>
+      </div>`
+    )
+    .join("");
+
+  const content = `
+    <h2>${subject}</h2>
+    <p>${intro}</p>
+    ${renderedSections}
+    <p style="margin-top: 30px;">Best,<br/> <strong>SpendWise Maintenance Worker</strong></p>
   `;
 
   return sendEmail(ADMIN_EMAIL, subject, wrapLayout(content, ADMIN_EMAIL));

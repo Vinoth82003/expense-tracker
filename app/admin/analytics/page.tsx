@@ -46,6 +46,7 @@ export default function AdminAnalyticsPage() {
   const [retention, setRetention] = useState([]);
   const [modes, setModes] = useState<any>(null);
   const [rates, setRates] = useState<any>(null);
+  const [site, setSite] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchAnalytics = async () => {
@@ -54,13 +55,14 @@ export default function AdminAnalyticsPage() {
     const to = new Date().toISOString();
 
     try {
-      const [dauRes, growthRes, featuresRes, retentionRes, modesRes, ratesRes] = await Promise.all([
+      const [dauRes, growthRes, featuresRes, retentionRes, modesRes, ratesRes, siteRes] = await Promise.all([
         fetch(`/api/admin/analytics/dau?from=${from}&to=${to}`),
         fetch(`/api/admin/analytics/growth?from=${from}&to=${to}`),
         fetch(`/api/admin/analytics/features?from=${from}&to=${to}`),
         fetch(`/api/admin/analytics/retention`),
         fetch(`/api/admin/analytics/modes`),
-        fetch(`/api/admin/analytics/2fa-rate`)
+        fetch(`/api/admin/analytics/2fa-rate`),
+        fetch(`/api/admin/analytics/site?range=${range}`)
       ]);
 
       setDauData(await dauRes.json());
@@ -69,6 +71,7 @@ export default function AdminAnalyticsPage() {
       setRetention(await retentionRes.json());
       setModes(await modesRes.json());
       setRates(await ratesRes.json());
+      setSite(await siteRes.json());
     } catch (error) {
       console.error("Failed to fetch analytics:", error);
     } finally {
@@ -206,7 +209,63 @@ export default function AdminAnalyticsPage() {
         </div>
       </div>
 
-      {/* Row 2: Feature Usage */}
+      {/* Row 2: Marketing site traffic (first-party, anonymous) */}
+      <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-8 space-y-6">
+        <div className="flex flex-wrap justify-between items-start gap-4">
+          <div>
+            <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-1">Marketing Site Traffic</h3>
+            <p className="text-2xl font-bold text-[var(--admin-text-primary)]">First-party, cookie-free pageviews</p>
+          </div>
+          <div className="flex gap-8">
+            <div className="text-right">
+              <p className="text-3xl font-black text-[var(--admin-text-primary)]">{site?.totals?.views ?? "—"}</p>
+              <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Pageviews</p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-black text-[var(--admin-text-primary)]">{site?.totals?.uniqueSessions ?? "—"}</p>
+              <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Sessions</p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-black text-[var(--admin-text-primary)]">{site?.totals?.directShare != null ? `${site.totals.directShare}%` : "—"}</p>
+              <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Direct</p>
+            </div>
+          </div>
+        </div>
+
+        {site?.daily?.length > 0 ? (
+          <div className="h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={site.daily}>
+                <defs>
+                  <linearGradient id="colorSite" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--admin-border)" />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--admin-text-muted)' }} />
+                <YAxis axisLine={false} tickLine={false} allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--admin-text-muted)' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--admin-bg-card)', border: '1px solid var(--admin-border)', borderRadius: '12px', color: 'var(--admin-text-primary)' }}
+                />
+                <Area type="monotone" dataKey="views" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorSite)" name="Views" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="py-10 text-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl">
+            <p className="text-sm font-bold text-[var(--admin-text-muted)]">No pageviews recorded yet in this range.</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <TopList title="Top Pages" items={site?.topPaths || []} />
+          <TopList title="Top Referrers" items={site?.topReferrers || []} />
+          <TopList title="Top Countries" items={site?.topCountries || []} />
+        </div>
+      </div>
+
+      {/* Row 3: Feature Usage */}
       <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm p-8 space-y-8">
         <div>
           <h3 className="text-sm font-black uppercase text-[var(--admin-text-muted)] tracking-widest mb-1">Feature Usage</h3>
@@ -405,6 +464,23 @@ export default function AdminAnalyticsPage() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TopList({ title, items }: { title: string; items: { key: string; count: number }[] }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest">{title}</p>
+      {items.length === 0 && (
+        <p className="text-xs font-bold text-[var(--admin-text-muted)] italic">No data yet</p>
+      )}
+      {items.map((item) => (
+        <div key={item.key} className="flex justify-between items-center gap-3">
+          <span className="text-xs font-bold text-[var(--admin-text-secondary)] truncate" title={item.key}>{item.key}</span>
+          <span className="text-xs font-black text-[var(--admin-text-primary)] shrink-0">{item.count}</span>
+        </div>
+      ))}
     </div>
   );
 }

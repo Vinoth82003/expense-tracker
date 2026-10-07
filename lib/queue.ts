@@ -205,7 +205,20 @@ async function jobProcessor(job: Job) {
 
     const personalizedSubject = replaceVariables(subject, variables);
     const contentHtml = replaceVariables(body, variables).replace(/\n/g, '<br/>');
-    const html = wrapLayout(contentHtml, userEmail);
+    let html = wrapLayout(contentHtml, userEmail);
+
+    // Open/click tracking: one EmailLog row per campaign+recipient (createEmailLog
+    // reuses the row on retries so a re-attempted job can't double-count opens).
+    // A tracking failure degrades to a plain send — it never blocks delivery.
+    if (notificationId) {
+      const { createEmailLog, injectEmailTracking } = await import("./email-tracking");
+      const logId = await createEmailLog({
+        campaignId: notificationId,
+        userId: typeof extra.userId === "string" ? extra.userId : null,
+        email: userEmail,
+      });
+      html = injectEmailTracking(html, logId);
+    }
 
     const result = await sendEmail(userEmail, personalizedSubject, html);
 

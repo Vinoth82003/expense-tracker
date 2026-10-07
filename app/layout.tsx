@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -26,6 +27,7 @@ import { PublicMaintenanceBanner } from "@/components/layout/PublicMaintenanceBa
 import { ModalProvider } from "@/components/providers/ModalProvider";
 import { UIProvider } from "@/context/UIContext";
 import { CookieConsent } from "@/components/layout/CookieConsent";
+import { SiteAnalytics } from "@/components/analytics/SiteAnalytics";
 
 
 export const viewport = {
@@ -176,6 +178,11 @@ export default function RootLayout({
         </AuthProvider>
         <PWAInstallBanner />
         <CookieConsent />
+        {/* First-party marketing analytics (anonymous, cookie-free). Suspense
+            required: SiteAnalytics calls useSearchParams. */}
+        <Suspense>
+          <SiteAnalytics />
+        </Suspense>
       </body>
     </html>
   );
