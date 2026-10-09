@@ -1,33 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { getAdminInfo, logAudit } from "@/lib/admin/audit";
-import { emailQueue, getNotificationProgress } from "@/lib/queue";
 import { subDays } from "date-fns";
 import { logger } from "@/lib/logger";
+import { sendEmail, replaceVariables, wrapLayout } from "@/lib/mail";
+import { createEmailLog, injectEmailTracking } from "@/lib/email-tracking";
 
 /**
- * How long this request is willing to stay open watching a campaign drain.
+ * Mass notification delivery.
  *
- * The old implementation blocked for up to 120s polling per-job state. On a
- * serverless runtime that overruns the invocation budget, and a single recipient
- * hitting an SMTP connection timeout threw its way out to a 500 while hundreds of
- * emails had in fact been delivered.
+ * This flow used to enqueue one BullMQ job per recipient and let a background
+ * worker drain the queue. That architecture only works with a long-running Node
+ * process (a Render Web Service/Background Worker). On a serverless runtime the
+ * worker starts, the invocation returns, and the process freezes — jobs sit in
+ * Redis forever and the campaign is stuck in PROCESSING. That is why this path
+ * failed while /admin/reviews (which sends inline) worked.
  *
- * We now watch only long enough for a *small* campaign to report real counts, then
- * hand the campaign back to the queue — its authoritative status is written by the
- * worker (see lib/queue.ts) and shown in the History tab. This is deliberately
- * short: at the configured rate limit a large campaign cannot finish inside any
- * sane request budget, so blocking longer only delays the admin for no new
- * information.
+ * Delivery is now inline and sequential, mirroring /api/admin/reviews:
+ *   - one EmailLog row per recipient (campaignId = Notification.id) for
+ *     open/click tracking and the admin opened-user list
+ *   - the Notification row is finalised synchronously (SUCCESS/PARTIAL/FAILED)
+ *   - no Redis / BullMQ dependency, so it behaves identically on Vercel, Render,
+ *     or locally
+ *
+ * Sequential (not parallel) is deliberate: Gmail throttles concurrent SMTP
+ * sessions from one account by stalling them, which turns a burst into
+ * timeouts. The stagger keeps the handshakes from landing at the same instant.
  */
-const OBSERVE_BUDGET_MS = Number(process.env.NOTIFICATION_OBSERVE_BUDGET_MS) || 4_000;
-const POLL_INTERVAL_MS = 300;
+const SEND_STAGGER_MS = Number(process.env.NOTIFICATION_SEND_STAGGER_MS) || 250;
 
-/** Spreads enqueue so a burst doesn't open N SMTP connections at the same instant. */
-const ENQUEUE_STAGGER_MAX_MS = 400;
+// Give the function room to finish a campaign on hosts that cap the invocation
+// (Vercel honours this; other platforms ignore it).
+export const maxDuration = 300;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** "html" is a raw embed; anything else is treated as plain text. */
+const normalizeFormat = (value: unknown): "text" | "html" =>
+  value === "html" ? "html" : "text";
+
+/** Renders an admin-authored body into the branded, sendable HTML. */
+function renderBody(
+  rawBody: string,
+  format: "text" | "html",
+  variables: Record<string, string>
+): string {
+  const personalized = replaceVariables(rawBody, variables);
+  const contentHtml =
+    format === "html" ? personalized : personalized.replace(/\n/g, "<br/>");
+  return contentHtml;
+}
 
 export async function POST(req: NextRequest) {
   const ip =
@@ -39,7 +63,8 @@ export async function POST(req: NextRequest) {
     }
 
     const admin = await getAdminInfo();
-    const { subject, body, recipientFilter } = await req.json();
+    const { subject, body, bodyFormat, recipientFilter } = await req.json();
+    const format = normalizeFormat(bodyFormat);
 
     await logger.info(`Starting mass notification send: ${subject}`, { recipientFilter }, "API");
 
@@ -48,33 +73,33 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Fetch unsubscribed emails
-    const unsubscribed = await (prisma as any).unsubscribe.findMany({
-      select: { email: true }
+    const unsubscribed = await prisma.unsubscribe.findMany({
+      select: { email: true },
     });
-    const unsubscribedEmails = unsubscribed.map((u: any) => u.email);
+    const unsubscribedEmails = unsubscribed.map((u) => u.email);
 
     // 2. Build where clause
-    const where: any = {
-      email: { notIn: unsubscribedEmails }
+    const where: Prisma.UserWhereInput = {
+      email: { notIn: unsubscribedEmails },
     };
 
     if (recipientFilter) {
-      const { 
-        twoFactorEnabled, limitMode, active30d, newUsers, 
+      const {
+        twoFactorEnabled, limitMode, active30d, newUsers,
         incomeNoExpenses, noIncomeNoExpenses,
-        inactive2d, inactive7d, specificEmail 
+        inactive2d, inactive7d, specificEmail,
       } = recipientFilter;
 
       if (twoFactorEnabled) where.twoFactorEnabled = true;
       if (limitMode) where.expenseMode = "limit";
       if (active30d) where.lastActive = { gte: subDays(new Date(), 30) };
       if (newUsers) where.createdAt = { gte: subDays(new Date(), 7) };
-      
+
       if (incomeNoExpenses) {
         where.incomes = { some: {} };
         where.expenses = { none: {} };
       }
-      
+
       if (noIncomeNoExpenses) {
         where.incomes = { none: {} };
         where.expenses = { none: {} };
@@ -102,17 +127,14 @@ export async function POST(req: NextRequest) {
     // 3. Fetch recipients
     const users = await prisma.user.findMany({
       where,
-      select: { id: true, name: true, email: true }
+      select: { id: true, name: true, email: true },
     });
 
     if (users.length === 0) {
       return NextResponse.json({ error: "No recipients found" }, { status: 400 });
     }
 
-    // 4. Resolve the recipients that can actually be delivered to. `recipientCount`
-    // below is this list's length, not `users.length` — the worker finalises the
-    // campaign once it has seen that many settled jobs, so a mismatch would leave
-    // the row stuck in PROCESSING forever.
+    // 4. Resolve the recipients that can actually be delivered to.
     const eligibleRecipients = users.filter((user) => Boolean(user.id && user.email));
 
     for (const skipped of users.filter((user) => !user.id || !user.email)) {
@@ -130,87 +152,88 @@ export async function POST(req: NextRequest) {
 
     const recipientCount = eligibleRecipients.length;
 
-    // 5. Create notification record
-    const notification = await (prisma as any).notification.create({
+    // 5. Create the campaign record up front so EmailLog rows can reference it.
+    const notification = await prisma.notification.create({
       data: {
         subject,
         body,
+        bodyFormat: format,
         recipientCount,
         recipientFilter: JSON.stringify(recipientFilter || {}),
         status: "PROCESSING",
         adminName: admin?.adminName || "SpendWise",
-      }
+      },
     });
 
-    // 6. Enqueue one job per recipient. `addBulk` is a single Redis round trip;
-    // a sequential `await queue.add()` per recipient cost ~60ms each, which meant
-    // an 8s enqueue phase *before* any mail went out (the send endpoint measured
-    // 24s wall-clock for 131 recipients). The stagger keeps the first wave of SMTP
-    // handshakes from landing on the provider all at once — a simultaneous burst
-    // is what trips Gmail's connection throttling.
-    const jobOptions = emailQueue.opts.defaultJobOptions ?? {};
-    await emailQueue.addBulk(
-      eligibleRecipients.map((user, index) => ({
-        name: "send-email",
-        data: {
-          userId: user.id,
-          userEmail: user.email,
-          userName: user.name || "User",
-          subject,
-          body,
-          notificationId: notification.id,
-          recipientCount,
-        },
-        opts: {
-          ...jobOptions,
-          delay: Math.floor(Math.random() * ENQUEUE_STAGGER_MAX_MS) + index * 2,
-        },
-      }))
-    );
+    // 6. Send sequentially.
+    let delivered = 0;
+    let failed = 0;
+    const errors: string[] = [];
 
-    await logger.info(`Enqueued ${recipientCount} email jobs`, {
-      notificationId: notification.id,
-    }, "API");
+    for (let i = 0; i < eligibleRecipients.length; i++) {
+      const user = eligibleRecipients[i];
+      try {
+        const variables: Record<string, string> = {
+          userName: user.name || "User",
+          date: new Date().toLocaleDateString(),
+        };
+
+        const personalizedSubject = replaceVariables(subject, variables);
+        let html = wrapLayout(renderBody(body, format, variables), user.email);
+
+        // One tracking row per recipient (createEmailLog reuses the row on retry),
+        // so opens/clicks land on this campaign's row. Non-throwing by contract.
+        const logId = await createEmailLog({
+          campaignId: notification.id,
+          userId: user.id,
+          email: user.email,
+        });
+        html = injectEmailTracking(html, logId);
+
+        const result = await sendEmail(user.email, personalizedSubject, html);
+
+        if (result.success) {
+          delivered++;
+          await logger.info(`Notification sent to ${user.email}`, null, "API");
+        } else {
+          failed++;
+          errors.push(`${user.email}: ${result.error}`);
+          await logger.error(`Failed to send notification to ${user.email}`, { error: result.error }, "API");
+        }
+      } catch (err) {
+        failed++;
+        const message = err instanceof Error ? err.message : String(err);
+        errors.push(`${user.email}: ${message}`);
+        await logger.error(`Exception sending notification to ${user.email}`, { error: message }, "API");
+      }
+
+      if (i < eligibleRecipients.length - 1 && SEND_STAGGER_MS > 0) {
+        await sleep(SEND_STAGGER_MS);
+      }
+    }
+
+    // 7. Finalise the campaign status synchronously.
+    const status = failed === 0 ? "SUCCESS" : delivered > 0 ? "PARTIAL" : "FAILED";
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: {
+        status,
+        ...(errors.length > 0 ? { error: errors.slice(0, 20).join("; ") } : {}),
+      },
+    }).catch(() => {});
 
     await logAudit({
       adminName: admin?.adminName,
       adminId: admin?.adminId,
-      actionType: "MASS_NOTIFICATION_ENQUEUE",
+      actionType: "MASS_NOTIFICATION_SEND",
       target: notification.id,
-      details: `subject="${subject}" recipients=${recipientCount} filter=${JSON.stringify(
+      details: `subject="${subject}" recipients=${recipientCount} delivered=${delivered} failed=${failed} format=${format} filter=${JSON.stringify(
         recipientFilter || {}
       )}`,
       ip,
     });
 
-    // 7. Observe briefly. A campaign is "done" when every recipient job has
-    // settled; anything still in flight is reported as processing, not failed.
-    const deadline = Date.now() + OBSERVE_BUDGET_MS;
-    let progress = await getNotificationProgress(notification.id);
-
-    while (Date.now() < deadline) {
-      if (progress && progress.settled >= recipientCount) break;
-      await sleep(POLL_INTERVAL_MS);
-      progress = await getNotificationProgress(notification.id).catch(() => progress);
-    }
-
-    const delivered = progress?.delivered ?? 0;
-    const failed = progress?.failed ?? 0;
-    const settled = progress?.settled ?? 0;
-    const inFlight = Math.max(0, recipientCount - settled);
-    const finished = inFlight === 0;
-
-    if (inFlight > 0) {
-      await logger.info(
-        `Campaign still delivering after ${OBSERVE_BUDGET_MS}ms — handing off to the queue`,
-        { notificationId: notification.id, delivered, failed, inFlight },
-        "API"
-      );
-    }
-
-    // Partial delivery is an outcome to report, not an API failure — the admin
-    // needs the history row and the counts, not a 500.
-    if (finished && failed > 0) {
+    if (failed > 0) {
       await logger.warn(
         `Campaign finished with ${failed} failed recipient(s)`,
         { notificationId: notification.id, delivered, failed },
@@ -218,24 +241,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // A total failure is reported as an API error so the admin sees the reason
+    // rather than a success toast. Partial delivery is a reported outcome.
+    if (delivered === 0 && failed > 0) {
+      return NextResponse.json(
+        { error: `All ${failed} email(s) failed. ${errors[0] ?? ""}`.trim() },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      status: inFlight > 0 ? "PROCESSING" : failed > 0 ? "PARTIAL" : "SUCCESS",
+      status,
       message:
-        inFlight > 0
-          ? `Queued for ${recipientCount} recipient(s). ${delivered} delivered so far — track progress in History.`
-          : failed > 0
-            ? `Delivered to ${delivered} of ${recipientCount} recipient(s). See History for failures.`
-            : `Delivered to all ${recipientCount} recipient(s).`,
+        failed > 0
+          ? `Delivered to ${delivered} of ${recipientCount} recipient(s). See History for failures.`
+          : `Delivered to all ${recipientCount} recipient(s).`,
       notificationId: notification.id,
       count: recipientCount,
       delivered,
       failed,
-      inFlight,
+      inFlight: 0,
     });
-  } catch (error: any) {
-    await logger.error("Notification Send-API Error", { error: error.message });
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await logger.error("Notification Send-API Error", { error: message });
+    return NextResponse.json({ error: message || "Internal server error" }, { status: 500 });
   }
 }
 
@@ -250,13 +281,14 @@ export async function GET(req: NextRequest) {
 
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-    const notification = await (prisma as any).notification.findUnique({
+    const notification = await prisma.notification.findUnique({
       where: { id },
     });
 
     return NextResponse.json(notification);
-  } catch (error: any) {
-    logger.error("Notification GET-API Error", { error: error.message });
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error("Notification GET-API Error", { error: message });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

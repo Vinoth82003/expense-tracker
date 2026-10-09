@@ -38,6 +38,7 @@ interface Template {
   name: string;
   subject: string;
   body: string;
+  bodyFormat: string;
   isSystem: boolean;
   updatedAt: string;
 }
@@ -102,6 +103,7 @@ function AdminNotificationsPageContent() {
   // Send Announcement State
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [bodyFormat, setBodyFormat] = useState<"text" | "html">("text");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [recipientType, setRecipientType] = useState("all"); // all, filtered, specific
   const [filters, setFilters] = useState<any>({
@@ -284,6 +286,7 @@ function AdminNotificationsPageContent() {
         body: JSON.stringify({
           subject,
           body,
+          bodyFormat,
           recipientFilter:
             recipientType === "all"
               ? {}
@@ -335,6 +338,7 @@ function AdminNotificationsPageContent() {
           templateId: template?.id,
           subject: subject,
           body: body,
+          bodyFormat: bodyFormat,
         }),
       });
       if (res.ok)
@@ -383,6 +387,7 @@ function AdminNotificationsPageContent() {
             name: newTemplateName,
             subject: selectedTemplate.subject,
             body: selectedTemplate.body,
+            bodyFormat: selectedTemplate.bodyFormat,
           }),
         });
         if (res.ok) {
@@ -429,6 +434,7 @@ function AdminNotificationsPageContent() {
             body: JSON.stringify({
               subject: selectedTemplate.subject,
               body: selectedTemplate.body,
+              bodyFormat: selectedTemplate.bodyFormat,
             }),
           },
         );
@@ -506,6 +512,7 @@ function AdminNotificationsPageContent() {
   const loadTemplateIntoComposer = (template: Template) => {
     setSubject(template.subject);
     setBody(template.body);
+    setBodyFormat(template.bodyFormat === "html" ? "html" : "text");
     setActiveTab("send");
   };
 
@@ -615,7 +622,21 @@ function AdminNotificationsPageContent() {
                       ))}
                     </select>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex rounded-lg border border-[var(--admin-border-subtle)] overflow-hidden">
+                      <button
+                        onClick={() => setBodyFormat("text")}
+                        className={`px-3 py-1 text-[10px] font-black uppercase transition-colors ${bodyFormat === "text" ? "bg-teal-500 text-white" : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]"}`}
+                      >
+                        Text
+                      </button>
+                      <button
+                        onClick={() => setBodyFormat("html")}
+                        className={`px-3 py-1 text-[10px] font-black uppercase transition-colors ${bodyFormat === "html" ? "bg-teal-500 text-white" : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]"}`}
+                      >
+                        HTML
+                      </button>
+                    </div>
                     <button
                       onClick={() => setIsPreviewMode(false)}
                       className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${!isPreviewMode ? "bg-teal-500 text-white" : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]"}`}
@@ -646,16 +667,29 @@ function AdminNotificationsPageContent() {
                       <h2 className="text-xl font-bold mb-4 text-[var(--admin-text-primary)]">
                         {subject || "No subject"}
                       </h2>
-                      <div className="whitespace-pre-wrap text-[var(--admin-text-secondary)]">
-                        {body || "No content..."}
-                      </div>
+                      {bodyFormat === "html" ? (
+                        <div
+                          className="text-[var(--admin-text-secondary)]"
+                          dangerouslySetInnerHTML={{
+                            __html: body || "No content...",
+                          }}
+                        />
+                      ) : (
+                        <div className="whitespace-pre-wrap text-[var(--admin-text-secondary)]">
+                          {body || "No content..."}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <textarea
-                      placeholder="Write your announcement here... Use {userName} for personalization."
+                      placeholder={
+                        bodyFormat === "html"
+                          ? "Paste your HTML here... Use {userName} for personalization. Links to your site are auto-tracked."
+                          : "Write your announcement here... Use {userName} for personalization."
+                      }
                       value={body}
                       onChange={(e) => setBody(e.target.value)}
-                      className="w-full min-h-[300px] bg-transparent border-none outline-none resize-none placeholder:text-[var(--admin-text-muted)] text-[var(--admin-text-secondary)] font-medium leading-relaxed"
+                      className={`w-full min-h-[300px] bg-transparent border-none outline-none resize-none placeholder:text-[var(--admin-text-muted)] text-[var(--admin-text-secondary)] leading-relaxed ${bodyFormat === "html" ? "font-mono text-xs" : "font-medium"}`}
                     />
                   )}
                 </div>
@@ -979,6 +1013,7 @@ function AdminNotificationsPageContent() {
                         name: "",
                         subject: "",
                         body: "",
+                        bodyFormat: "text",
                         isSystem: false,
                         updatedAt: "",
                       });
@@ -1137,9 +1172,35 @@ function AdminNotificationsPageContent() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">
-                          Email Body
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">
+                            Email Body
+                          </label>
+                          <div className="flex rounded-lg border border-[var(--admin-border-subtle)] overflow-hidden">
+                            <button
+                              onClick={() =>
+                                setSelectedTemplate({
+                                  ...selectedTemplate,
+                                  bodyFormat: "text",
+                                })
+                              }
+                              className={`px-3 py-1 text-[10px] font-black uppercase transition-colors ${selectedTemplate.bodyFormat !== "html" ? "bg-teal-500 text-white" : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]"}`}
+                            >
+                              Text
+                            </button>
+                            <button
+                              onClick={() =>
+                                setSelectedTemplate({
+                                  ...selectedTemplate,
+                                  bodyFormat: "html",
+                                })
+                              }
+                              className={`px-3 py-1 text-[10px] font-black uppercase transition-colors ${selectedTemplate.bodyFormat === "html" ? "bg-teal-500 text-white" : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-secondary)]"}`}
+                            >
+                              HTML
+                            </button>
+                          </div>
+                        </div>
                         <textarea
                           value={selectedTemplate.body}
                           onChange={(e) =>
@@ -1148,7 +1209,12 @@ function AdminNotificationsPageContent() {
                               body: e.target.value,
                             })
                           }
-                          className="w-full min-h-[250px] p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-medium outline-none text-[var(--admin-text-secondary)] focus:ring-2 focus:ring-teal-500 resize-none leading-relaxed"
+                          placeholder={
+                            selectedTemplate.bodyFormat === "html"
+                              ? "Paste your HTML here..."
+                              : "Write your template here..."
+                          }
+                          className={`w-full min-h-[250px] p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl outline-none text-[var(--admin-text-secondary)] focus:ring-2 focus:ring-teal-500 resize-none leading-relaxed ${selectedTemplate.bodyFormat === "html" ? "font-mono text-xs" : "text-sm font-medium"}`}
                         />
                       </div>
                     </div>

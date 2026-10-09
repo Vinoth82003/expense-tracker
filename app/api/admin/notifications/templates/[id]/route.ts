@@ -13,7 +13,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { subject, body: bodyContent } = body;
+    const { subject, body: bodyContent, bodyFormat } = body;
 
     if (!subject || !bodyContent) {
       return NextResponse.json(
@@ -24,7 +24,11 @@ export async function PATCH(
 
     const template = await (prisma as any).emailTemplate.update({
       where: { id },
-      data: { subject, body: bodyContent },
+      data: {
+        subject,
+        body: bodyContent,
+        ...(bodyFormat ? { bodyFormat: bodyFormat === "html" ? "html" : "text" } : {}),
+      },
     });
 
     return NextResponse.json(template);

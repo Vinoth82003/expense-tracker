@@ -115,6 +115,7 @@ model Notification {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   subject        String
   body           String
+  bodyFormat     String   @default("text") // "text" | "html"
   recipientCount Int
   recipientFilter String? // JSON stringified filter
   status         String   // "SENT", "FAILED"
@@ -124,12 +125,13 @@ model Notification {
 }
 
 model EmailTemplate {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String   @unique
-  subject   String
-  body      String
-  isSystem  Boolean  @default(false)
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name       String   @unique
+  subject    String
+  body       String
+  bodyFormat String   @default("text") // "text" | "html"
+  isSystem   Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
 }
 
 model Unsubscribe {

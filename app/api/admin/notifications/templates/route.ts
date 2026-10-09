@@ -85,13 +85,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { name, subject, body } = await req.json();
+    const { name, subject, body, bodyFormat } = await req.json();
 
     const template = await (prisma as any).emailTemplate.create({
       data: {
         name,
         subject,
         body,
+        bodyFormat: bodyFormat === "html" ? "html" : "text",
         isSystem: false
       }
     });

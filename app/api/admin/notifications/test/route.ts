@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { templateId, subject, body } = await req.json();
+    const { templateId, subject, body, bodyFormat } = await req.json();
     
     // In a real app, we'd get the admin's actual email from their session
     // For now, we'll use a placeholder or check process.env.SMTP_USER
@@ -21,12 +21,14 @@ export async function POST(req: NextRequest) {
 
     let finalSubject = subject;
     let finalBody = body;
+    let finalFormat: "text" | "html" = bodyFormat === "html" ? "html" : "text";
 
     if (templateId) {
       const template = await (prisma as any).emailTemplate.findUnique({ where: { id: templateId } });
       if (template) {
         finalSubject = template.subject;
         finalBody = template.body;
+        finalFormat = template.bodyFormat === "html" ? "html" : "text";
       }
     }
 
@@ -41,11 +43,13 @@ export async function POST(req: NextRequest) {
 
     const processedSubject = replaceVariables(finalSubject, sampleValues);
     const processedBody = replaceVariables(finalBody, sampleValues);
+    const bodyHtml =
+      finalFormat === "html" ? processedBody : processedBody.replace(/\n/g, '<br/>');
 
     const html = wrapLayout(`
       <div style="border: 2px dashed #0d9488; border-radius: 16px; padding: 20px; position: relative;">
         <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 0 10px; color: #0d9488; font-weight: bold; font-size: 10px; text-transform: uppercase;">Test Preview</div>
-        ${processedBody.replace(/\n/g, '<br/>')}
+        ${bodyHtml}
       </div>
     `);
 
