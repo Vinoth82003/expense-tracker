@@ -1,29 +1,40 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { logAudit } from "@/lib/admin/audit";
+import { logger } from "@/lib/logger";
 
+const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
+
+// Read-only: individual sessions cannot be revoked under JWT auth. Access is
+// cut off by locking the account (Security -> Lockouts). See the collection
+// route for the full rationale.
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   if (!(await verifyAdminSession())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await params;
+  if (!OBJECT_ID_RE.test(id)) {
+    return NextResponse.json({ error: "Invalid session id." }, { status: 400 });
+  }
+
   try {
-    const { id } = await params;
-    const session = await (prisma as any).userSession.findUnique({
+    const session = await prisma.userSession.findUnique({
       where: { id },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            avatar: true
-          }
-        }
-      }
+      select: {
+        id: true,
+        userId: true,
+        device: true,
+        browser: true,
+        ip: true,
+        location: true,
+        expires: true,
+        createdAt: true,
+        user: { select: { name: true, email: true, avatar: true } },
+      },
     });
 
     if (!session) {
@@ -32,48 +43,7 @@ export async function GET(
 
     return NextResponse.json(session);
   } catch (error) {
-    console.error("Failed to fetch session:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-  }
-}
-
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  if (!(await verifyAdminSession())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const { id } = await params;
-    
-    // Get session first to know who it belongs to for the audit log
-    const session = await (prisma as any).userSession.findUnique({
-      where: { id },
-      include: { user: { select: { email: true } } }
-    });
-
-    if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
-    }
-
-    await (prisma as any).userSession.delete({
-      where: { id }
-    });
-
-    // Log the administrative action
-    // SECURITY FIX: VULN-019 — logAudit now auto-resolves real admin identity from session
-    await logAudit({
-      actionType: "SESSION_REVOKED",
-      target: session.user.email,
-      details: `Revoked session ${id} (${session.browser} on ${session.device})`,
-      ip: req.headers.get("x-forwarded-for") || "unknown"
-    });
-
-    return NextResponse.json({ message: "Session revoked successfully" });
-  } catch (error) {
-    console.error("Failed to revoke session:", error);
+    logger.error("Failed to fetch session", { error, sessionId: id });
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
