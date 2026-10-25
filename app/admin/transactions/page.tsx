@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { FLAGGED_THRESHOLD } from "@/lib/admin/transactions-filter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Search, 
@@ -54,16 +55,43 @@ interface Transaction {
   isFlagged?: boolean;
 }
 
+interface TransactionStats {
+  totalAmount?: number;
+  recordCount?: number;
+  flaggedCount?: number;
+  avgPerUser?: number;
+  growth?: { percent: number | null } | null;
+}
+
+interface TransactionContext {
+  budgetPercentage?: number | null;
+  categoryAverage?: number | null;
+  userMonthlyTotal?: number | null;
+}
+
+interface ChartDatum {
+  name: string;
+  volume: number;
+  count: number;
+}
+
+interface TooltipPayloadItem {
+  value: number;
+  payload: ChartDatum;
+}
+
 export default function AdminTransactionsPage() {
   const [activeTab, setActiveTab] = useState<"expenses" | "income">("expenses");
   const [data, setData] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<TransactionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [isChartOpen, setIsChartOpen] = useState(false);
-  const [chartData, setChartData] = useState([]);
+  const [chartData, setChartData] = useState<ChartDatum[]>([]);
   const [chartMode, setChartMode] = useState<"volume" | "count">("volume");
+  // Notes are sensitive: hidden in the table until explicitly revealed.
+  const [revealNotes, setRevealNotes] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -76,10 +104,18 @@ export default function AdminTransactionsPage() {
 
   // Detail View
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  const [txContext, setTxContext] = useState<any>(null);
+  const [txContext, setTxContext] = useState<TransactionContext | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Honour deep links (e.g. the Overview "Flagged" shortcut → ?flagged=true).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("flagged") === "true") setFlaggedOnly(true);
+    const tab = params.get("tab");
+    if (tab === "expenses" || tab === "income") setActiveTab(tab);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -164,6 +200,44 @@ export default function AdminTransactionsPage() {
     }
   };
 
+  // Escapes a CSV field so spreadsheet apps never execute a leading formula,
+  // and quotes per RFC 4180. Notes are redacted unless the admin revealed them.
+  const toCsvCell = (value: string) => {
+    const s = String(value ?? "");
+    const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+    return `"${safe.replace(/"/g, '""')}"`;
+  };
+
+  const exportCsv = () => {
+    const includeNotes = revealNotes;
+    const header = ["User", "Email", "Category", "Subcategory", "Amount", "Date", "Note", "Status"];
+    const rows = data.map((tx) => [
+      tx.user.name || "Anonymous",
+      tx.user.email,
+      tx.category || tx.source || "",
+      tx.subcategory || "",
+      String(tx.amount),
+      new Date(tx.date).toISOString(),
+      tx.note ? (includeNotes ? tx.note : "[redacted]") : "",
+      tx.isFlagged ? "Flagged" : "Normal",
+    ]);
+    const csv = [header, ...rows].map((row) => row.map(toCsvCell).join(",")).join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${activeTab}-page-${page}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const noteText = (note: string | null) => {
+    if (!note) return "No note";
+    return revealNotes ? note : "••••••";
+  };
+
   const categories = useMemo(() => {
     if (activeTab === "expenses") return ["Needs", "Wants"];
     return ["All"]; // Income categories are more fluid
@@ -200,17 +274,25 @@ export default function AdminTransactionsPage() {
             <StatChip label="Total Logged" value={`₹${(stats?.totalAmount || 0).toLocaleString()}`} color="text-red-500" />
             <StatChip label="Records" value={stats?.recordCount?.toLocaleString() || "0"} color="text-[var(--admin-text-primary)]" />
             <StatChip label="Flagged" value={stats?.flaggedCount?.toString() || "0"} color="text-amber-500" />
-            <StatChip label="Avg / User" value="₹10,840" color="text-[var(--admin-text-primary)]" />
+            <StatChip label="Avg / User" value={`₹${Math.round(stats?.avgPerUser || 0).toLocaleString()}`} color="text-[var(--admin-text-primary)]" />
           </>
         ) : (
           <>
             <StatChip label="Total Logged" value={`₹${(stats?.totalAmount || 0).toLocaleString()}`} color="text-emerald-500" />
             <StatChip label="Records" value={stats?.recordCount?.toLocaleString() || "0"} color="text-[var(--admin-text-primary)]" />
-            <StatChip label="Avg / User" value="₹43,400" color="text-[var(--admin-text-primary)]" />
-            <StatChip label="Growth" value="+12%" color="text-emerald-500" />
+            <StatChip label="Avg / User" value={`₹${Math.round(stats?.avgPerUser || 0).toLocaleString()}`} color="text-[var(--admin-text-primary)]" />
+            <StatChip
+              label="Growth (MoM)"
+              value={stats?.growth?.percent != null ? `${stats.growth.percent >= 0 ? "+" : ""}${stats.growth.percent.toFixed(1)}%` : "—"}
+              color={stats?.growth?.percent != null && stats.growth.percent < 0 ? "text-red-500" : "text-emerald-500"}
+            />
           </>
         )}
       </div>
+      <p className="-mt-4 text-xs font-medium text-[var(--admin-text-muted)]">
+        All figures above reflect the current filters{dateFrom || dateTo ? " and selected date range" : ""}
+        {activeTab === "income" ? "; growth compares this calendar month with the previous month." : "."}
+      </p>
 
       {/* Filters Bar */}
       <div className="flex flex-col gap-4 bg-[var(--admin-bg-card)] p-6 rounded-[2rem] border border-[var(--admin-border)] shadow-sm">
@@ -263,7 +345,28 @@ export default function AdminTransactionsPage() {
             </button>
           </div>
 
-          <button className="p-2.5 bg-teal-500 text-white rounded-xl shadow-lg shadow-teal-500/20 hover:bg-teal-600 transition-colors">
+          <button
+            type="button"
+            onClick={() => setRevealNotes((v) => !v)}
+            aria-pressed={revealNotes}
+            title="Notes are hidden by default for privacy. Reveal to view and include them in exports."
+            className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
+              revealNotes
+                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                : "bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-muted)]"
+            }`}
+          >
+            <Eye size={14} />
+            {revealNotes ? "Notes visible" : "Notes hidden"}
+          </button>
+
+          <button 
+            onClick={exportCsv}
+            disabled={data.length === 0}
+            title="Export the current page to CSV (notes redacted unless revealed)"
+            aria-label="Export current page to CSV"
+            className="p-2.5 bg-teal-500 text-white rounded-xl shadow-lg shadow-teal-500/20 hover:bg-teal-600 transition-colors disabled:opacity-50"
+          >
             <Download size={18} />
           </button>
         </div>
@@ -321,7 +424,9 @@ export default function AdminTransactionsPage() {
                   </td>
                   <td className="py-4 px-6 text-xs font-bold text-[var(--admin-text-muted)]">{new Date(tx.date).toLocaleDateString()}</td>
                   <td className="py-4 px-6">
-                    <p className="text-xs text-[var(--admin-text-secondary)] truncate max-w-[120px]">{tx.note || "No note"}</p>
+                    <p className="text-xs text-[var(--admin-text-secondary)] truncate max-w-[120px]" title={revealNotes ? (tx.note || "No note") : "Note hidden"}>
+                      {noteText(tx.note)}
+                    </p>
                   </td>
                   <td className="py-4 px-6">
                     {tx.isFlagged ? (
@@ -420,7 +525,9 @@ export default function AdminTransactionsPage() {
                     <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 700, fill: 'var(--admin-text-muted)' }} />
                     <Tooltip 
                       cursor={{ fill: 'transparent' }}
-                      content={({ active, payload }: any) => {
+                      content={(props) => {
+                        const active = props.active;
+                        const payload = props.payload as unknown as TooltipPayloadItem[] | undefined;
                         if (active && payload && payload.length) {
                           return (
                             <div className="bg-[var(--admin-bg-card)] p-3 rounded-xl border border-[var(--admin-border-subtle)] shadow-xl">
@@ -435,7 +542,7 @@ export default function AdminTransactionsPage() {
                       }}
                     />
                     <Bar dataKey={chartMode === 'volume' ? 'volume' : 'count'} radius={[0, 4, 4, 0]}>
-                      {chartData.map((entry: any, index: number) => (
+                      {chartData.map((entry: ChartDatum, index: number) => (
                         <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#00D4AA' : '#38BDF8'} />
                       ))}
                     </Bar>
@@ -495,10 +602,25 @@ export default function AdminTransactionsPage() {
                     <DetailBox label="Subcategory" value={selectedTx.subcategory || "N/A"} />
                   </div>
 
+                  {selectedTx.isFlagged && (
+                    <div className="flex gap-4 p-5 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+                      <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-amber-600 dark:text-amber-400">Why this is flagged</p>
+                        <p className="text-xs font-medium text-[var(--admin-text-secondary)] leading-relaxed">
+                          The amount exceeds the ₹
+                          {FLAGGED_THRESHOLD[activeTab === "expenses" ? "expense" : "income"].toLocaleString()}{" "}
+                          {activeTab === "expenses" ? "expense" : "income"} outlier threshold. Flagging is automatic and
+                          informational — it does not indicate wrongdoing.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="p-6 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)]">
                     <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-2">Note</p>
                     <p className="text-sm font-medium text-[var(--admin-text-secondary)] leading-relaxed italic">
-                      "{selectedTx.note || "No notes provided for this transaction."}"
+                      &ldquo;{selectedTx.note || "No notes provided for this transaction."}&rdquo;
                     </p>
                   </div>
 

@@ -46,12 +46,6 @@ export async function GET() {
       ],
     });
 
-    if (topUsers.length === 0) {
-      return NextResponse.json({ error: "No users found" }, { status: 404 });
-    }
-
-    // console.log("topUsers:", topUsers);
-
     const formattedUsers = topUsers.map((u, index) => ({
       rank: index + 1,
       userId: u.id,

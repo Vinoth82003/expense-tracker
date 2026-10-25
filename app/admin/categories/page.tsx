@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 import { 
   Plus, 
   Settings, 
@@ -78,6 +79,7 @@ export default function AdminCategoriesPage() {
   const { alert, confirm } = useModal();
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [duplicates, setDuplicates] = useState<{ normalized: string; names: string[] }[]>([]);
   const [totalSub, setTotalSub] = useState(0);
   const [loading, setLoading] = useState(true);
   const [lastCleared, setLastCleared] = useState<Date>(new Date(Date.now() - 2 * 60 * 60 * 1000));
@@ -97,30 +99,44 @@ export default function AdminCategoriesPage() {
   // Filters
   const [subFilter, setSubFilter] = useState("All");
   const [subPage, setSubPage] = useState(1);
+  const [subQuery, setSubQuery] = useState("");
+  const [subSearch, setSubSearch] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      const subParams = new URLSearchParams({ category: subFilter, page: String(subPage) });
+      if (subSearch) subParams.set("search", subSearch);
       const [catRes, subRes] = await Promise.all([
         fetch("/api/admin/categories"),
-        fetch(`/api/admin/subcategories?category=${subFilter}&page=${subPage}`)
+        fetch(`/api/admin/subcategories?${subParams.toString()}`)
       ]);
       if (catRes.ok) setCategories(await catRes.json());
       if (subRes.ok) {
         const result = await subRes.json();
         setSubcategories(result.subcategories);
         setTotalSub(result.total);
+        setDuplicates(result.duplicates ?? []);
       }
     } catch (error) {
       console.error("Failed to fetch data", error);
     } finally {
       setLoading(false);
     }
-  }, [subFilter, subPage]);
+  }, [subFilter, subPage, subSearch]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Debounce the subcategory search box before it hits the API.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setSubSearch(subQuery.trim());
+      setSubPage(1);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [subQuery]);
 
   const invalidateCache = async () => {
     try {
@@ -149,9 +165,13 @@ export default function AdminCategoriesPage() {
         setHasEdits(true);
         fetchData();
         invalidateCache(); // Auto-clear cache on save
+      } else {
+        const data = await res.json().catch(() => ({}));
+        await alert({ title: editingCat ? "Update failed" : "Create failed", message: data.error || "Could not save category." });
       }
     } catch (error) {
       console.error("Failed to save", error);
+      await alert({ title: "Save failed", message: "Network error while saving the category." });
     } finally {
       setActionLoading(false);
     }
@@ -169,16 +189,43 @@ export default function AdminCategoriesPage() {
       if (res.ok) {
         setHasEdits(true);
         fetchData();
+        invalidateCache();
       } else {
         const err = await res.json();
         await alert({
-          title: "Error",
-          message: err.error,
+          title: "Delete failed",
+          message: err.error || "Could not delete category.",
           type: "error"
         });
       }
     } catch (error) {
       console.error("Failed to delete", error);
+      await alert({ title: "Delete failed", message: "Network error while deleting.", type: "error" });
+    }
+  };
+
+  const deleteSubcategory = async (id: string, name: string, usageCount: number) => {
+    const isConfirmed = await confirm({
+      title: "Delete Subcategory",
+      message:
+        usageCount > 0
+          ? `"${name}" is used by ${usageCount} transaction(s) and cannot be deleted until they are re-tagged or merged. Continue anyway?`
+          : `Permanently delete the subcategory "${name}"?`,
+      danger: true,
+    });
+    if (!isConfirmed) return;
+    try {
+      const res = await fetch(`/api/admin/subcategories/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        fetchData();
+        invalidateCache();
+      } else {
+        await alert({ title: "Delete failed", message: data.error || "Could not delete subcategory.", type: "error" });
+      }
+    } catch (error) {
+      console.error("Failed to delete subcategory", error);
+      await alert({ title: "Delete failed", message: "Network error while deleting.", type: "error" });
     }
   };
 
@@ -191,13 +238,23 @@ export default function AdminCategoriesPage() {
         body: JSON.stringify({ sourceId: sourceSub.id, targetId: targetSubId })
       });
       if (res.ok) {
+        const data = await res.json().catch(() => ({}));
         setIsMergeModalOpen(false);
         setHasEdits(true);
         fetchData();
         invalidateCache();
+        await alert({
+          title: "Merge complete",
+          message: data.message || "Subcategories merged.",
+          type: "success",
+        });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        await alert({ title: "Merge failed", message: data.error || "Could not merge.", type: "error" });
       }
     } catch (error) {
       console.error("Failed to merge", error);
+      await alert({ title: "Merge failed", message: "Network error while merging.", type: "error" });
     } finally {
       setActionLoading(false);
     }
@@ -265,6 +322,35 @@ export default function AdminCategoriesPage() {
           color="text-emerald-500" 
         />
       </div>
+      <p className="-mt-3 text-xs font-medium text-[var(--admin-text-muted)]">
+        Categorization health = system categories used by at least one expense ÷ all system categories.
+        Usage counts and volumes are all-time, not limited to the selected period.
+      </p>
+
+      {/* Duplicate Detection */}
+      {duplicates.length > 0 ? (
+        <div className="p-5 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-3">
+          <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
+            <AlertTriangle size={20} />
+            <p className="text-sm font-bold">
+              {duplicates.length} possible duplicate name{duplicates.length === 1 ? "" : "s"} across subcategories
+            </p>
+          </div>
+          <ul className="space-y-2">
+            {duplicates.map((group) => (
+              <li key={group.normalized} className="text-xs font-medium text-[var(--admin-text-secondary)]">
+                <span className="font-bold text-[var(--admin-text-primary)]">{group.names.join(" · ")}</span>
+                <span className="text-[var(--admin-text-muted)]"> — all normalize to “{group.normalized}”. Review before merging.</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 p-5 bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-2xl text-[var(--admin-text-muted)]">
+          <CheckCircle2 size={18} className="text-emerald-500" />
+          <p className="text-xs font-bold">No duplicate subcategory names detected in this view.</p>
+        </div>
+      )}
 
       {/* System Categories Section */}
       <section className="space-y-6">
@@ -285,7 +371,7 @@ export default function AdminCategoriesPage() {
                   style={{ backgroundColor: cat.color || '#00D4AA' }}
                 >
                   {(() => {
-                    const Icon = (ICON_LIST as any)[cat.icon || 'Settings'] || Settings;
+                    const Icon = ICON_LIST[(cat.icon || "Settings") as keyof typeof ICON_LIST] || Settings;
                     return <Icon size={24} />;
                   })()}
                 </div>
@@ -338,9 +424,19 @@ export default function AdminCategoriesPage() {
             User Subcategories
           </h2>
           <div className="flex gap-4">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]" />
+              <input
+                type="text"
+                value={subQuery}
+                onChange={(e) => setSubQuery(e.target.value)}
+                placeholder="Search name, owner…"
+                className="pl-9 pr-4 py-2 w-56 bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-xl text-sm font-medium outline-none text-[var(--admin-text-primary)]"
+              />
+            </div>
             <select 
               value={subFilter}
-              onChange={(e) => setSubFilter(e.target.value)}
+              onChange={(e) => { setSubFilter(e.target.value); setSubPage(1); }}
               className="px-4 py-2 bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-xl text-sm font-bold outline-none text-[var(--admin-text-primary)]"
             >
               <option value="All">All Types</option>
@@ -388,7 +484,10 @@ export default function AdminCategoriesPage() {
                         >
                           <GitMerge size={16} />
                         </button>
-                        <button className="p-2 text-[var(--admin-text-muted)] hover:text-red-500 transition-colors" title="Delete">
+                        <button 
+                          onClick={() => deleteSubcategory(sub.id, sub.name, sub.usageCount)}
+                          className="p-2 text-[var(--admin-text-muted)] hover:text-red-500 transition-colors" title="Delete"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -443,7 +542,7 @@ export default function AdminCategoriesPage() {
                     <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] tracking-widest">Icon</label>
                     <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                       {Object.keys(ICON_LIST).map(iconName => {
-                        const IconComp = (ICON_LIST as any)[iconName];
+                        const IconComp = ICON_LIST[iconName as keyof typeof ICON_LIST];
                         return (
                           <button 
                             key={iconName}
@@ -519,7 +618,7 @@ export default function AdminCategoriesPage() {
                   {subcategories.filter(s => s.id !== sourceSub.id).map(s => <option key={s.id} value={s.id}>{s.name} ({s.user.name})</option>)}
                 </select>
                 <p className="text-xs bg-blue-50 dark:bg-blue-500/10 p-4 rounded-xl text-blue-600 dark:text-blue-400 leading-relaxed italic">
-                  "All {sourceSub.usageCount} transactions will be re-tagged to the target. This action auto-clears the global cache."
+                  &ldquo;All {sourceSub.usageCount} transactions will be re-tagged to the target. This action auto-clears the global cache.&rdquo;
                 </p>
               </div>
 
@@ -543,7 +642,7 @@ export default function AdminCategoriesPage() {
   );
 }
 
-function StatCard({ label, value, icon: Icon, color }: any) {
+function StatCard({ label, value, icon: Icon, color }: { label: string; value: string; icon: LucideIcon; color: string }) {
   return (
     <div className="p-6 bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm flex items-center gap-6">
       <div className={`w-14 h-14 rounded-2xl bg-[var(--admin-bg-surface-variant)] flex items-center justify-center ${color}`}>

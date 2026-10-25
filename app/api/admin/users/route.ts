@@ -1,6 +1,18 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
+import { getAdminInfo, logAudit } from "@/lib/admin/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
+import { prismaErrorCode } from "@/lib/admin/errors";
+import { parseUserListQuery, buildUsersWhere } from "@/lib/admin/users-filter";
+
+const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
+
+function clientIp(req: NextRequest): string {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0]!.trim();
+  return req.headers.get("x-real-ip") || "127.0.0.1";
+}
 
 export async function GET(req: NextRequest) {
   if (!(await verifyAdminSession())) {
@@ -9,37 +21,9 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const search = searchParams.get("search") || "";
-    const twoFA = searchParams.get("twoFA"); // "Enabled", "Disabled"
-    const mode = searchParams.get("mode"); // "Limit", "No-limit"
-    const joined = searchParams.get("joined"); // "Last 7d", "Last 30d"
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "25");
-    const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
-
-    const skip = (page - 1) * limit;
-
-    const where: any = {};
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (twoFA === "Enabled") where.twoFactorEnabled = true;
-    if (twoFA === "Disabled") where.twoFactorEnabled = false;
-
-    if (mode === "Limit") where.expenseMode = "limit";
-    if (mode === "No-limit") where.expenseMode = "no-limit";
-
-    if (joined === "Last 7d") {
-      where.createdAt = { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) };
-    } else if (joined === "Last 30d") {
-      where.createdAt = { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) };
-    }
+    const query = parseUserListQuery(searchParams);
+    const where = buildUsersWhere(query);
+    const skip = (query.page - 1) * query.limit;
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -53,39 +37,44 @@ export async function GET(req: NextRequest) {
           twoFactorEnabled: true,
           lastActive: true,
           createdAt: true,
-          ...({ isSuspended: true } as any),
+          isSuspended: true,
         },
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: { [query.sortBy]: query.sortOrder },
         skip,
-        take: limit,
+        take: query.limit,
       }),
       prisma.user.count({ where }),
     ]);
 
-    // Stats for the strip
+    // Stats strip is intentionally platform-wide (not filtered). Scope is
+    // surfaced so the UI never implies the numbers track the active filter.
     const [totalUsers, activeToday, twoFAEnabled] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({
-        where: { lastActive: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } }
+        where: { lastActive: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
       }),
-      prisma.user.count({
-        where: { twoFactorEnabled: true }
-      })
+      prisma.user.count({ where: { twoFactorEnabled: true } }),
     ]);
 
     return NextResponse.json({
       users,
       total,
-      stats: { totalUsers, activeToday, twoFAEnabled }
+      page: query.page,
+      limit: query.limit,
+      statsScope: "all-users",
+      stats: { totalUsers, activeToday, twoFAEnabled },
     });
   } catch (error) {
-    console.error("Failed to fetch users:", error);
+    logger.error("Failed to fetch users", { error });
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
+  const ip = clientIp(req);
+
   if (!(await verifyAdminSession())) {
+    logger.warn("Unauthorized user delete attempt", { ip });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -93,17 +82,44 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
-    if (!id) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+    if (!id || !OBJECT_ID_RE.test(id)) {
+      return NextResponse.json({ error: "A valid user id is required" }, { status: 400 });
     }
 
-    await prisma.user.delete({
+    const admin = await getAdminInfo();
+    const target = await prisma.user.findUnique({
       where: { id },
+      select: { id: true, email: true },
+    });
+    if (!target) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Self-delete guard — an admin must not delete their own account.
+    if (admin?.adminId === target.id) {
+      return NextResponse.json(
+        { error: "Refusing to delete your own admin account." },
+        { status: 400 }
+      );
+    }
+
+    await prisma.user.delete({ where: { id } });
+
+    await logAudit({
+      adminName: admin?.adminName,
+      adminId: admin?.adminId,
+      actionType: "USER_DELETED",
+      target: target.email,
+      details: `Deleted user ${target.email}.`,
+      ip,
     });
 
     return NextResponse.json({ message: "User deleted successfully" });
   } catch (error) {
-    console.error("Failed to delete user:", error);
+    if (prismaErrorCode(error) === "P2025") {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    logger.error("Failed to delete user", { error });
     return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
   }
 }

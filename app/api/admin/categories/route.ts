@@ -1,6 +1,8 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAdminInfo, logAudit } from "@/lib/admin/audit";
+import { validateCategoryInput } from "@/lib/admin/category-validation";
 
 export async function GET() {
   if (!(await verifyAdminSession())) {
@@ -9,30 +11,24 @@ export async function GET() {
 
   try {
     const categories = await prisma.category.findMany({
-      where: { isDefault: true, userId: null },
-      orderBy: { name: 'asc' }
+      where: { isDefault: true },
     });
 
-    // For each category, get usage stats
+    // Calculate usage count and volume per category
     const formattedCategories = await Promise.all(categories.map(async (cat) => {
-      const transactionCount = await prisma.expense.count({
-        where: { subcategory: cat.name }
-      });
-      const transactionVolume = await prisma.expense.aggregate({
-        where: { subcategory: cat.name },
-        _sum: { amount: true }
-      });
-
-      return {
-        ...cat,
-        usageCount: transactionCount,
-        volume: transactionVolume._sum.amount || 0
-      };
+      const [usageCount, aggregate] = await Promise.all([
+        prisma.expense.count({ where: { subcategory: cat.name } }),
+        prisma.expense.aggregate({
+          where: { subcategory: cat.name },
+          _sum: { amount: true },
+        }),
+      ]);
+      return { ...cat, usageCount, volume: aggregate._sum.amount || 0 };
     }));
 
     return NextResponse.json(formattedCategories);
   } catch (error) {
-    console.error("Failed to fetch admin categories:", error);
+    console.error("[API] Failed to fetch categories:", error);
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });
   }
 }
@@ -43,22 +39,45 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { name, type, icon, color } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const parsed = validateCategoryInput(body, "global");
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    const { name, type, color, icon } = parsed.value;
 
-    const category = await (prisma as any).category.create({
-      data: {
-        name,
-        type,
-        icon,
-        color,
+    // Scope-aware duplicate check: only collide with other GLOBAL categories.
+    const existing = await prisma.category.findFirst({
+      where: {
+        name: { equals: name, mode: "insensitive" },
         isDefault: true,
-        userId: null
-      }
+      },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: `A global category named "${name}" already exists.` },
+        { status: 409 }
+      );
+    }
+
+    const created = await prisma.category.create({
+      data: { name, type, color: color || undefined, icon: icon || undefined, isDefault: true },
     });
 
-    return NextResponse.json(category, { status: 201 });
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const adminInfo = await getAdminInfo();
+    await logAudit({
+      adminName: adminInfo?.adminName,
+      adminId: adminInfo?.adminId,
+      actionType: "CATEGORY_CREATED",
+      target: `category:${created.id}`,
+      details: `Created global category "${name}" (${type})`,
+      ip,
+    });
+
+    return NextResponse.json(created, { status: 201 });
   } catch (error) {
-    console.error("Failed to create admin category:", error);
+    console.error("[API] Failed to create category:", error);
     return NextResponse.json({ error: "Failed to create category" }, { status: 500 });
   }
 }

@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { getAdminInfo, logAudit } from "@/lib/admin/audit";
-import { subDays } from "date-fns";
 import { logger } from "@/lib/logger";
 import { sendEmail, replaceVariables, wrapLayout } from "@/lib/mail";
 import { createEmailLog, injectEmailTracking } from "@/lib/email-tracking";
+import {
+  buildRecipientWhere,
+  getUnsubscribedEmails,
+} from "@/lib/admin/notification-recipients";
+import {
+  DEFAULT_MESSAGE_TYPE,
+  describeNotificationStatus,
+  sanitizeEmailErrorCode,
+  sanitizeEmailErrorSummary,
+} from "@/lib/email-jobs";
+import { randomUUID } from "crypto";
 
 /**
  * Mass notification delivery.
@@ -41,6 +50,28 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const normalizeFormat = (value: unknown): "text" | "html" =>
   value === "html" ? "html" : "text";
 
+const MAX_SUBJECT_LENGTH = 200;
+const MAX_BODY_LENGTH = 100_000;
+
+/** Message-type allowlist so a caller cannot persist arbitrary values. */
+const MESSAGE_TYPES = new Set([
+  "ANNOUNCEMENT",
+  "TEST",
+  "FEEDBACK_REQUEST",
+  "SYSTEM",
+]);
+
+const normalizeMessageType = (value: unknown): string =>
+  typeof value === "string" && MESSAGE_TYPES.has(value)
+    ? value
+    : DEFAULT_MESSAGE_TYPE;
+
+/** Only a plain object is a valid recipient filter; arrays/null are rejected. */
+const normalizeRecipientFilter = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+};
+
 /** Renders an admin-authored body into the branded, sendable HTML. */
 function renderBody(
   rawBody: string,
@@ -63,66 +94,51 @@ export async function POST(req: NextRequest) {
     }
 
     const admin = await getAdminInfo();
-    const { subject, body, bodyFormat, recipientFilter } = await req.json();
-    const format = normalizeFormat(bodyFormat);
-
-    await logger.info(`Starting mass notification send: ${subject}`, { recipientFilter }, "API");
+    const payload = await req.json().catch(() => ({}));
+    const subject = typeof payload?.subject === "string" ? payload.subject.trim() : "";
+    const body = typeof payload?.body === "string" ? payload.body : "";
+    const format = normalizeFormat(payload?.bodyFormat);
+    const messageType = normalizeMessageType(payload?.messageType);
+    const templateId =
+      typeof payload?.templateId === "string" && payload.templateId
+        ? payload.templateId
+        : null;
+    const templateVersion =
+      typeof payload?.templateVersion === "string" && payload.templateVersion
+        ? payload.templateVersion
+        : null;
+    const recipientFilter = normalizeRecipientFilter(payload?.recipientFilter);
 
     if (!subject || !body) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
-
-    // 1. Fetch unsubscribed emails
-    const unsubscribed = await prisma.unsubscribe.findMany({
-      select: { email: true },
-    });
-    const unsubscribedEmails = unsubscribed.map((u) => u.email);
-
-    // 2. Build where clause
-    const where: Prisma.UserWhereInput = {
-      email: { notIn: unsubscribedEmails },
-    };
-
-    if (recipientFilter) {
-      const {
-        twoFactorEnabled, limitMode, active30d, newUsers,
-        incomeNoExpenses, noIncomeNoExpenses,
-        inactive2d, inactive7d, specificEmail,
-      } = recipientFilter;
-
-      if (twoFactorEnabled) where.twoFactorEnabled = true;
-      if (limitMode) where.expenseMode = "limit";
-      if (active30d) where.lastActive = { gte: subDays(new Date(), 30) };
-      if (newUsers) where.createdAt = { gte: subDays(new Date(), 7) };
-
-      if (incomeNoExpenses) {
-        where.incomes = { some: {} };
-        where.expenses = { none: {} };
-      }
-
-      if (noIncomeNoExpenses) {
-        where.incomes = { none: {} };
-        where.expenses = { none: {} };
-      }
-
-      if (inactive2d) {
-        where.lastActive = { lte: subDays(new Date(), 2) };
-      }
-
-      if (inactive7d) {
-        where.lastActive = { lte: subDays(new Date(), 7) };
-      }
-
-      if (recipientFilter.onboarded === false) {
-        where.onboarded = false;
-      }
-
-      if (recipientFilter.noPWA === true) {
-        where.isPWAInstalled = false;
-      }
-
-      if (specificEmail) where.email = specificEmail;
+    if (subject.length > MAX_SUBJECT_LENGTH) {
+      return NextResponse.json(
+        { error: `Subject must be ${MAX_SUBJECT_LENGTH} characters or fewer.` },
+        { status: 400 }
+      );
     }
+    if (body.length > MAX_BODY_LENGTH) {
+      return NextResponse.json(
+        { error: `Body must be ${MAX_BODY_LENGTH} characters or fewer.` },
+        { status: 400 }
+      );
+    }
+
+    // Stable id shared with the SystemLog rows for this job (spec 14).
+    const correlationId = randomUUID();
+
+    await logger.info(
+      "Email job accepted for processing",
+      { correlationId, messageType, recipientFilter },
+      "API"
+    );
+
+    // 1. Fetch unsubscribed emails so they are excluded from the audience.
+    const unsubscribedEmails = await getUnsubscribedEmails();
+
+    // 2. Build where clause (shared with the audience-preview endpoint).
+    const where = buildRecipientWhere(recipientFilter, unsubscribedEmails);
 
     // 3. Fetch recipients
     const users = await prisma.user.findMany({
@@ -153,15 +169,28 @@ export async function POST(req: NextRequest) {
     const recipientCount = eligibleRecipients.length;
 
     // 5. Create the campaign record up front so EmailLog rows can reference it.
+    //    One logical message: a retry increments `attempts`, it never inserts a
+    //    second Notification row.
+    const startedAt = new Date();
     const notification = await prisma.notification.create({
       data: {
         subject,
         body,
         bodyFormat: format,
         recipientCount,
-        recipientFilter: JSON.stringify(recipientFilter || {}),
+        recipientFilter: JSON.stringify(recipientFilter),
         status: "PROCESSING",
         adminName: admin?.adminName || "SpendWise",
+        correlationId,
+        messageType,
+        templateId,
+        templateVersion,
+        attempts: 1,
+        deliveredCount: 0,
+        failedCount: 0,
+        queuedAt: startedAt,
+        processingAt: startedAt,
+        deliveryConfirmed: false,
       },
     });
 
@@ -212,15 +241,56 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 7. Finalise the campaign status synchronously.
+    // 7. Finalise the campaign status synchronously. SUCCESS means the provider
+    //    ACCEPTED every message — it is not a delivery confirmation, so
+    //    deliveryConfirmed stays false.
     const status = failed === 0 ? "SUCCESS" : delivered > 0 ? "PARTIAL" : "FAILED";
+    const errorCode = failed > 0 ? sanitizeEmailErrorCode(errors[0]) : null;
+    const errorSummary =
+      failed > 0
+        ? sanitizeEmailErrorSummary(
+            `${failed} of ${recipientCount} recipients failed: ${errors[0] ?? ""}`
+          )
+        : null;
+
     await prisma.notification.update({
       where: { id: notification.id },
       data: {
         status,
-        ...(errors.length > 0 ? { error: errors.slice(0, 20).join("; ") } : {}),
+        deliveredCount: delivered,
+        failedCount: failed,
+        completedAt: new Date(),
+        deliveryConfirmed: false,
+        errorCode,
+        ...(errorSummary ? { error: errorSummary } : {}),
       },
     }).catch(() => {});
+
+    const lifecycle = describeNotificationStatus(status, {
+      deliveryConfirmed: false,
+      attempts: 1,
+    });
+    const terminalLog = {
+      correlationId,
+      notificationId: notification.id,
+      status,
+      lifecycle: lifecycle.key,
+      delivered,
+      failed,
+    };
+    if (failed === 0) {
+      await logger.info(
+        `Email job completed: ${lifecycle.label} (${delivered}/${recipientCount})`,
+        terminalLog,
+        "API"
+      );
+    } else {
+      await logger.warn(
+        `Email job completed: ${lifecycle.label} (${delivered}/${recipientCount}, ${failed} failed, code=${errorCode ?? "n/a"})`,
+        terminalLog,
+        "API"
+      );
+    }
 
     await logAudit({
       adminName: admin?.adminName,
@@ -253,11 +323,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       status,
+      lifecycle: lifecycle.key,
+      lifecycleLabel: lifecycle.label,
+      deliveryConfirmed: false,
       message:
         failed > 0
-          ? `Delivered to ${delivered} of ${recipientCount} recipient(s). See History for failures.`
-          : `Delivered to all ${recipientCount} recipient(s).`,
+          ? `Accepted by the provider for ${delivered} of ${recipientCount} recipient(s); ${failed} failed. See History for details.`
+          : `Accepted by the provider for all ${recipientCount} recipient(s). Delivery not independently confirmed.`,
       notificationId: notification.id,
+      correlationId,
+      attempts: 1,
       count: recipientCount,
       delivered,
       failed,

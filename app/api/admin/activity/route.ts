@@ -1,6 +1,15 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { maskEmail } from "@/lib/admin/sessions-filter";
+
+// Show a display name when we have one, otherwise a masked email — never the
+// raw address (spec 01: reduce personal data in the activity feed).
+function actorLabel(name?: string | null, email?: string | null): string {
+  if (name && name.trim()) return name.trim();
+  if (email && email.trim()) return maskEmail(email.trim());
+  return "a user";
+}
 
 export async function GET() {
   if (!(await verifyAdminSession())) {
@@ -32,21 +41,21 @@ export async function GET() {
       ...users.map(u => ({
         type: "signup",
         userId: u.id,
-        description: `${u.name || u.email} signed up`,
+        description: `${actorLabel(u.name, u.email)} signed up`,
         timestamp: u.createdAt,
         color: "teal"
       })),
       ...reports.map(r => ({
         type: "report",
         userId: r.userId,
-        description: `${r.user?.name || r.user?.email} generated an AI report`,
+        description: `${actorLabel(r.user?.name, r.user?.email)} generated an AI report`,
         timestamp: r.date,
         color: "blue"
       })),
       ...budgets.map(b => ({
         type: "budget",
         userId: b.userId,
-        description: `${b.user?.name || b.user?.email} updated their monthly budget to ₹${b.amount}`,
+        description: `${actorLabel(b.user?.name, b.user?.email)} updated their monthly budget`,
         timestamp: new Date(parseInt(b.id.substring(0,8), 16) * 1000), // Infer date from MongoDB ObjectId
         color: "amber"
       }))

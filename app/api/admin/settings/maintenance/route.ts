@@ -11,12 +11,45 @@ export async function PATCH(req: NextRequest) {
   try {
     const config = await req.json();
 
-    const settingsToSave = {
-      enabled: !!config.enabled,
-      message: config.message || "SpendWise is undergoing maintenance. We'll be back shortly.",
-      eta: config.eta || null,
-      adminBypass: !!config.adminBypass
-    };
+    // --- Validation (server-side; never trust the client) ---
+    const enabled = config.enabled === true;
+    const adminBypass = config.adminBypass === true;
+
+    let message = typeof config.message === "string" ? config.message.trim() : "";
+    if (message.length > 500) {
+      return NextResponse.json({ error: "Message must be 500 characters or fewer." }, { status: 400 });
+    }
+    if (!message) {
+      message = "SpendWise is undergoing maintenance. We'll be back shortly.";
+    }
+
+    let eta: string | null = null;
+    if (config.eta) {
+      const parsed = new Date(config.eta);
+      if (Number.isNaN(parsed.getTime())) {
+        return NextResponse.json({ error: "Maintenance ETA is not a valid date/time." }, { status: 400 });
+      }
+      if (enabled && parsed.getTime() <= Date.now()) {
+        return NextResponse.json(
+          { error: "Maintenance ETA must be in the future while maintenance mode is enabled." },
+          { status: 400 }
+        );
+      }
+      eta = parsed.toISOString();
+    }
+
+    const settingsToSave = { enabled, message, eta, adminBypass };
+
+    // Capture the previous value for an auditable before/after record.
+    const previousRow = await (prisma as any).settings.findUnique({ where: { key: "maintenance" } });
+    let previous: unknown = null;
+    if (previousRow?.value) {
+      try {
+        previous = JSON.parse(previousRow.value);
+      } catch {
+        previous = null;
+      }
+    }
 
     // Save to DB
     await (prisma as any).settings.upsert({
@@ -39,7 +72,9 @@ export async function PATCH(req: NextRequest) {
         adminId: safeAdminId,
         actionType: "SETTING_CHANGED",
         target: "maintenance",
-        details: `Maintenance mode turned ${settingsToSave.enabled ? 'ON' : 'OFF'}`,
+        details: `Maintenance mode turned ${enabled ? 'ON' : 'OFF'}${
+          eta ? ` (ETA ${eta})` : ''
+        }. Before=${JSON.stringify(previous)} After=${JSON.stringify(settingsToSave)}`,
         ip
       }
     });

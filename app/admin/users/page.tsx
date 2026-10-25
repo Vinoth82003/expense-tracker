@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useModal } from "@/components/providers/ModalProvider";
+import type { ComponentType, ReactNode } from "react";
 
 interface User {
   id: string;
@@ -37,7 +38,7 @@ interface User {
   email: string;
   avatar: string | null;
   expenseMode: string | null;
-  twoFactorEnabled: boolean;
+  twoFactorEnabled: boolean | null;
   lastActive: string | null;
   createdAt: string;
   isSuspended: boolean;
@@ -45,6 +46,7 @@ interface User {
 }
 
 interface UserDetail extends User {
+  monthlyLimit?: number | null;
   _count: {
     expenses: number;
     incomes: number;
@@ -58,11 +60,12 @@ interface UserDetail extends User {
 }
 
 export default function AdminUsersPage() {
-  const { confirm } = useModal();
+  const { alert, prompt } = useModal();
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, twoFAEnabled: 0 });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   
   // Filtering & Pagination
   const [search, setSearch] = useState("");
@@ -75,6 +78,7 @@ export default function AdminUsersPage() {
 
   // Selection & UI State
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
+  const [actionUser, setActionUser] = useState<User | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -82,32 +86,41 @@ export default function AdminUsersPage() {
   const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
+  const filterParams = useCallback(() => {
+    const params = new URLSearchParams({
+      search,
+      twoFA: twoFA !== "All" ? twoFA : "",
+      mode: mode !== "All" ? mode : "",
+      joined: joined !== "All time" ? joined : "",
+    });
+    return params;
+  }, [search, twoFA, mode, joined]);
+
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        search,
-        twoFA: twoFA !== "All" ? twoFA : "",
-        mode: mode !== "All" ? mode : "",
-        joined: joined !== "All time" ? joined : "",
-        page: page.toString(),
-        limit: "25",
-        sortBy,
-        sortOrder
-      });
+      const params = filterParams();
+      params.set("page", page.toString());
+      params.set("limit", "25");
+      params.set("sortBy", sortBy);
+      params.set("sortOrder", sortOrder);
       const res = await fetch(`/api/admin/users?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users);
         setTotal(data.total);
         setStats(data.stats);
+        setLoadError(false);
+      } else {
+        setLoadError(true);
       }
     } catch (error) {
       console.error("Failed to fetch users", error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, [search, twoFA, mode, joined, page, sortBy, sortOrder]);
+  }, [filterParams, page, sortBy, sortOrder]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -139,11 +152,26 @@ export default function AdminUsersPage() {
     }
   }, []);
 
+  const activeFilters = [
+    search ? { key: "search", label: `Search: "${search}"`, clear: () => setSearch("") } : null,
+    twoFA !== "All" ? { key: "twoFA", label: `2FA: ${twoFA}`, clear: () => setTwoFA("All") } : null,
+    mode !== "All" ? { key: "mode", label: `Mode: ${mode}`, clear: () => setMode("All") } : null,
+    joined !== "All time" ? { key: "joined", label: `Joined: ${joined}`, clear: () => setJoined("All time") } : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; clear: () => void }>;
+
+  const clearFilters = () => {
+    setSearch("");
+    setTwoFA("All");
+    setMode("All");
+    setJoined("All time");
+    setPage(1);
+  };
+
   const handleSuspend = async () => {
-    if (!selectedUser) return;
+    if (!actionUser) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/admin/users/${selectedUser.id}/suspend`, {
+      const res = await fetch(`/api/admin/users/${actionUser.id}/suspend`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: suspensionReason }),
@@ -151,8 +179,11 @@ export default function AdminUsersPage() {
       if (res.ok) {
         setIsSuspendModalOpen(false);
         setSuspensionReason("");
-        fetchUserDetail(selectedUser.id);
+        if (isDrawerOpen) fetchUserDetail(actionUser.id);
         fetchUsers();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        await alert({ title: "Action failed", message: data.error || "Unable to update suspension", type: "error" });
       }
     } catch (error) {
       console.error("Failed to suspend user", error);
@@ -162,10 +193,10 @@ export default function AdminUsersPage() {
   };
 
   const handleDelete = async () => {
-    if (!selectedUser || deleteConfirmationEmail !== selectedUser.email) return;
+    if (!actionUser || deleteConfirmationEmail !== actionUser.email) return;
     setActionLoading(true);
     try {
-      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+      const res = await fetch(`/api/admin/users/${actionUser.id}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -173,6 +204,9 @@ export default function AdminUsersPage() {
         setDeleteConfirmationEmail("");
         setIsDrawerOpen(false);
         fetchUsers();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        await alert({ title: "Delete failed", message: data.error || "Unable to delete user", type: "error" });
       }
     } catch (error) {
       console.error("Failed to delete user", error);
@@ -183,20 +217,34 @@ export default function AdminUsersPage() {
 
   const handleReset2FA = async () => {
     if (!selectedUser) return;
-    const isConfirmed = await confirm({
+    const reason = await prompt({
       title: "Reset 2FA",
-      message: "Are you sure you want to reset 2FA for this user?",
-      danger: true
+      message: "Provide a reason for resetting this user's 2FA (recorded in the audit log).",
+      placeholder: "e.g. User lost their device"
     });
-    if (!isConfirmed) return;
+    if (!reason) return;
+
+    const pwd = await prompt({
+      title: "Confirm Admin Password",
+      message: "Enter your administrator password to reset 2FA.",
+      type: "password"
+    });
+    if (!pwd) return;
+
     setActionLoading(true);
     try {
       const res = await fetch(`/api/admin/users/${selectedUser.id}/reset-2fa`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason, adminPassword: pwd }),
       });
       if (res.ok) {
+        await alert({ title: "Done", message: "2FA reset successfully.", type: "success" });
         fetchUserDetail(selectedUser.id);
         fetchUsers();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        await alert({ title: "Reset failed", message: data.error || "Unable to reset 2FA", type: "error" });
       }
     } catch (error) {
       console.error("Failed to reset 2FA", error);
@@ -205,30 +253,37 @@ export default function AdminUsersPage() {
     }
   };
 
-  const exportCSV = () => {
-    const headers = ["Name", "Email", "Joined", "Expense Mode", "2FA", "Last Active"];
-    const rows = users.map(u => [
-      u.name || "Anonymous",
-      u.email,
-      new Date(u.createdAt).toLocaleDateString(),
-      u.expenseMode || "No limit",
-      u.twoFactorEnabled ? "On" : "Off",
-      u.lastActive ? new Date(u.lastActive).toLocaleString() : "Never"
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers, ...rows].map(e => e.join(",")).join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `users_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const exportCSV = async () => {
+    try {
+      const params = filterParams();
+      params.set("sortBy", sortBy);
+      params.set("sortOrder", sortOrder);
+      const res = await fetch(`/api/admin/users/export?${params.toString()}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        await alert({ title: "Export failed", message: data.error || "Unable to export users", type: "error" });
+        return;
+      }
+      const truncated = res.headers.get("X-Export-Truncated") === "true";
+      const csvBlob = await res.blob();
+      const url = URL.createObjectURL(csvBlob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      if (truncated) {
+        await alert({ title: "Export truncated", message: "Only the first 5,000 matching users were exported.", type: "warning" });
+      }
+    } catch (error) {
+      console.error("Failed to export users", error);
+    }
   };
 
   const handleSort = (field: string) => {
+    setPage(1);
     if (sortBy === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
@@ -246,12 +301,17 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Stats Strip */}
-      <div className="flex flex-wrap gap-4">
-        <StatChip label={`${stats.totalUsers.toLocaleString()} total users`} />
-        <div className="w-[1px] h-6 bg-[var(--admin-border)] self-center" />
-        <StatChip label={`${stats.activeToday.toLocaleString()} active today`} />
-        <div className="w-[1px] h-6 bg-[var(--admin-border)] self-center" />
-        <StatChip label={`${stats.twoFAEnabled.toLocaleString()} with 2FA enabled`} />
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-4">
+          <StatChip label={`${stats.totalUsers.toLocaleString()} total users`} />
+          <div className="w-[1px] h-6 bg-[var(--admin-border)] self-center" />
+          <StatChip label={`${stats.activeToday.toLocaleString()} active in last 24h`} />
+          <div className="w-[1px] h-6 bg-[var(--admin-border)] self-center" />
+          <StatChip label={`${stats.twoFAEnabled.toLocaleString()} with 2FA enabled`} />
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--admin-text-muted)]">
+          Platform-wide totals — not affected by the filters below.
+        </p>
       </div>
 
       {/* Filters Bar */}
@@ -262,7 +322,7 @@ export default function AdminUsersPage() {
             type="text"
             placeholder="Search by name or email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-11 pr-4 py-3 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border)] rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition-all text-sm font-medium text-[var(--admin-text-primary)]"
           />
         </div>
@@ -273,7 +333,7 @@ export default function AdminUsersPage() {
             {["All", "Enabled", "Disabled"].map(opt => (
               <button
                 key={opt}
-                onClick={() => setTwoFA(opt)}
+                onClick={() => { setTwoFA(opt); setPage(1); }}
                 className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${twoFA === opt ? 'bg-[var(--admin-bg-card)] text-teal-600 dark:text-teal-400 shadow-sm' : 'text-[var(--admin-text-secondary)] hover:text-[var(--admin-text-primary)]'}`}
               >
                 {opt === "All" ? "All 2FA" : opt}
@@ -283,17 +343,18 @@ export default function AdminUsersPage() {
 
           <select 
             value={mode}
-            onChange={(e) => setMode(e.target.value)}
+            onChange={(e) => { setMode(e.target.value); setPage(1); }}
             className="bg-[var(--admin-bg-surface-variant)] border-none rounded-xl px-4 py-2.5 text-xs font-bold text-[var(--admin-text-secondary)] outline-none cursor-pointer"
           >
             <option value="All">All Modes</option>
             <option value="Limit">Limit</option>
             <option value="No-limit">No-limit</option>
+            <option value="Unset">Not set</option>
           </select>
 
           <select 
             value={joined}
-            onChange={(e) => setJoined(e.target.value)}
+            onChange={(e) => { setJoined(e.target.value); setPage(1); }}
             className="bg-[var(--admin-bg-surface-variant)] border-none rounded-xl px-4 py-2.5 text-xs font-bold text-[var(--admin-text-secondary)] outline-none cursor-pointer"
           >
             <option value="All time">All time</option>
@@ -310,6 +371,29 @@ export default function AdminUsersPage() {
           </button>
         </div>
       </div>
+
+      {/* Active filters */}
+      {activeFilters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--admin-text-muted)]">Active filters:</span>
+          {activeFilters.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => { f.clear(); setPage(1); }}
+              className="flex items-center gap-1 px-3 py-1.5 bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-full text-[10px] font-bold uppercase hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-all"
+            >
+              {f.label}
+              <X size={12} />
+            </button>
+          ))}
+          <button
+            onClick={clearFilters}
+            className="text-[10px] font-bold uppercase text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)] transition-colors ml-1"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
 
       {/* User Table */}
       <div className="bg-[var(--admin-bg-card)] rounded-[2rem] border border-[var(--admin-border)] shadow-sm overflow-hidden">
@@ -333,7 +417,36 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--admin-border-subtle)]">
-              {users.map((user) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-16 text-center">
+                    <RefreshCcw size={28} className="inline-block text-[var(--admin-text-muted)] opacity-50 animate-spin" />
+                    <p className="mt-3 text-xs font-bold uppercase tracking-widest text-[var(--admin-text-muted)]">Loading users…</p>
+                  </td>
+                </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={7} className="py-16 text-center">
+                    <AlertTriangle size={28} className="inline-block text-amber-500 opacity-70" />
+                    <p className="mt-3 text-sm font-bold text-amber-600">Could not load users.</p>
+                    <button onClick={fetchUsers} className="mt-3 px-4 py-2 bg-[var(--admin-bg-surface-variant)] rounded-lg text-xs font-bold text-[var(--admin-text-primary)] hover:bg-[var(--admin-border-subtle)] transition-colors">
+                      Retry
+                    </button>
+                  </td>
+                </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-16 text-center">
+                    <UserX size={28} className="inline-block text-[var(--admin-text-muted)] opacity-50" />
+                    <p className="mt-3 text-sm font-bold text-[var(--admin-text-secondary)]">No users match these filters.</p>
+                    {activeFilters.length > 0 && (
+                      <button onClick={clearFilters} className="mt-3 text-xs font-bold text-teal-600 dark:text-teal-400 hover:underline">
+                        Clear filters
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ) : users.map((user) => (
                 <tr 
                   key={user.id} 
                   className="group hover:bg-[var(--admin-bg-surface-variant)] transition-colors cursor-pointer"
@@ -355,14 +468,12 @@ export default function AdminUsersPage() {
                   <td className="py-5 px-6 text-sm font-medium text-[var(--admin-text-secondary)]">{user.email}</td>
                   <td className="py-5 px-6 text-xs font-bold text-[var(--admin-text-muted)]">{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td className="py-5 px-6">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${user.expenseMode === 'limit' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-secondary)]'}`}>
-                      {user.expenseMode === 'limit' ? 'Limit' : 'No limit'}
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${user.expenseMode === 'limit' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400' : user.expenseMode === 'no-limit' ? 'bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-secondary)]' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>
+                      {user.expenseMode === 'limit' ? 'Limit' : user.expenseMode === 'no-limit' ? 'No limit' : 'Not set'}
                     </span>
                   </td>
                   <td className="py-5 px-6">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${user.twoFactorEnabled ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'}`}>
-                      {user.twoFactorEnabled ? 'On' : 'Off'}
-                    </span>
+                    <TwoFactorBadge enabled={user.twoFactorEnabled} />
                   </td>
                   <td className="py-5 px-6 text-xs font-bold text-[var(--admin-text-muted)]">{user.lastActive ? formatRelativeTime(user.lastActive) : "Never"}</td>
                   <td className="py-5 px-6 text-right">
@@ -373,11 +484,11 @@ export default function AdminUsersPage() {
                       <button 
                         className={`p-2 transition-all rounded-lg ${user.isSuspended ? 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10' : 'text-[var(--admin-text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10'}`} 
                         title={user.isSuspended ? "Activate" : "Suspend"} 
-                        onClick={() => { setSelectedUser(user as any); setIsSuspendModalOpen(true); }}
+                        onClick={() => { setActionUser(user); setIsSuspendModalOpen(true); }}
                       >
                         <Ban size={16} />
                       </button>
-                      <button className="p-2 text-[var(--admin-text-muted)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all" title="Delete" onClick={() => { setSelectedUser(user as any); setIsDeleteModalOpen(true); }}>
+                      <button className="p-2 text-[var(--admin-text-muted)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all" title="Delete" onClick={() => { setActionUser(user); setIsDeleteModalOpen(true); }}>
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -479,7 +590,7 @@ export default function AdminUsersPage() {
                 <DrawerSection title="Budget" icon={CreditCard}>
                   <DetailItem label="Current Mode" value={selectedUser.expenseMode === 'limit' ? 'Limit' : 'No limit'} />
                   {selectedUser.expenseMode === 'limit' && (
-                    <DetailItem label="Monthly Limit" value={`₹${(selectedUser as any).monthlyLimit?.toLocaleString() || 0}`} />
+                    <DetailItem label="Monthly Limit" value={`₹${selectedUser.monthlyLimit?.toLocaleString() || 0}`} />
                   )}
                   {selectedUser.stats.budgetHistory.length > 0 && (
                     <div className="mt-4 space-y-2">
@@ -504,11 +615,21 @@ export default function AdminUsersPage() {
                 <DrawerSection title="Security" icon={Lock}>
                   <div className="flex items-center justify-between p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)]">
                     <div className="flex items-center gap-3">
-                      <ShieldCheck size={18} className={selectedUser.twoFactorEnabled ? "text-emerald-500" : "text-[var(--admin-text-muted)]"} />
+                      <ShieldCheck size={18} className={selectedUser.twoFactorEnabled === true ? "text-emerald-500" : "text-[var(--admin-text-muted)]"} />
                       <span className="text-sm font-bold text-[var(--admin-text-secondary)]">Two-Factor Auth</span>
                     </div>
-                    <span className={`text-xs font-bold uppercase ${selectedUser.twoFactorEnabled ? "text-emerald-500" : "text-red-500"}`}>
-                      {selectedUser.twoFactorEnabled ? "Enabled" : "Disabled"}
+                    <span className={`text-xs font-bold uppercase ${
+                      selectedUser.twoFactorEnabled === true
+                        ? "text-emerald-500"
+                        : selectedUser.twoFactorEnabled === false
+                        ? "text-red-500"
+                        : "text-[var(--admin-text-muted)]"
+                    }`}>
+                      {selectedUser.twoFactorEnabled === true
+                        ? "Enabled"
+                        : selectedUser.twoFactorEnabled === false
+                        ? "Disabled"
+                        : "Unknown"}
                     </span>
                   </div>
                 </DrawerSection>
@@ -534,7 +655,7 @@ export default function AdminUsersPage() {
                     <ChevronRight size={16} className="text-[var(--admin-text-muted)]" />
                   </button>
                   <button 
-                    onClick={() => setIsSuspendModalOpen(true)}
+                    onClick={() => { setActionUser(selectedUser); setIsSuspendModalOpen(true); }}
                     className="w-full flex items-center justify-between p-4 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-2xl transition-all group"
                   >
                     <div className="flex items-center gap-3">
@@ -544,7 +665,7 @@ export default function AdminUsersPage() {
                     <ChevronRight size={16} className="text-red-300" />
                   </button>
                   <button 
-                    onClick={() => setIsDeleteModalOpen(true)}
+                    onClick={() => { setActionUser(selectedUser); setIsDeleteModalOpen(true); }}
                     className="w-full flex items-center justify-between p-4 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-2xl transition-all group"
                   >
                     <div className="flex items-center gap-3">
@@ -562,7 +683,7 @@ export default function AdminUsersPage() {
 
       {/* Suspend Modal */}
       <AnimatePresence>
-        {isSuspendModalOpen && selectedUser && (
+        {isSuspendModalOpen && actionUser && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-md bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-[2rem] p-8 shadow-2xl space-y-6">
               <div className="flex flex-col items-center text-center space-y-4">
@@ -571,15 +692,15 @@ export default function AdminUsersPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-[var(--admin-text-primary)]">
-                    {selectedUser.isSuspended ? 'Activate' : 'Suspend'} {selectedUser.name || "User"}?
+                    {actionUser.isSuspended ? 'Activate' : 'Suspend'} {actionUser.name || "User"}?
                   </h3>
                   <p className="text-sm font-medium text-[var(--admin-text-secondary)]">
-                    {selectedUser.isSuspended ? "Allow this user to access their account again." : "The user will be immediately logged out and blocked from logging in."}
+                    {actionUser.isSuspended ? "Allow this user to access their account again." : "The user will be immediately logged out and blocked from logging in."}
                   </p>
                 </div>
               </div>
 
-              {!selectedUser.isSuspended && (
+              {!actionUser.isSuspended && (
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest pl-2">Reason for suspension</label>
                   <textarea 
@@ -596,10 +717,10 @@ export default function AdminUsersPage() {
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={handleSuspend}
-                  disabled={actionLoading || (!selectedUser.isSuspended && !suspensionReason)}
-                  className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all ${selectedUser.isSuspended ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'} disabled:opacity-50`}
+                  disabled={actionLoading || (!actionUser.isSuspended && !suspensionReason)}
+                  className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all ${actionUser.isSuspended ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'} disabled:opacity-50`}
                 >
-                  {actionLoading ? "Processing..." : selectedUser.isSuspended ? "Activate Account" : "Suspend Account"}
+                  {actionLoading ? "Processing..." : actionUser.isSuspended ? "Activate Account" : "Suspend Account"}
                 </button>
                  <button 
                   onClick={() => setIsSuspendModalOpen(false)}
@@ -615,7 +736,7 @@ export default function AdminUsersPage() {
 
       {/* Delete Modal */}
       <AnimatePresence>
-        {isDeleteModalOpen && selectedUser && (
+        {isDeleteModalOpen && actionUser && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="w-full max-w-md bg-[var(--admin-bg-card)] border border-red-500/30 dark:border-red-500/20 rounded-[2rem] p-8 shadow-2xl space-y-6">
               <div className="flex flex-col items-center text-center space-y-4">
@@ -625,14 +746,14 @@ export default function AdminUsersPage() {
                 <div>
                   <h3 className="text-xl font-bold text-[var(--admin-text-primary)]">Permanently delete account?</h3>
                   <p className="text-sm font-medium text-[var(--admin-text-secondary)]">
-                    This will permanently delete all expenses, reports, and data for <strong>{selectedUser.name || "this user"}</strong>. This action cannot be undone.
+                    This will permanently delete all expenses, reports, and data for <strong>{actionUser.name || "this user"}</strong>. This action cannot be undone.
                   </p>
                 </div>
               </div>
 
               <div className="space-y-3 bg-red-50 dark:bg-red-500/5 p-4 rounded-2xl border border-red-100 dark:border-red-500/10">
                 <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-widest text-center">Type email to confirm</p>
-                <p className="text-xs font-medium text-red-500/70 dark:text-red-400/60 text-center mb-2">{selectedUser.email}</p>
+                <p className="text-xs font-medium text-red-500/70 dark:text-red-400/60 text-center mb-2">{actionUser.email}</p>
                 <input 
                   type="email"
                   value={deleteConfirmationEmail}
@@ -645,7 +766,7 @@ export default function AdminUsersPage() {
               <div className="flex flex-col gap-3">
                 <button 
                   onClick={handleDelete}
-                  disabled={actionLoading || deleteConfirmationEmail !== selectedUser.email}
+                  disabled={actionLoading || deleteConfirmationEmail !== actionUser.email}
                   className="w-full py-4 bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 disabled:opacity-50 transition-all"
                 >
                   {actionLoading ? "Deleting..." : "Permanently Delete Data"}
@@ -673,7 +794,32 @@ export default function AdminUsersPage() {
   );
 }
 
-function DrawerSection({ title, icon: Icon, children }: any) {
+// Tri-state: true = enabled, false = disabled, null/undefined = unknown (older
+// records where the value was never recorded). Rendered distinctly rather than
+// inferred as "Off".
+function TwoFactorBadge({ enabled }: { enabled: boolean | null | undefined }) {
+  if (enabled === true) {
+    return (
+      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+        On
+      </span>
+    );
+  }
+  if (enabled === false) {
+    return (
+      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+        Off
+      </span>
+    );
+  }
+  return (
+    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-muted)]">
+      Unknown
+    </span>
+  );
+}
+
+function DrawerSection({ title, icon: Icon, children }: { title: string; icon: ComponentType<{ size?: number }>; children: ReactNode }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-[var(--admin-text-muted)] uppercase tracking-widest text-[10px] font-black">

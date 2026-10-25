@@ -1,12 +1,18 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { getAdminInfo } from "@/lib/admin/audit";
+import {
+  verifyAdminPassword,
+  isStepUpRateLimited,
+  registerStepUpFailure,
+  clearStepUpFailures,
+} from "@/lib/admin-step-up";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendAutomatedEmail } from "@/lib/mail";
 import { logger } from "@/lib/logger";
-import bcrypt from "bcryptjs";
 
-// SECURITY FIX: VULN-006 — Removed hardcoded "admin123"; verify against ADMIN_PASS env var + bcrypt hash
+// SECURITY FIX: VULN-006 — Step-up credential is verified hash-aware and
+// constant-time via lib/admin-step-up (no bcrypt re-hash / plaintext `===`).
 
 export async function POST(req: NextRequest) {
   if (!(await verifyAdminSession())) {
@@ -21,13 +27,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // 1. Verify Admin Password — compare against env var with bcrypt
-    const adminPass = process.env.ADMIN_PASS || "";
-    const isPasswordValid = bcrypt.compareSync(adminPassword, bcrypt.hashSync(adminPass, 10)) || adminPassword === adminPass;
-    if (!isPasswordValid) {
+    if (action !== "lock" && action !== "unlock") {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+
+    if (isStepUpRateLimited(ip)) {
+      logger.warn("Step-up rate limit hit on lockout action", { ip, action });
+      return NextResponse.json(
+        { error: "Too many attempts. Try again later." },
+        { status: 429 }
+      );
+    }
+
+    // 1. Verify step-up credential (hash-aware, constant-time).
+    if (!verifyAdminPassword(adminPassword)) {
+      registerStepUpFailure(ip);
       logger.error("Invalid admin password for security action", { action, userId });
       return NextResponse.json({ error: "Invalid administrator password" }, { status: 403 });
     }
+    clearStepUpFailures(ip);
 
     // 2. Fetch User
     const user = await (prisma as any).user.findUnique({
@@ -39,7 +59,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // 3. Update User Status
+    // 3. Self-lockout guard: an admin must not lock their own account.
+    const adminInfoPre = await getAdminInfo();
+    if (action === "lock" && adminInfoPre?.adminId === user.id) {
+      return NextResponse.json(
+        { error: "Refusing to lock your own admin account." },
+        { status: 400 }
+      );
+    }
+
+    // 4. Update User Status
     const isLocked = action === "lock";
     await (prisma as any).user.update({
       where: { id: userId },
@@ -54,8 +83,6 @@ export async function POST(req: NextRequest) {
 
     // 4. Log to Audit Trail
     // SECURITY FIX: VULN-019 — Resolve real admin identity from session
-    const headerList = await req.headers;
-    const ip = headerList.get("x-forwarded-for") || "127.0.0.1";
     const adminInfo = await getAdminInfo();
     const safeAdminId = (adminInfo?.adminId && /^[0-9a-fA-F]{24}$/.test(adminInfo.adminId))
       ? adminInfo.adminId

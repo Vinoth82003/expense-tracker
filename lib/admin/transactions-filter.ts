@@ -103,7 +103,9 @@ export function buildTransactionWhere(
 
   if (input.from || input.to) {
     const from = toFiniteDate(input.from);
-    const to = toFiniteDate(input.to);
+    // A date-only `to` (e.g. "2026-01-31") parses to midnight, which would drop
+    // every record later that day. Extend it to the end of the day.
+    const to = toFiniteDate(input.to, true);
     if (from || to) {
       where.date = {
         ...(from ? { gte: from } : {}),
@@ -124,10 +126,33 @@ export function buildTransactionWhere(
   return where;
 }
 
-function toFiniteDate(value?: string | null): Date | null {
+function toFiniteDate(value?: string | null, endOfDay = false): Date | null {
   if (!value) return null;
+  // Date-only strings are treated as a whole calendar day (UTC).
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value.trim());
+  if (dateOnly && endOfDay) {
+    const [y, m, d] = value.trim().split("-").map(Number);
+    const end = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+    return Number.isNaN(end.getTime()) ? null : end;
+  }
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * Returns a human-readable error when an explicit date range is inverted,
+ * otherwise null. Endpoints reject `from > to` with a 400 rather than silently
+ * returning an empty set.
+ */
+export function validateTransactionDateRange(
+  from?: string | null,
+  to?: string | null
+): string | null {
+  if (!from || !to) return null;
+  const start = new Date(from);
+  const end = new Date(to);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  return start.getTime() > end.getTime() ? "`from` date must not be after `to` date." : null;
 }
 
 /** Builds the `user` select shape shared by both transaction endpoints. */

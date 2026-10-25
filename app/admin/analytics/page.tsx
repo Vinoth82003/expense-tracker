@@ -229,8 +229,16 @@ export default function AdminAnalyticsPage() {
               <p className="text-3xl font-black text-[var(--admin-text-primary)]">{site?.totals?.directShare != null ? `${site.totals.directShare}%` : "—"}</p>
               <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Direct</p>
             </div>
+            <div className="text-right">
+              <p className="text-3xl font-black text-[var(--admin-text-primary)]">{site?.totals?.referrerCategories?.search ?? "—"}</p>
+              <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Search referrals</p>
+            </div>
           </div>
         </div>
+        <p className="text-[10px] font-medium text-[var(--admin-text-muted)] -mt-2">
+          Direct = no referrer. Search = a known search-engine result host only; product hosts such as
+          search.google.com count as referrals, not organic search.
+        </p>
 
         {site?.daily?.length > 0 ? (
           <div className="h-[220px]">
@@ -454,10 +462,10 @@ export default function AdminAnalyticsPage() {
                 <tr key={i} className="hover:bg-[var(--admin-bg-surface-variant)] transition-colors">
                   <td className="py-5 px-8 text-sm font-black text-[var(--admin-text-primary)]">{row.month}</td>
                   <td className="py-5 px-8 text-sm font-bold text-[var(--admin-text-muted)]">{row.users}</td>
-                  <RetentionCell value={row.d1} />
-                  <RetentionCell value={row.d7} />
-                  <RetentionCell value={row.d14} />
-                  <RetentionCell value={row.d30} />
+                   <RetentionCell cell={row.d1} />
+                   <RetentionCell cell={row.d7} />
+                   <RetentionCell cell={row.d14} />
+                   <RetentionCell cell={row.d30} />
                 </tr>
               ))}
             </tbody>
@@ -485,14 +493,27 @@ function TopList({ title, items }: { title: string; items: { key: string; count:
   );
 }
 
-function RetentionCell({ value }: { value: string | null }) {
-  if (value === null) return <td className="py-5 px-8 text-xs text-[var(--admin-text-muted)] opacity-50 italic">-</td>;
-  const num = parseFloat(value);
+interface RetentionCellData {
+  value: number | null;
+  pending: boolean;
+}
+
+function RetentionCell({ cell }: { cell: RetentionCellData | null | undefined }) {
+  if (!cell || cell.pending || cell.value === null) {
+    return (
+      <td className="py-5 px-8">
+        <span className="text-xs font-bold text-[var(--admin-text-muted)] opacity-60 italic">
+          Pending
+        </span>
+      </td>
+    );
+  }
+  const num = cell.value;
   const color = num >= 50 ? "bg-emerald-500/10 text-emerald-600" : num >= 25 ? "bg-amber-500/10 text-amber-600" : "bg-red-500/10 text-red-600";
   return (
     <td className="py-5 px-8">
       <div className={`px-3 py-1 rounded-lg text-xs font-black inline-block ${color}`}>
-        {value}%
+        {num}%
       </div>
     </td>
   );

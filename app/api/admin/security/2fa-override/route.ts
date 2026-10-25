@@ -1,5 +1,11 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { getAdminInfo } from "@/lib/admin/audit";
+import {
+  verifyAdminOverridePassword,
+  isStepUpRateLimited,
+  registerStepUpFailure,
+  clearStepUpFailures,
+} from "@/lib/admin-step-up";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies, headers } from "next/headers";
@@ -17,17 +23,49 @@ export async function POST(req: NextRequest) {
     const headerList = await headers();
     const ip = headerList.get("x-forwarded-for") || "127.0.0.1";
 
-    // 1. Verify admin password
-    // SECURITY FIX: VULN-006 — No hardcoded fallback; ADMIN_OVERRIDE_PASSWORD must be set
-    if (!process.env.ADMIN_OVERRIDE_PASSWORD || adminPassword !== process.env.ADMIN_OVERRIDE_PASSWORD) {
+    if (!userId || typeof reason !== "string" || reason.trim().length < 3) {
+      return NextResponse.json(
+        { error: "A target user and a reason (min 3 chars) are required." },
+        { status: 400 }
+      );
+    }
+
+    if (isStepUpRateLimited(ip)) {
+      logger.warn("Step-up rate limit hit on 2FA override", { ip });
+      return NextResponse.json(
+        { error: "Too many attempts. Try again later." },
+        { status: 429 }
+      );
+    }
+
+    // 1. Verify step-up credential (hash-aware, constant-time, never stored)
+    // SECURITY FIX: VULN-006 — No hardcoded fallback; override secret must be set
+    if (!verifyAdminOverridePassword(adminPassword)) {
+      registerStepUpFailure(ip);
       logger.error("Invalid admin password for 2FA override", { userId, ip });
       return NextResponse.json({ error: "Invalid admin password" }, { status: 403 });
     }
+    clearStepUpFailures(ip);
 
-    // 2. Disable 2FA
+    // 2. Disable 2FA — reject self-targeting to avoid admin self-lockout.
+    const adminInfoPre = await getAdminInfo();
+    const target = await (prisma as any).user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true },
+    });
+    if (!target) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    if (adminInfoPre?.adminId === target.id) {
+      return NextResponse.json(
+        { error: "Refusing to disable 2FA on your own admin account." },
+        { status: 400 }
+      );
+    }
+
     const user = await (prisma as any).user.update({
       where: { id: userId },
-      data: { twoFactorEnabled: false }
+      data: { twoFactorEnabled: false },
     });
 
     logger.info("Admin disabled 2FA for user", { targetEmail: user.email, reason });

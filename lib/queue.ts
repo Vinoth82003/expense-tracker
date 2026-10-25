@@ -104,7 +104,8 @@ const progressKey = (notificationId: string) => `sw:notification:${notificationI
 async function recordJobOutcome(
   notificationId: string,
   recipientCount: number,
-  delivered: boolean
+  delivered: boolean,
+  lastError?: unknown
 ): Promise<void> {
   try {
     const redis = getQueueConn();
@@ -128,14 +129,41 @@ async function recordJobOutcome(
     const status =
       failedCount === 0 ? "SUCCESS" : deliveredCount > 0 ? "PARTIAL" : "FAILED";
 
-    await (prisma as any).notification.update({
+    // Re-read the correlation id so the terminal log and the Notification row
+    // carry the same job id (spec 14). Legacy rows fall back to their own id.
+    let correlationId = notificationId;
+    try {
+      const row = await prisma.notification.findUnique({
+        where: { id: notificationId },
+        select: { correlationId: true },
+      });
+      correlationId = row?.correlationId ?? notificationId;
+    } catch {
+      /* non-fatal */
+    }
+
+    const { sanitizeEmailErrorCode, sanitizeEmailErrorSummary } = await import(
+      "./email-jobs"
+    );
+    const errorCode = failedCount > 0 ? sanitizeEmailErrorCode(lastError) : null;
+    const errorSummary =
+      failedCount > 0
+        ? sanitizeEmailErrorSummary(
+            `${failedCount} of ${settled} recipients failed to send: ${lastError ?? ""}`
+          )
+        : null;
+
+    await prisma.notification.update({
       where: { id: notificationId },
       data: {
         status,
-        error:
-          failedCount > 0
-            ? `${failedCount} of ${settled} recipients failed to send`
-            : null,
+        deliveredCount,
+        failedCount,
+        completedAt: new Date(),
+        deliveryConfirmed: false,
+        correlationId,
+        ...(errorCode ? { errorCode } : {}),
+        ...(errorSummary ? { error: errorSummary } : {}),
       },
     });
 
@@ -144,16 +172,45 @@ async function recordJobOutcome(
 
     logger.info(
       `[Queue] Notification ${notificationId} finalised: ${status} (${deliveredCount} delivered, ${failedCount} failed)`,
-      null,
+      { correlationId, notificationId, status, deliveredCount, failedCount },
       "QUEUE"
     );
-  } catch (error: any) {
+  } catch (error) {
     // Never fail a send because its bookkeeping failed.
     logger.error(
       `[Queue] Failed to record outcome for notification ${notificationId}`,
-      { error: error?.message },
+      { error: error instanceof Error ? error.message : String(error) },
       "QUEUE"
     );
+  }
+}
+
+/**
+ * Marks a campaign as awaiting another attempt after a non-final failure. The
+ * row stays inspectable as ONE logical message; the next attempt flips it back
+ * to PROCESSING. Best-effort — never blocks the retry itself.
+ */
+async function markRetryScheduled(
+  notificationId: string,
+  nextAttempt: number
+): Promise<void> {
+  try {
+    const row = await prisma.notification.findUnique({
+      where: { id: notificationId },
+      select: { status: true, correlationId: true },
+    });
+    if (!row || row.status !== "PROCESSING") return;
+    await prisma.notification.update({
+      where: { id: notificationId },
+      data: { status: "RETRY_SCHEDULED" },
+    });
+    logger.warn(
+      `[Queue] Notification ${notificationId} retry scheduled (attempt ${nextAttempt})`,
+      { correlationId: row.correlationId ?? notificationId, notificationId, nextAttempt },
+      "QUEUE"
+    );
+  } catch {
+    /* best-effort */
   }
 }
 
@@ -231,13 +288,27 @@ async function jobProcessor(job: Job) {
     logger.info(`[Worker] Job ${job.id} finished`, null, "QUEUE");
     return result;
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     logger.warn(
-      `[Worker] Job ${job.id} failed (attempt ${job.attemptsMade}/${job.opts?.attempts ?? 1}): ${(error as Error)?.message}`,
+      `[Worker] Job ${job.id} failed after ${job.attemptsMade}/${job.opts?.attempts ?? 1} attempt(s): ${message}`,
       null,
       "QUEUE"
     );
-    if (notificationId && isFinalAttempt()) {
-      await recordJobOutcome(notificationId, Number(recipientCount) || 0, false);
+
+    // Record the terminal outcome only on the LAST attempt, so a retried
+    // recipient is tallied once and the campaign can actually finalise. A
+    // non-final failure is surfaced as RETRY_SCHEDULED, not as a new message.
+    if (notificationId) {
+      if (isFinalAttempt()) {
+        await recordJobOutcome(
+          notificationId,
+          Number(recipientCount) || 0,
+          false,
+          error
+        );
+      } else {
+        await markRetryScheduled(notificationId, job.attemptsMade + 1);
+      }
     }
     throw error;
   }

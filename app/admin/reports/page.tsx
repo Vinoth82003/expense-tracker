@@ -46,13 +46,22 @@ interface User {
 
 interface Report {
   id: string;
+  userId: string;
   content: string | null;
   status: string;
-  tokens: number;
-  cost: number;
+  tokens: number | null;
+  cost: number | null;
   error: string | null;
   date: string;
   user: User;
+}
+
+function displayName(user: User): { primary: string; secondary: string | null } {
+  const name = user?.name?.trim();
+  const email = user?.email?.trim();
+  if (name) return { primary: name, secondary: email || null };
+  if (email) return { primary: email.split("@")[0], secondary: email };
+  return { primary: "Unknown user", secondary: null };
 }
 
 export default function AdminReportsPage() {
@@ -69,11 +78,48 @@ export default function AdminReportsPage() {
   // Config
   const [maxReports, setMaxReports] = useState(3);
   const [cleanupDays, setCleanupDays] = useState(30);
+  const [cleanupEligible, setCleanupEligible] = useState<number | null>(null);
+  const [searchInput, setSearchInput] = useState("");
 
   // Detail View
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Debounce the search box so we don't refetch on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // Preview how many reports a cleanup window would remove.
+  useEffect(() => {
+    if (!Number.isInteger(cleanupDays) || cleanupDays < 1) {
+      setCleanupEligible(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/admin/reports/cleanup?olderThanDays=${cleanupDays}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setCleanupEligible(data.eligible);
+        } else if (!cancelled) {
+          setCleanupEligible(null);
+        }
+      } catch {
+        if (!cancelled) setCleanupEligible(null);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [cleanupDays]);
 
   const fetchStats = async () => {
     try {
@@ -111,19 +157,25 @@ export default function AdminReportsPage() {
   }, [fetchReports]);
 
   const updateRateLimit = async () => {
+    if (!Number.isInteger(maxReports) || maxReports < 1 || maxReports > 1000) {
+      await alert({ title: "Invalid value", message: "Rate limit must be a whole number between 1 and 1000.", type: "error" });
+      return;
+    }
     setActionLoading(true);
     try {
       const res = await fetch("/api/admin/reports/rate-limit", {
         method: "PATCH",
         body: JSON.stringify({ maxPerDay: maxReports })
       });
-      if (res.ok) await alert({
-        title: "Updated",
-        message: "Rate limit updated!",
-        type: "success"
-      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await alert({ title: "Updated", message: "Rate limit updated!", type: "success" });
+      } else {
+        await alert({ title: "Update failed", message: data.error || "Could not update the rate limit.", type: "error" });
+      }
     } catch (error) {
       console.error("Failed to update rate limit", error);
+      await alert({ title: "Update failed", message: "Network error while updating.", type: "error" });
     } finally {
       setActionLoading(false);
     }
@@ -132,7 +184,9 @@ export default function AdminReportsPage() {
   const cleanupReports = async () => {
     const isConfirmed = await confirm({
       title: "Cleanup Reports",
-      message: `Are you sure you want to delete reports older than ${cleanupDays} days?`,
+      message: `Permanently delete reports older than ${cleanupDays} days${
+        cleanupEligible !== null ? ` (${cleanupEligible} report(s) will be removed)` : ""
+      }? This cannot be undone.`,
       danger: true
     });
     if (!isConfirmed) return;
@@ -142,17 +196,18 @@ export default function AdminReportsPage() {
         method: "DELETE",
         body: JSON.stringify({ olderThanDays: cleanupDays })
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        const data = await res.json();
-        await alert({
-          title: "Cleanup Complete",
-          message: data.message,
-          type: "success"
-        });
+        await alert({ title: "Cleanup Complete", message: data.message, type: "success" });
         fetchReports();
+        fetchStats();
+        setCleanupEligible(null);
+      } else {
+        await alert({ title: "Cleanup failed", message: data.error || "Could not clean up reports.", type: "error" });
       }
     } catch (error) {
       console.error("Failed to cleanup", error);
+      await alert({ title: "Cleanup failed", message: "Network error while cleaning up.", type: "error" });
     } finally {
       setActionLoading(false);
     }
@@ -167,12 +222,40 @@ export default function AdminReportsPage() {
     if (!isConfirmed) return;
     try {
       const res = await fetch(`/api/admin/reports/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setIsPanelOpen(false);
         fetchReports();
+        fetchStats();
+      } else {
+        await alert({ title: "Delete failed", message: data.error || "Could not delete report.", type: "error" });
       }
     } catch (error) {
       console.error("Failed to delete", error);
+      await alert({ title: "Delete failed", message: "Network error while deleting.", type: "error" });
+    }
+  };
+
+  const retryReport = async (report: Report) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/reports/generate", {
+        method: "POST",
+        body: JSON.stringify({ userId: report.userId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await alert({ title: "Regenerated", message: "A fresh report was generated for this user.", type: "success" });
+        fetchReports();
+        fetchStats();
+      } else {
+        await alert({ title: "Retry failed", message: data.error || "Could not regenerate the report.", type: "error" });
+      }
+    } catch (error) {
+      console.error("Failed to retry report", error);
+      await alert({ title: "Retry failed", message: "Network error while retrying.", type: "error" });
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -189,12 +272,12 @@ export default function AdminReportsPage() {
       {/* KPI Strip */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <KPIBox 
-          label="Total Intelligent Reports" 
-          value={stats?.reportsMonth?.toLocaleString() || "0"} 
-          subValue="Generated this billing cycle"
+          label="Total Reports" 
+          value={stats?.totalReports?.toLocaleString() || "0"} 
+          subValue="All-time across all users"
           icon={Cpu}
           color="text-teal-500"
-          trend="+12% vs last month"
+          trend={`${stats?.reportsMonth?.toLocaleString() || "0"} this month`}
         />
         <KPIBox 
           label="Daily Velocity" 
@@ -214,7 +297,7 @@ export default function AdminReportsPage() {
               <Activity size={16} className={tokenQuotaPercent > 80 ? 'text-rose-500 animate-pulse' : 'text-teal-500'} />
             </div>
             <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-black text-[var(--admin-text-primary)]">{(stats?.tokensToday / 1000000).toFixed(2)}M</p>
+              <p className="text-3xl font-black text-[var(--admin-text-primary)]">{((stats?.tokensToday || 0) / 1000000).toFixed(2)}M</p>
               <p className="text-xs font-bold text-[var(--admin-text-muted)]">/ 3.5M</p>
             </div>
             <div className="space-y-2">
@@ -226,8 +309,13 @@ export default function AdminReportsPage() {
               </div>
               <div className="flex justify-between text-[10px] font-black uppercase text-[var(--admin-text-muted)]">
                 <span>Usage: {tokenQuotaPercent.toFixed(1)}%</span>
-                <span>Reset in 14h</span>
+                <span>Reset daily</span>
               </div>
+              {(stats?.unknownMetadata || 0) > 0 && (
+                <p className="text-[10px] font-bold text-amber-500">
+                  {stats.unknownMetadata} report(s) missing provider token/cost metadata (shown as Unknown)
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -333,8 +421,8 @@ export default function AdminReportsPage() {
             <input 
               type="text" 
               placeholder="Search by ID, Name or Email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="pl-10 pr-4 py-2.5 bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-xl text-sm font-medium outline-none text-[var(--admin-text-primary)] focus:ring-2 focus:ring-teal-500 w-64"
             />
           </div>
@@ -363,8 +451,10 @@ export default function AdminReportsPage() {
                           {report.user.avatar ? <img src={report.user.avatar} className="w-full h-full object-cover" /> : (report.user.name?.charAt(0) || "?")}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold text-[var(--admin-text-primary)] truncate max-w-[120px]">{report.user.name || "Anonymous"}</span>
-                          <span className="text-[10px] text-[var(--admin-text-muted)] truncate max-w-[120px]">{report.user.email}</span>
+                          <span className="text-sm font-bold text-[var(--admin-text-primary)] truncate max-w-[120px]">{displayName(report.user).primary}</span>
+                          {displayName(report.user).secondary && (
+                            <span className="text-[10px] text-[var(--admin-text-muted)] truncate max-w-[120px]">{displayName(report.user).secondary}</span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -377,8 +467,8 @@ export default function AdminReportsPage() {
                     <td className="py-4 px-6">
                       <StatusBadge status={report.status} />
                     </td>
-                    <td className="py-4 px-6 text-xs font-mono font-bold text-[var(--admin-text-secondary)]">{(report.tokens || 0).toLocaleString()}</td>
-                    <td className="py-4 px-6 text-xs font-mono font-bold text-emerald-500">₹{(report.cost || 0).toFixed(2)}</td>
+                    <td className="py-4 px-6 text-xs font-mono font-bold text-[var(--admin-text-secondary)]">{report.tokens == null ? <span className="text-amber-500">Unknown</span> : report.tokens.toLocaleString()}</td>
+                    <td className="py-4 px-6 text-xs font-mono font-bold text-emerald-500">{report.cost == null ? <span className="text-amber-500">Unknown</span> : `₹${report.cost.toFixed(2)}`}</td>
                     <td className="py-4 px-6">
                       <span className="text-[10px] font-mono text-[var(--admin-text-muted)] uppercase tracking-tighter">#{report.id.slice(-8)}</span>
                     </td>
@@ -391,7 +481,12 @@ export default function AdminReportsPage() {
                           <Eye size={16} />
                         </button>
                         {report.status === 'FAILED' && (
-                          <button className="p-2 text-[var(--admin-text-muted)] hover:text-blue-500 transition-colors">
+                          <button
+                            onClick={() => retryReport(report)}
+                            disabled={actionLoading}
+                            title="Regenerate a report for this user"
+                            className="p-2 text-[var(--admin-text-muted)] hover:text-blue-500 transition-colors disabled:opacity-50"
+                          >
                             <RefreshCw size={16} />
                           </button>
                         )}
@@ -452,7 +547,9 @@ export default function AdminReportsPage() {
           </div>
           <div className="px-8 border-x border-[var(--admin-border-subtle)] hidden md:block">
             <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-1">Impact</p>
-            <p className="text-lg font-bold text-red-500">~124 reports</p>
+            <p className="text-lg font-bold text-red-500">
+              {cleanupEligible === null ? "—" : `${cleanupEligible} report${cleanupEligible === 1 ? "" : "s"}`}
+            </p>
           </div>
           <button 
             onClick={cleanupReports}
@@ -517,8 +614,10 @@ export default function AdminReportsPage() {
                         {selectedReport.user.avatar ? <img src={selectedReport.user.avatar} className="w-full h-full object-cover" /> : selectedReport.user.name?.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm font-black text-[var(--admin-text-primary)]">{selectedReport.user.name || "Anonymous User"}</p>
-                        <p className="text-[10px] font-bold text-[var(--admin-text-secondary)]">{selectedReport.user.email}</p>
+                        <p className="text-sm font-black text-[var(--admin-text-primary)]">{displayName(selectedReport.user).primary}</p>
+                        {displayName(selectedReport.user).secondary && (
+                          <p className="text-[10px] font-bold text-[var(--admin-text-secondary)]">{displayName(selectedReport.user).secondary}</p>
+                        )}
                       </div>
                     </div>
                     <div className="text-right flex flex-col justify-center">
@@ -534,11 +633,15 @@ export default function AdminReportsPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="p-6 bg-[var(--admin-bg-surface-variant)] rounded-3xl border border-[var(--admin-border-subtle)]">
                     <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-1">Compute Cost</p>
-                    <p className="text-lg font-black text-emerald-500">₹{selectedReport.cost.toFixed(4)}</p>
+                    <p className="text-lg font-black text-emerald-500">
+                      {selectedReport.cost == null ? <span className="text-amber-500">Unknown</span> : `₹${selectedReport.cost.toFixed(4)}`}
+                    </p>
                   </div>
                   <div className="p-6 bg-[var(--admin-bg-surface-variant)] rounded-3xl border border-[var(--admin-border-subtle)]">
                     <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-1">Tokens Burned</p>
-                    <p className="text-lg font-black text-blue-500">{selectedReport.tokens.toLocaleString()}</p>
+                    <p className="text-lg font-black text-blue-500">
+                      {selectedReport.tokens == null ? <span className="text-amber-500">Unknown</span> : selectedReport.tokens.toLocaleString()}
+                    </p>
                   </div>
                   <div className="p-6 bg-[var(--admin-bg-surface-variant)] rounded-3xl border border-[var(--admin-border-subtle)]">
                     <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-1">Status Code</p>
@@ -622,8 +725,12 @@ export default function AdminReportsPage() {
                         <h3 className="text-xl font-black text-rose-500 uppercase tracking-tight">Intelligence Failure</h3>
                         <p className="text-sm text-[var(--admin-text-muted)] mt-2 font-medium">"{selectedReport.error || "A critical API error prevented report generation."}"</p>
                       </div>
-                      <button className="px-8 py-3 bg-rose-500 text-white rounded-xl font-bold text-xs uppercase shadow-xl shadow-rose-500/20">
-                        Retry Generation
+                      <button
+                        onClick={() => retryReport(selectedReport)}
+                        disabled={actionLoading}
+                        className="px-8 py-3 bg-rose-500 text-white rounded-xl font-bold text-xs uppercase shadow-xl shadow-rose-500/20 disabled:opacity-50"
+                      >
+                        {actionLoading ? "Retrying..." : "Retry Generation"}
                       </button>
                     </div>
                   )}

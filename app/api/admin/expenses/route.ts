@@ -6,6 +6,7 @@ import {
   buildTransactionWhere,
   FLAGGED_THRESHOLD,
   TRANSACTION_USER_SELECT,
+  validateTransactionDateRange,
 } from "@/lib/admin/transactions-filter";
 
 export async function GET(req: NextRequest) {
@@ -18,6 +19,14 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
     const limit = 25;
     const skip = (page - 1) * limit;
+
+    const rangeError = validateTransactionDateRange(
+      searchParams.get("from"),
+      searchParams.get("to")
+    );
+    if (rangeError) {
+      return NextResponse.json({ error: rangeError }, { status: 400 });
+    }
 
     const where = buildTransactionWhere(
       {
@@ -51,13 +60,26 @@ export async function GET(req: NextRequest) {
       isFlagged: e.amount > FLAGGED_THRESHOLD.expense,
     }));
 
-    const stats = {
-      totalAmount:
-        (await prisma.expense.aggregate({ _sum: { amount: true } }))._sum.amount || 0,
-      recordCount: await prisma.expense.count(),
-      flaggedCount: await prisma.expense.count({
-        where: { amount: { gt: FLAGGED_THRESHOLD.expense } },
+    const [sumAgg, recordCount, flaggedCount, distinctUsers] = await Promise.all([
+      prisma.expense.aggregate({ _sum: { amount: true }, where }),
+      prisma.expense.count({ where }),
+      prisma.expense.count({
+        where: { ...where, amount: { ...((where.amount as Record<string, unknown>) || {}), gt: FLAGGED_THRESHOLD.expense } },
       }),
+      prisma.expense.findMany({ distinct: ["userId"], where, select: { userId: true } }),
+    ]);
+    const totalAmount = sumAgg._sum.amount || 0;
+    const userCount = distinctUsers.length;
+
+    const stats = {
+      totalAmount,
+      recordCount,
+      flaggedCount,
+      userCount,
+      // Explicit: these totals obey the current filters/period, so they always
+      // reconcile with the table below (not a hidden lifetime roll-up).
+      avgPerUser: userCount > 0 ? totalAmount / userCount : 0,
+      scope: "filtered" as const,
     };
 
     return NextResponse.json({

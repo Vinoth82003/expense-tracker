@@ -32,6 +32,7 @@ import {
   Bell,
 } from "lucide-react";
 import { useModal } from "@/components/providers/ModalProvider";
+import { describeNotificationStatus } from "@/lib/email-jobs";
 
 interface Template {
   id: string;
@@ -51,6 +52,11 @@ interface NotificationLog {
   adminName: string;
   createdAt: string;
   body: string;
+  correlationId?: string | null;
+  attempts?: number | null;
+  deliveredCount?: number | null;
+  failedCount?: number | null;
+  deliveryConfirmed?: boolean | null;
   stats?: { opened: number; clicked: number; logged: number };
 }
 
@@ -106,7 +112,7 @@ function AdminNotificationsPageContent() {
   const [bodyFormat, setBodyFormat] = useState<"text" | "html">("text");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [recipientType, setRecipientType] = useState("all"); // all, filtered, specific
-  const [filters, setFilters] = useState<any>({
+  const [filters, setFilters] = useState<Record<string, boolean | null>>({
     twoFactorEnabled: false,
     limitMode: false,
     active30d: false,
@@ -119,6 +125,14 @@ function AdminNotificationsPageContent() {
     noPWA: false,
   });
   const [specificEmail, setSpecificEmail] = useState("");
+
+  // Exact audience preview (server-resolved, never estimated)
+  const [audience, setAudience] = useState<{
+    count: number;
+    excludedUnsubscribed: number;
+  } | null>(null);
+  const [audienceLoading, setAudienceLoading] = useState(false);
+  const [audienceError, setAudienceError] = useState<string | null>(null);
 
   // History State
   const [history, setHistory] = useState<NotificationLog[]>([]);
@@ -250,6 +264,54 @@ function AdminNotificationsPageContent() {
     }
   }, []);
 
+  /**
+   * Resolves the effective recipient filter from the composer state. Kept in one
+   * place so the audience preview and the actual send request never diverge.
+   */
+  const resolveRecipientFilter = useCallback(() => {
+    if (recipientType === "specific") return { specificEmail };
+    if (recipientType === "filtered") return filters;
+    return {};
+  }, [recipientType, specificEmail, filters]);
+
+  const fetchAudience = useCallback(async () => {
+    if (recipientType === "specific" && !specificEmail.trim()) {
+      setAudience({ count: 0, excludedUnsubscribed: 0 });
+      setAudienceError(null);
+      return;
+    }
+    setAudienceLoading(true);
+    setAudienceError(null);
+    try {
+      const res = await fetch("/api/admin/notifications/recipients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipientFilter: resolveRecipientFilter() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAudience({
+          count: data.count ?? 0,
+          excludedUnsubscribed: data.excludedUnsubscribed ?? 0,
+        });
+      } else {
+        setAudience(null);
+        setAudienceError("Could not resolve audience");
+      }
+    } catch {
+      setAudience(null);
+      setAudienceError("Could not resolve audience");
+    } finally {
+      setAudienceLoading(false);
+    }
+  }, [recipientType, specificEmail, resolveRecipientFilter]);
+
+  // Debounce audience resolution while the admin edits filters.
+  useEffect(() => {
+    const timer = setTimeout(fetchAudience, 350);
+    return () => clearTimeout(timer);
+  }, [fetchAudience]);
+
   useEffect(() => {
     if (activeTab === "history") fetchHistory();
     if (activeTab === "alerts") fetchAlerts();
@@ -272,9 +334,19 @@ function AdminNotificationsPageContent() {
         message: "Subject and body are required",
         type: "warning",
       });
+
+    if (audience && audience.count === 0) {
+      return alert({
+        title: "No Recipients",
+        message:
+          "The selected audience resolves to 0 deliverable recipients. Adjust the filters before sending.",
+        type: "warning",
+      });
+    }
+
     const isConfirmed = await confirm({
       title: "Confirm Send",
-      message: "Send this announcement to the selected recipients?",
+      message: `Send this announcement to ${audience ? `${audience.count} verified recipient(s)` : "the selected recipients"}?`,
     });
     if (!isConfirmed) return;
 
@@ -287,12 +359,7 @@ function AdminNotificationsPageContent() {
           subject,
           body,
           bodyFormat,
-          recipientFilter:
-            recipientType === "all"
-              ? {}
-              : recipientType === "specific"
-                ? { specificEmail }
-                : filters,
+          recipientFilter: resolveRecipientFilter(),
         }),
       });
 
@@ -543,6 +610,71 @@ function AdminNotificationsPageContent() {
     }
   };
 
+  const retryNotification = async (log: NotificationLog) => {
+    const isConfirmed = await confirm({
+      title: "Retry Campaign",
+      message:
+        "Retry the SAME campaign for its audience? Failed sends are re-attempted; this is not a new message and open counts will not double.",
+    });
+    if (!isConfirmed) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/notifications/${log.id}/retry`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        await alert({
+          title: "Retry complete",
+          message: `Attempt ${data.attempts ?? ""}: accepted ${data.delivered ?? 0} of ${data.count ?? 0} recipient(s).`,
+          type: "success",
+        });
+        fetchHistory();
+      } else {
+        alert({
+          title: "Retry failed",
+          message: data.error || "Could not retry the campaign.",
+          type: "error",
+        });
+      }
+    } catch (error) {
+      alert({ title: "Retry failed", message: "Network error.", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const lifecycleBadgeClass = (tone: string) => {
+    switch (tone) {
+      case "success":
+        return "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400";
+      case "info":
+        return "bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400";
+      case "warning":
+        return "bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400";
+      case "danger":
+        return "bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400";
+      default:
+        return "bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-secondary)]";
+    }
+  };
+
+  const renderLifecycleBadge = (log: NotificationLog) => {
+    const lc = describeNotificationStatus(log.status, {
+      deliveryConfirmed: log.deliveryConfirmed,
+      attempts: log.attempts,
+    });
+    return (
+      <span
+        title={lc.description}
+        className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${lifecycleBadgeClass(lc.tone)}`}
+      >
+        {lc.label}
+      </span>
+    );
+  };
+
   const updateSettings = async (val: number) => {
     setThreshold(val);
     try {
@@ -704,7 +836,7 @@ function AdminNotificationsPageContent() {
                   </button>
                   <button
                     onClick={sendAnnouncement}
-                    disabled={loading || !subject || !body}
+                    disabled={loading || !subject || !body || audience?.count === 0}
                     className="px-8 py-3 bg-teal-500 text-white rounded-xl font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-600 transition-all disabled:opacity-50 flex items-center gap-2"
                   >
                     {loading ? (
@@ -764,7 +896,7 @@ function AdminNotificationsPageContent() {
                       >
                         <input
                           type="checkbox"
-                          checked={filters[f.id]}
+                          checked={Boolean(filters[f.id])}
                           onChange={(e) =>
                             setFilters({ ...filters, [f.id]: e.target.checked })
                           }
@@ -805,11 +937,28 @@ function AdminNotificationsPageContent() {
 
                 <div className="p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-dashed border-[var(--admin-border-subtle)] text-center">
                   <p className="text-[10px] font-black uppercase text-[var(--admin-text-muted)] mb-1">
-                    Impact Preview
+                    Verified Recipients
                   </p>
                   <p className="text-xl font-black text-[var(--admin-text-primary)]">
-                    ~847 users
+                    {audienceLoading
+                      ? "…"
+                      : audienceError
+                        ? "Unavailable"
+                        : `${audience?.count ?? 0} users`}
                   </p>
+                  {audience && audience.excludedUnsubscribed > 0 && (
+                    <p className="text-[10px] font-medium text-[var(--admin-text-muted)] mt-1">
+                      {audience.excludedUnsubscribed} unsubscribed excluded
+                    </p>
+                  )}
+                  {audienceError && (
+                    <button
+                      onClick={fetchAudience}
+                      className="text-[10px] font-bold text-teal-600 hover:text-teal-700 mt-1"
+                    >
+                      Retry
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -926,6 +1075,11 @@ function AdminNotificationsPageContent() {
                     </td>
                     <td className="py-4 px-8 text-sm font-bold text-[var(--admin-text-secondary)]">
                       {log.recipientCount} users
+                      {typeof log.attempts === "number" && log.attempts > 1 && (
+                        <span className="ml-2 text-[10px] font-bold uppercase text-amber-500">
+                          {log.attempts} attempts
+                        </span>
+                      )}
                     </td>
                     <td className="py-4 px-8 text-sm font-bold">
                       {log.stats && log.stats.logged > 0 ? (
@@ -953,32 +1107,24 @@ function AdminNotificationsPageContent() {
                       </div>
                     </td>
                     <td className="py-4 px-8">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                          log.status === "SUCCESS"
-                            ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
-                            : log.status === "PROCESSING"
-                              ? "bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
-                              : log.status === "PARTIAL"
-                                ? "bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
-                                : "bg-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400"
-                        }`}
-                      >
-                        {log.status === "SUCCESS"
-                          ? "✓ Success"
-                          : log.status === "PROCESSING"
-                            ? "⋯ Processing"
-                            : log.status === "PARTIAL"
-                              ? "◐ Partial"
-                              : "✗ Failed"}
-                      </span>
+                      {renderLifecycleBadge(log)}
                     </td>
                     <td className="py-4 px-8 text-xs font-bold text-[var(--admin-text-secondary)]">
                       {log.adminName}
                     </td>
-                    <td className="py-4 px-8 text-right">
+                    <td className="py-4 px-8 text-right whitespace-nowrap">
+                      {(log.status === "FAILED" || log.status === "PARTIAL") && (
+                        <button
+                          onClick={() => retryNotification(log)}
+                          title="Retry the same campaign for its audience"
+                          className="p-2 text-[var(--admin-text-muted)] hover:text-amber-500 transition-colors"
+                        >
+                          <RefreshCw size={16} />
+                        </button>
+                      )}
                       <button
                         onClick={() => viewNotification(log.id)}
+                        title="View details"
                         className="p-2 text-[var(--admin-text-muted)] hover:text-teal-500 transition-colors"
                       >
                         <Eye size={16} />

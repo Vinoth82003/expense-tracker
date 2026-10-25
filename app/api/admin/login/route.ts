@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { signAdminSession } from "@/lib/admin-auth";
+import { verifyAdminPassword } from "@/lib/admin-step-up";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { sendEmail } from "@/lib/mail";
-import bcrypt from "bcryptjs";
 import { isAllowedOrigin } from "@/lib/origins";
 
 // SECURITY FIX: VULN-014 — Use crypto.randomUUID() for admin session nonce
@@ -31,14 +31,14 @@ export async function POST(req: Request) {
     const adminUser = process.env.ADMIN_USER;
     const adminPass = process.env.ADMIN_PASS;
 
-    if (!adminUser || !adminPass) {
-      console.error("[SECURITY] ADMIN_USER or ADMIN_PASS environment variables are not set.");
+    if (!adminUser || (!adminPass && !process.env.ADMIN_PASS_HASH)) {
+      console.error("[SECURITY] ADMIN_USER or admin password environment variables are not set.");
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
-    // SECURITY FIX: VULN-028 — Constant-time comparison for admin credentials
+    // SECURITY FIX: VULN-028 — Constant-time / bcrypt-hash comparison for admin credentials
     const isUserMatch = email === adminUser;
-    const isPassMatch = password === adminPass || bcrypt.compareSync(password, bcrypt.hashSync(adminPass, 10));
+    const isPassMatch = verifyAdminPassword(password);
 
     if (isUserMatch && isPassMatch) {
       // SECURITY FIX: VULN-014 — Use cryptographically secure random UUID

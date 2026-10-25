@@ -2,6 +2,7 @@ import { verifyAdminSession } from "@/lib/admin-auth";
 import { getAdminInfo } from "@/lib/admin/audit";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { validateAiSettings } from "@/lib/admin/settings-validation";
 
 export async function PATCH(req: NextRequest) {
   if (!(await verifyAdminSession())) {
@@ -11,14 +12,11 @@ export async function PATCH(req: NextRequest) {
   try {
     const aiConfig = await req.json();
 
-    // Validate inputs loosely
-    const settingsToSave = {
-      maxReports: parseInt(aiConfig.maxReports) || 3,
-      maxTokens: parseInt(aiConfig.maxTokens) || 4096,
-      model: aiConfig.model || "openai/gpt-oss-120b",
-      quotaAlertThreshold: parseInt(aiConfig.quotaAlertThreshold) || 80,
-      costPer1k: parseFloat(aiConfig.costPer1k) || 0.05
-    };
+    const validation = validateAiSettings(aiConfig);
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.errors.join("; ") }, { status: 400 });
+    }
+    const settingsToSave = validation.value;
 
     // Save to DB
     await (prisma as any).settings.upsert({

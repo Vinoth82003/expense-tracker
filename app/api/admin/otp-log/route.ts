@@ -1,6 +1,8 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
+import { buildOtpWhere, maskEmail, parseSessionListQuery } from "@/lib/admin/sessions-filter";
 
 export async function GET(req: NextRequest) {
   if (!(await verifyAdminSession())) {
@@ -9,58 +11,56 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get("status");
-    const userId = searchParams.get("userId");
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
-
-    const where: any = {};
-    if (status && status !== "All") where.status = status;
-    if (userId) where.userId = userId;
-    if (from || to) {
-      where.createdAt = {};
-      if (from) where.createdAt.gte = new Date(from);
-      if (to) where.createdAt.lte = new Date(to);
+    const query = parseSessionListQuery(searchParams);
+    if (query.dateInvalid) {
+      return NextResponse.json({ error: "Invalid date filter." }, { status: 400 });
     }
 
-    const logs = await prisma.oTPLog.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-            avatar: true,
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    const where = buildOtpWhere(query);
+    const skip = (query.page - 1) * query.limit;
 
-    // Brute force detection logic
-    // If same user/email has 3+ failed OTPs in last 60 min
+    const [rows, total] = await Promise.all([
+      prisma.oTPLog.findMany({
+        where,
+        select: {
+          id: true,
+          userId: true,
+          email: true,
+          status: true,
+          ip: true,
+          attempts: true,
+          createdAt: true,
+          expiresAt: true,
+          user: { select: { name: true, avatar: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: query.limit,
+      }),
+      prisma.oTPLog.count({ where }),
+    ]);
+
+    // Brute-force heuristic: 3+ failures for the same address within the last hour.
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const failedCounts = await prisma.oTPLog.groupBy({
-      by: ['email'],
-      where: {
-        status: 'FAILED',
-        createdAt: { gte: hourAgo }
-      },
-      _count: {
-        id: true
-      }
+      by: ["email"],
+      where: { status: "FAILED", createdAt: { gte: hourAgo } },
+      _count: { id: true },
     });
+    const bruteForceEmails = new Set(
+      failedCounts.filter((f) => f._count.id >= 3).map((f) => f.email)
+    );
 
-    const bruteForceEmails = failedCounts.filter(f => f._count.id >= 3).map(f => f.email);
-
-    const formattedLogs = logs.map(l => ({
-      ...l,
-      isBruteForce: bruteForceEmails.includes(l.email)
+    // Mask the delivery destination; no OTP code or secret is ever selected.
+    const items = rows.map((log) => ({
+      ...log,
+      email: maskEmail(log.email),
+      isBruteForce: bruteForceEmails.has(log.email),
     }));
 
-    return NextResponse.json(formattedLogs);
+    return NextResponse.json({ items, total, page: query.page, limit: query.limit });
   } catch (error) {
-    console.error("Failed to fetch OTP logs:", error);
+    logger.error("Failed to fetch OTP logs", { error });
     return NextResponse.json({ error: "Failed to fetch OTP logs" }, { status: 500 });
   }
 }

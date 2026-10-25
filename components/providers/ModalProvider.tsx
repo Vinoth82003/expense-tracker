@@ -10,6 +10,8 @@ interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   danger?: boolean;
+  /** When set, the user must type this exact text to enable the confirm button. */
+  confirmationText?: string;
 }
 
 interface AlertOptions {
@@ -65,8 +67,11 @@ export function ModalProvider({ children }: { children: ReactNode }) {
 
   const [promptValue, setPromptValue] = useState("");
 
+  const [confirmValue, setConfirmValue] = useState("");
+
   const confirm = (options: ConfirmOptions | string) => {
     const opts = typeof options === "string" ? { title: "Confirm", message: options } : options;
+    setConfirmValue("");
     return new Promise<boolean>((resolve) => {
       setConfirmState({ isOpen: true, options: opts, resolve });
     });
@@ -140,6 +145,16 @@ export function ModalProvider({ children }: { children: ReactNode }) {
                   </p>
                 </div>
               </div>
+              {confirmState.options.confirmationText && (
+                <input
+                  type="text"
+                  value={confirmValue}
+                  onChange={(e) => setConfirmValue(e.target.value)}
+                  placeholder={`Type "${confirmState.options.confirmationText}" to confirm`}
+                  autoFocus
+                  className="w-full mt-6 p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-red-500 text-slate-900 dark:text-white"
+                />
+              )}
               <div className="flex gap-3 mt-8">
                 <button
                   onClick={() => handleConfirmAction(false)}
@@ -149,7 +164,11 @@ export function ModalProvider({ children }: { children: ReactNode }) {
                 </button>
                 <button
                   onClick={() => handleConfirmAction(true)}
-                  className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-lg ${
+                  disabled={
+                    !!confirmState.options.confirmationText &&
+                    confirmValue.trim() !== confirmState.options.confirmationText
+                  }
+                  className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${
                     confirmState.options.danger 
                       ? "bg-red-500 hover:bg-red-600 shadow-red-500/20" 
                       : "bg-teal-500 hover:bg-teal-600 shadow-teal-500/20"

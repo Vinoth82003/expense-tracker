@@ -18,7 +18,8 @@ import {
   Clock,
   User,
   Monitor,
-  Activity
+  Activity,
+  Hash,
 } from "lucide-react";
 import { useModal } from "@/components/providers/ModalProvider";
 
@@ -30,6 +31,7 @@ interface Log {
   details: string | null;
   ip: string | null;
   userId: string | null;
+  correlationId: string | null;
   createdAt: string;
 }
 
@@ -40,7 +42,7 @@ interface Pagination {
 }
 
 export default function LogsPage() {
-  const { confirm } = useModal();
+  const { confirm, alert } = useModal();
   const [logs, setLogs] = useState<Log[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,11 +51,13 @@ export default function LogsPage() {
   const [service, setService] = useState("ALL");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
 
   useEffect(() => {
     fetchLogs();
-  }, [level, service, page, search]);
+  }, [level, service, page, search, fromDate, toDate]);
 
   const fetchLogs = async () => {
     setIsRefreshing(true);
@@ -64,6 +68,8 @@ export default function LogsPage() {
         page: page.toString(),
       });
       if (search.trim()) params.set("query", search.trim());
+      if (fromDate) params.set("from", new Date(fromDate).toISOString());
+      if (toDate) params.set("to", new Date(`${toDate}T23:59:59.999`).toISOString());
 
       const res = await fetch(`/api/admin/logs?${params.toString()}`);
       if (res.ok) {
@@ -81,20 +87,49 @@ export default function LogsPage() {
 
   const clearLogs = async (all = false) => {
     const isConfirmed = await confirm({
-      title: "Clear Logs",
-      message: `Are you sure you want to ${all ? 'clear ALL logs' : 'clear logs older than 30 days'}?`,
-      danger: true
+      title: all ? "Clear ALL Logs" : "Clean Up Old Logs",
+      message: all
+        ? "This permanently deletes EVERY system log and cannot be undone. Continue?"
+        : "This permanently deletes logs older than 30 days (the retention window). Newer logs are kept. Continue?",
+      danger: true,
+      confirmationText: all ? "CLEAR ALL" : undefined,
     });
     if (!isConfirmed) return;
-    
+
     try {
-      const res = await fetch(`/api/admin/logs?all=${all}`, { method: "DELETE" });
+      const url = all
+        ? "/api/admin/logs?all=true&confirm=CLEAR_ALL"
+        : "/api/admin/logs?all=false";
+      const res = await fetch(url, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        await alert({
+          title: "Logs cleaned",
+          message:
+            `Removed ${data.deleted ?? 0} of ${data.eligible ?? 0} eligible log(s).` +
+            (data.cutoff ? ` Cutoff: ${new Date(data.cutoff).toLocaleString()}.` : ""),
+        });
         fetchLogs();
+      } else {
+        await alert({ title: "Cleanup failed", message: data.error || "Could not clean logs." });
       }
     } catch (error) {
       console.error("Failed to clear logs", error);
+      await alert({ title: "Cleanup failed", message: "Network error while cleaning logs." });
     }
+  };
+
+  const formatDetails = (details: string) => {
+    const capped = details.length > 20000 ? `${details.slice(0, 20000)}…[truncated]` : details;
+    const trimmed = capped.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      try {
+        return JSON.stringify(JSON.parse(capped), null, 2);
+      } catch {
+        return capped;
+      }
+    }
+    return capped;
   };
 
   const getLevelIcon = (level: string) => {
@@ -188,6 +223,36 @@ export default function LogsPage() {
           Chatbot events
         </button>
 
+        <div className="flex items-center gap-2 bg-[var(--admin-bg-surface-variant)] px-3 py-1.5 rounded-lg border border-[var(--admin-border-subtle)]">
+          <Calendar size={14} className="text-[var(--admin-text-muted)]" />
+          <input
+            type="date"
+            value={fromDate}
+            max={toDate || undefined}
+            onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+            aria-label="From date"
+            className="bg-transparent text-xs font-bold text-[var(--admin-text-primary)] focus:outline-none"
+          />
+          <span className="text-[var(--admin-text-muted)] text-xs">→</span>
+          <input
+            type="date"
+            value={toDate}
+            min={fromDate || undefined}
+            onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+            aria-label="To date"
+            className="bg-transparent text-xs font-bold text-[var(--admin-text-primary)] focus:outline-none"
+          />
+          {(fromDate || toDate) && (
+            <button
+              type="button"
+              onClick={() => { setFromDate(""); setToDate(""); setPage(1); }}
+              className="text-[10px] font-bold uppercase text-rose-500 hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
         <div className="flex-1 min-w-[200px] relative group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)] group-focus-within:text-teal-500 transition-colors" size={16} />
           <input 
@@ -268,6 +333,14 @@ export default function LogsPage() {
                         <p className="text-sm font-medium text-[var(--admin-text-primary)] line-clamp-1 group-hover:line-clamp-none transition-all">
                           {log.message}
                         </p>
+                        {log.correlationId && (
+                          <span
+                            title={`Correlation ID: ${log.correlationId}`}
+                            className="mt-1 inline-block px-1.5 py-0.5 rounded bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[9px] font-mono font-bold"
+                          >
+                            job {log.correlationId.slice(0, 8)}
+                          </span>
+                        )}
                       </td>
                       <td className="py-4 px-6 text-right">
                         {log.details && (
@@ -380,6 +453,15 @@ export default function LogsPage() {
                     </div>
                     <p className="text-sm font-bold text-[var(--admin-text-secondary)] font-mono">{selectedLog.userId || "System"}</p>
                   </div>
+                  {selectedLog.correlationId && (
+                    <div className="p-4 bg-[var(--admin-bg-surface-variant)] rounded-2xl border border-[var(--admin-border-subtle)]">
+                      <div className="flex items-center gap-2 mb-2 text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest">
+                        <Hash size={12} />
+                        Correlation ID
+                      </div>
+                      <p className="text-xs font-bold text-[var(--admin-text-secondary)] font-mono break-all">{selectedLog.correlationId}</p>
+                    </div>
+                  )}
                 </div>
 
                 {selectedLog.details && (
@@ -394,11 +476,8 @@ export default function LogsPage() {
                       </button>
                     </div>
                     <div className="p-6 bg-[var(--admin-bg-primary)] rounded-3xl overflow-x-auto border border-[var(--admin-border)]">
-                      <pre className="text-xs text-teal-400 font-mono leading-relaxed">
-                        {selectedLog.details.startsWith('{') 
-                          ? JSON.stringify(JSON.parse(selectedLog.details), null, 2)
-                          : selectedLog.details
-                        }
+                      <pre className="text-xs text-teal-400 font-mono leading-relaxed whitespace-pre-wrap break-words">
+                        {formatDetails(selectedLog.details)}
                       </pre>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 import { verifyAdminSession } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { describeNotificationStatus } from "@/lib/email-jobs";
 
 export async function GET(req: NextRequest) {
   if (!(await verifyAdminSession())) {
@@ -63,10 +64,26 @@ export async function GET(req: NextRequest) {
       bump(loggedGroups, "logged");
     }
 
-    const enriched = history.map((h) => ({
-      ...h,
-      stats: openCounts[h.id] || { opened: 0, clicked: 0, logged: 0 },
-    }));
+    const enriched = history.map((h) => {
+      const lifecycle = describeNotificationStatus(h.status, {
+        deliveryConfirmed: h.deliveryConfirmed ?? false,
+        attempts: h.attempts ?? 1,
+      });
+      return {
+        ...h,
+        // Legacy rows have no correlationId column value; their id is the job id.
+        correlationId: h.correlationId ?? h.id,
+        attempts: h.attempts ?? 1,
+        deliveredCount: h.deliveredCount ?? null,
+        failedCount: h.failedCount ?? null,
+        deliveryConfirmed: h.deliveryConfirmed ?? false,
+        lifecycle: lifecycle.key,
+        lifecycleLabel: lifecycle.label,
+        lifecycleTone: lifecycle.tone,
+        lifecycleDescription: lifecycle.description,
+        stats: openCounts[h.id] || { opened: 0, clicked: 0, logged: 0 },
+      };
+    });
 
     return NextResponse.json({ history: enriched, total });
   } catch (error) {

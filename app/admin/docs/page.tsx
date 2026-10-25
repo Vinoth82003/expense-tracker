@@ -26,6 +26,7 @@ import {
 import { useModal } from "@/components/providers/ModalProvider";
 import { ThemedMarkdown } from "@/components/ui/ThemedMarkdown";
 import { cn } from "@/lib/utils";
+import { normalizeSlug, isValidSlug } from "@/lib/slug";
 
 import { Doc } from "@/types/docs";
 
@@ -68,6 +69,26 @@ export default function AdminDocs() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const normalizedSlug = normalizeSlug(formData.slug);
+    if (!isValidSlug(normalizedSlug)) {
+      modalAlert({
+        title: "Invalid slug",
+        message: "Use lowercase letters, numbers, hyphens and slashes only.",
+        type: "error",
+      });
+      return;
+    }
+    const collision = docs.some((d) => d.slug === normalizedSlug && d.id !== editingId);
+    if (collision) {
+      modalAlert({
+        title: "Duplicate slug",
+        message: `The slug "/${normalizedSlug}" is already used by another document.`,
+        type: "error",
+      });
+      return;
+    }
+
     const url = editingId ? `/api/docs/${editingId}` : "/api/docs";
     const method = editingId ? "PATCH" : "POST";
 
@@ -75,7 +96,7 @@ export default function AdminDocs() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, slug: normalizedSlug }),
       });
 
       if (res.ok) {
@@ -155,9 +176,18 @@ export default function AdminDocs() {
     doc.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const generateSlug = (title: string) => {
-    return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  };
+  const generateSlug = (title: string) => normalizeSlug(title);
+
+  const normalizedSlug = normalizeSlug(formData.slug);
+  const slugInvalid = normalizedSlug.length > 0 && !isValidSlug(normalizedSlug);
+  const slugCollision =
+    normalizedSlug.length > 0 &&
+    docs.some((d) => d.slug === normalizedSlug && d.id !== editingId);
+  const slugHint = slugInvalid
+    ? "Invalid slug characters"
+    : slugCollision
+    ? "This slug is already in use"
+    : null;
 
   return (
     <div className="space-y-10 pb-20 max-w-[1600px] mx-auto">
@@ -291,13 +321,22 @@ export default function AdminDocs() {
                            <span className="text-[11px] font-bold text-[var(--admin-text-secondary)]">URL Slug</span>
                            <div className="relative">
                              <Link2 size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-text-muted)]" />
-                             <input 
-                               required
-                               value={formData.slug}
-                               onChange={(e) => setFormData({...formData, slug: e.target.value})}
-                               className="w-full pl-10 pr-4 py-4 rounded-2xl bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] font-medium text-xs text-[var(--admin-text-secondary)] focus:ring-2 focus:ring-teal-500 outline-none transition-all"
-                             />
-                           </div>
+                              <input 
+                                required
+                                value={formData.slug}
+                                onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                                onBlur={(e) => setFormData({...formData, slug: normalizeSlug(e.target.value)})}
+                                className={cn(
+                                  "w-full pl-10 pr-4 py-4 rounded-2xl bg-[var(--admin-bg-surface-variant)] border font-medium text-xs text-[var(--admin-text-secondary)] focus:ring-2 focus:ring-teal-500 outline-none transition-all",
+                                  slugHint ? "border-rose-400 focus:ring-rose-500" : "border-[var(--admin-border-subtle)]"
+                                )}
+                              />
+                            </div>
+                            {slugHint && (
+                              <p className="flex items-center gap-1.5 text-[11px] font-bold text-rose-500">
+                                <AlertCircle size={12} /> {slugHint}
+                              </p>
+                            )}
                          </div>
                        </div>
                     </div>

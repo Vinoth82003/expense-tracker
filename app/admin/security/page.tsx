@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ShieldAlert, 
@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { useModal } from "@/components/providers/ModalProvider";
+import { useSearchParams, useRouter } from "next/navigation";
 
 interface Alert {
   id: string;
@@ -39,6 +40,9 @@ interface Alert {
   description: string;
   createdAt: string;
   status: string;
+  source?: string | null;
+  firstSeenAt?: string;
+  lastSeenAt?: string | null;
   user?: { name: string | null; email: string };
 }
 
@@ -57,6 +61,8 @@ interface BlockedIP {
   addedBy: string;
   requests: number;
   createdAt: string;
+  expiresAt?: string | null;
+  expired?: boolean;
 }
 
 interface AuditLog {
@@ -70,22 +76,48 @@ interface AuditLog {
   createdAt: string;
 }
 
+interface FoundUser {
+  id: string;
+  name: string | null;
+  email: string;
+  twoFactorEnabled: boolean;
+  isLocked: boolean;
+}
+
+const SECURITY_TABS = ["alerts", "lockouts", "blocklist", "audit"];
+
 export default function AdminSecurityPage() {
-  const { alert, confirm, prompt } = useModal();
-  const [activeTab, setActiveTab] = useState("alerts");
+  return (
+    <Suspense fallback={null}>
+      <AdminSecurityContent />
+    </Suspense>
+  );
+}
+
+function AdminSecurityContent() {
+  const { alert, prompt } = useModal();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams.get("tab");
+  // Tab lives in the URL so Overview shortcuts (?tab=lockouts) deep-link correctly.
+  const activeTab = tabParam && SECURITY_TABS.includes(tabParam) ? tabParam : "alerts";
+  const setActiveTab = (id: string) => router.replace(`?tab=${id}`, { scroll: false });
   const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [lockouts, setLockouts] = useState<LockedUser[]>([]);
   const [blocklist, setBlocklist] = useState<BlockedIP[]>([]);
   const [auditLog, setAuditLog] = useState<AuditLog[]>([]);
+  const [dataStatus, setDataStatus] = useState<"loading" | "ok" | "partial" | "error">("loading");
+  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   
   // IP Block form
   const [newIP, setNewIP] = useState("");
   const [ipNote, setIpNote] = useState("");
+  const [ipExpiry, setIpExpiry] = useState("never");
 
   // User Actions (Unified)
   const [searchEmail, setSearchEmail] = useState("");
-  const [foundUser, setFoundUser] = useState<any>(null);
+  const [foundUser, setFoundUser] = useState<FoundUser | null>(null);
   const [adminPassword, setAdminPassword] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   
@@ -96,46 +128,64 @@ export default function AdminSecurityPage() {
 
   const fetchAlerts = useCallback(async () => {
     const res = await fetch("/api/admin/security/alerts");
-    if (res.ok) setAlerts(await res.json());
+    if (!res.ok) return false;
+    setAlerts(await res.json());
+    return true;
   }, []);
 
   const fetchLockouts = useCallback(async () => {
     const res = await fetch("/api/admin/security/lockouts");
-    if (res.ok) setLockouts(await res.json());
+    if (!res.ok) return false;
+    setLockouts(await res.json());
+    return true;
   }, []);
 
   const fetchBlocklist = useCallback(async () => {
     const res = await fetch("/api/admin/security/blocklist");
-    if (res.ok) setBlocklist(await res.json());
+    if (!res.ok) return false;
+    setBlocklist(await res.json());
+    return true;
   }, []);
 
   const fetchAudit = useCallback(async () => {
     const res = await fetch("/api/admin/security/audit");
-    if (res.ok) {
-      let logs = await res.json();
-      
-      // Client-side filtering for search and type
-      if (auditSearch) {
-        logs = logs.filter((l: any) => 
-          l.target.toLowerCase().includes(auditSearch.toLowerCase()) ||
-          l.adminName.toLowerCase().includes(auditSearch.toLowerCase()) ||
-          l.details.toLowerCase().includes(auditSearch.toLowerCase())
-        );
-      }
-      
-      if (auditType !== "All Actions") {
-        logs = logs.filter((l: any) => l.actionType === auditType);
-      }
-      
-      setAuditLog(logs);
+    if (!res.ok) return false;
+    let logs: AuditLog[] = await res.json();
+
+    // Client-side filtering for search and type
+    if (auditSearch) {
+      logs = logs.filter((l) =>
+        l.target.toLowerCase().includes(auditSearch.toLowerCase()) ||
+        l.adminName.toLowerCase().includes(auditSearch.toLowerCase()) ||
+        l.details.toLowerCase().includes(auditSearch.toLowerCase())
+      );
     }
+
+    if (auditType !== "All Actions") {
+      logs = logs.filter((l) => l.actionType === auditType);
+    }
+
+    setAuditLog(logs);
+    return true;
   }, [auditSearch, auditType]);
 
   useEffect(() => {
-    fetchAlerts();
-    fetchLockouts();
-    fetchBlocklist();
-    fetchAudit();
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.all([
+        fetchAlerts(),
+        fetchLockouts(),
+        fetchBlocklist(),
+        fetchAudit(),
+      ]);
+      if (cancelled) return;
+      const okCount = results.filter(Boolean).length;
+      setDataStatus(okCount === results.length ? "ok" : okCount === 0 ? "error" : "partial");
+      setLastCheckedAt(new Date());
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [fetchAlerts, fetchLockouts, fetchBlocklist, fetchAudit]);
 
   const activeAlerts = alerts.filter(a => a.status === 'ACTIVE');
@@ -187,33 +237,66 @@ export default function AdminSecurityPage() {
   };
 
   const banAccount = async (userId: string) => {
-    const isConfirmed = await confirm({
+    const reason = await prompt({
       title: "Permanent Ban",
-      message: "Banning is permanent and cannot be undone. Are you sure you want to proceed?",
-      danger: true,
-      confirmText: "Yes, Ban User"
+      message: "This action is permanent and cannot be undone. Provide a reason (recorded in the audit log).",
+      placeholder: "e.g. Confirmed fraud"
     });
-    if (!isConfirmed) return;
-    const res = await fetch(`/api/admin/security/lockouts/${userId}/ban`, { method: 'PATCH' });
-    if (res.ok) fetchLockouts();
+    if (!reason) return;
+
+    const pwd = await prompt({
+      title: "Confirm Admin Password",
+      message: "Enter your administrator password to apply a permanent ban.",
+      type: "password"
+    });
+    if (!pwd) return;
+
+    setLoading(true);
+    const res = await fetch(`/api/admin/security/lockouts/${userId}/ban`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason, adminPassword: pwd })
+    });
+
+    if (res.ok) {
+      await alert({ title: "Banned", message: "Account banned permanently.", type: "success" });
+      fetchLockouts();
+      fetchAudit();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      await alert({ title: "Ban failed", message: data.error || "Unable to ban account", type: "error" });
+    }
+    setLoading(false);
   };
 
   const blockIP = async () => {
     if (!newIP) return;
     const res = await fetch("/api/admin/security/blocklist", {
       method: "POST",
-      body: JSON.stringify({ ip: newIP, note: ipNote })
+      body: JSON.stringify({
+        ip: newIP,
+        note: ipNote,
+        duration: ipExpiry === "never" ? undefined : ipExpiry
+      })
     });
     if (res.ok) {
       setNewIP("");
       setIpNote("");
+      setIpExpiry("never");
       fetchBlocklist();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      await alert({ title: "Block failed", message: data.error || "Unable to block that address", type: "error" });
     }
   };
 
   const unblockIP = async (ip: string) => {
-    const res = await fetch(`/api/admin/security/blocklist/${ip}`, { method: 'DELETE' });
-    if (res.ok) fetchBlocklist();
+    const res = await fetch(`/api/admin/security/blocklist/${encodeURIComponent(ip)}`, { method: 'DELETE' });
+    if (res.ok) {
+      fetchBlocklist();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      await alert({ title: "Unblock failed", message: data.error || "Unable to unblock that address", type: "error" });
+    }
   };
 
   const findUser = async () => {
@@ -373,7 +456,15 @@ export default function AdminSecurityPage() {
           <h1 className="text-3xl font-bold text-[var(--admin-text-primary)] tracking-tight">Security</h1>
           <span className="px-3 py-1 bg-rose-500 text-white text-[10px] font-black uppercase rounded-full shadow-lg shadow-rose-500/20">Critical</span>
         </div>
-        <p className="text-[var(--admin-text-secondary)] font-medium">2FA oversight, threat monitoring, audit trail</p>
+        <div className="text-right">
+          <p className="text-[var(--admin-text-secondary)] font-medium">2FA oversight, threat monitoring, audit trail</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--admin-text-muted)] mt-1">
+            {dataStatus === "loading" && "Checking security data…"}
+            {dataStatus === "error" && "Security status unknown — data failed to load"}
+            {dataStatus === "partial" && "Security status partial — some sources unavailable"}
+            {dataStatus === "ok" && lastCheckedAt && `Last checked ${lastCheckedAt.toLocaleTimeString()}`}
+          </p>
+        </div>
       </div>
 
       {/* Alerts Banner */}
@@ -431,10 +522,26 @@ export default function AdminSecurityPage() {
         {activeTab === "alerts" && (
           <div className="space-y-4">
             {activeAlerts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-[2rem] border border-dashed border-emerald-200 dark:border-emerald-500/20">
-                <ShieldCheck size={48} className="text-emerald-500 mb-4 opacity-50" />
-                <p className="text-sm font-bold text-emerald-600">All systems secure. No active alerts.</p>
-              </div>
+              dataStatus === "error" ? (
+                <div className="flex flex-col items-center justify-center py-20 bg-amber-50/60 dark:bg-amber-500/5 rounded-[2rem] border border-dashed border-amber-300 dark:border-amber-500/30">
+                  <AlertTriangle size={48} className="text-amber-500 mb-4 opacity-60" />
+                  <p className="text-sm font-bold text-amber-600">Security status unknown.</p>
+                  <p className="text-xs text-[var(--admin-text-muted)] mt-1">The alert feed could not be loaded, so this is not a clean bill of health.</p>
+                </div>
+              ) : dataStatus === "loading" ? (
+                <div className="flex flex-col items-center justify-center py-20 bg-[var(--admin-bg-surface-variant)] rounded-[2rem] border border-dashed border-[var(--admin-border)]">
+                  <RefreshCw size={48} className="text-[var(--admin-text-muted)] mb-4 opacity-40 animate-spin" />
+                  <p className="text-sm font-bold text-[var(--admin-text-muted)]">Checking for security alerts…</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-[2rem] border border-dashed border-emerald-200 dark:border-emerald-500/20">
+                  <ShieldCheck size={48} className="text-emerald-500 mb-4 opacity-50" />
+                  <p className="text-sm font-bold text-emerald-600">No active security alerts.</p>
+                  <p className="text-xs text-[var(--admin-text-muted)] mt-1">
+                    No unresolved events in the security alert log (last {alerts.length} loaded{lastCheckedAt ? `, checked ${lastCheckedAt.toLocaleTimeString()}` : ""}).
+                  </p>
+                </div>
+              )
             ) : (
               activeAlerts.map(alert => (
                 <motion.div 
@@ -455,6 +562,12 @@ export default function AdminSecurityPage() {
                         </span>
                         <span className="text-[10px] text-[var(--admin-text-muted)] font-bold">•</span>
                         <span className="text-[10px] text-[var(--admin-text-muted)] font-bold">{new Date(alert.createdAt).toLocaleString()}</span>
+                        {alert.source && (
+                          <>
+                            <span className="text-[10px] text-[var(--admin-text-muted)] font-bold">•</span>
+                            <span className="text-[10px] text-[var(--admin-text-muted)] font-bold">via {alert.source}</span>
+                          </>
+                        )}
                       </div>
                       <p className="text-sm font-bold text-[var(--admin-text-primary)]">{alert.description}</p>
                       {alert.user && (
@@ -552,15 +665,30 @@ export default function AdminSecurityPage() {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Reason / Note</label>
                     <textarea 
-                      placeholder="e.g. Bot scraping detected"
+                      placeholder="e.g. Bot scraping detected (required)"
                       value={ipNote}
                       onChange={(e) => setIpNote(e.target.value)}
                       className="w-full h-24 p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-rose-500 resize-none text-[var(--admin-text-primary)]"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Expires</label>
+                    <select
+                      value={ipExpiry}
+                      onChange={(e) => setIpExpiry(e.target.value)}
+                      className="w-full p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-rose-500 text-[var(--admin-text-primary)]"
+                    >
+                      <option value="never">Never (permanent)</option>
+                      <option value="1h">1 hour</option>
+                      <option value="1d">1 day</option>
+                      <option value="7d">7 days</option>
+                      <option value="30d">30 days</option>
+                    </select>
+                  </div>
                   <button 
                     onClick={blockIP}
-                    className="w-full py-4 bg-rose-500 text-white rounded-2xl font-black uppercase shadow-lg shadow-rose-500/20 hover:bg-rose-600 transition-all"
+                    disabled={!newIP || ipNote.trim().length < 3}
+                    className="w-full py-4 bg-rose-500 text-white rounded-2xl font-black uppercase shadow-lg shadow-rose-500/20 hover:bg-rose-600 transition-all disabled:opacity-50"
                   >
                     Block IP Address
                   </button>
@@ -580,6 +708,7 @@ export default function AdminSecurityPage() {
                       <th className="py-4 px-6">IP Address</th>
                       <th className="py-4 px-6">Added At</th>
                       <th className="py-4 px-6">Note</th>
+                      <th className="py-4 px-6">Expires</th>
                       <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -589,6 +718,15 @@ export default function AdminSecurityPage() {
                         <td className="py-3 px-6 text-sm font-black text-[var(--admin-text-primary)]">{entry.ip}</td>
                         <td className="py-3 px-6 text-[10px] font-bold text-[var(--admin-text-muted)]">{new Date(entry.createdAt).toLocaleDateString()}</td>
                         <td className="py-3 px-6 text-xs text-[var(--admin-text-secondary)] italic">{entry.note || "No note"}</td>
+                        <td className="py-3 px-6 text-[10px] font-bold">
+                          {entry.expiresAt ? (
+                            <span className={entry.expired ? "text-[var(--admin-text-muted)] line-through" : "text-amber-500"}>
+                              {new Date(entry.expiresAt).toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="text-[var(--admin-text-muted)]">Never</span>
+                          )}
+                        </td>
                         <td className="py-3 px-6 text-right">
                           <button 
                             onClick={() => unblockIP(entry.ip)}
@@ -860,7 +998,7 @@ export default function AdminSecurityPage() {
                   <label className="text-[10px] font-black uppercase text-[var(--admin-text-muted)]">Detailed Action Logs</label>
                   <div className="p-6 bg-[var(--admin-bg-surface-variant)] rounded-3xl border border-[var(--admin-border-subtle)]">
                     <p className="text-sm leading-relaxed font-medium text-[var(--admin-text-secondary)] italic">
-                      "{selectedAuditLog.details}"
+                      &ldquo;{selectedAuditLog.details}&rdquo;
                     </p>
                   </div>
                 </div>

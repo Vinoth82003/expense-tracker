@@ -61,6 +61,17 @@ class Logger {
 
     // Log to database asynchronously (don't await to avoid blocking)
     try {
+      // A caller that already holds an email job's correlation id can pass it in
+      // `details.correlationId`; promote it to its own column so Logs and
+      // Notifications can be reconciled (spec 14) without parsing JSON.
+      const correlationId =
+        details &&
+        typeof details === "object" &&
+        !Array.isArray(details) &&
+        typeof (details as { correlationId?: unknown }).correlationId === "string"
+          ? ((details as { correlationId: string }).correlationId)
+          : null;
+
       // Check if we are in an environment that can access Prisma (standard Node runtime)
       if (typeof process !== 'undefined' && (prisma as any).systemLog) {
         await (prisma as any).systemLog.create({
@@ -71,6 +82,7 @@ class Logger {
             details: details ? (typeof details === "string" ? details : JSON.stringify(details)) : null,
             ip,
             userId: (userId && /^[0-9a-fA-F]{24}$/.test(userId)) ? userId : null,
+            ...(correlationId ? { correlationId } : {}),
           },
         });
       }

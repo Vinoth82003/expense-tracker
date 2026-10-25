@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Star, 
@@ -9,15 +9,14 @@ import {
   XCircle, 
   Trash2, 
   Search, 
-  Filter, 
   RefreshCcw,
   User,
   Clock,
-  ThumbsUp,
-  ThumbsDown,
+  AlertTriangle,
   ChevronLeft,
+  ChevronRight,
   Send,
-  Mail
+  Mail,
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -29,20 +28,33 @@ interface Review {
   comment: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: string;
+  moderationReason?: string | null;
+  moderatedAt?: string | null;
+  moderatedBy?: string | null;
   user: {
-    name: string;
+    id: string;
+    name: string | null;
     email: string;
     avatar: string | null;
   };
 }
 
-
 export default function AdminReviewsPage() {
+  const { confirm, prompt } = useModal();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "APPROVED" | "PENDING" | "REJECTED">("all");
-  const { confirm } = useModal();
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<{
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    averageRating: number | null;
+  } | null>(null);
 
   const [mounted, setMounted] = useState(false);
 
@@ -56,7 +68,7 @@ export default function AdminReviewsPage() {
     limitMode: false,
     active30d: false,
     newUsers: false,
-    incomeNoExpenses: false,
+    incomeExpenses: false,
     noIncomeNoExpenses: false,
     inactive2d: false,
     inactive7d: false,
@@ -64,39 +76,69 @@ export default function AdminReviewsPage() {
     noPWA: undefined as boolean | undefined,
   });
 
-  useEffect(() => {
-    setMounted(true);
-    fetchReviews();
-  }, []);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
-      const res = await fetch("/api/admin/reviews");
-      if (res.ok) {
-        const data = await res.json();
-        setReviews(data);
+      const params = new URLSearchParams({ page: String(page), limit: "25" });
+      if (search) params.set("search", search);
+      if (filter !== "all") params.set("status", filter);
+      const res = await fetch(`/api/admin/reviews?${params.toString()}`);
+      if (!res.ok) {
+        setLoadError(true);
+        return;
       }
+      const data = await res.json();
+      setReviews(data.items ?? []);
+      setTotal(data.total ?? 0);
+      setStats(data.stats ?? null);
     } catch (error) {
-      toast.error("Failed to fetch reviews");
+      console.error("Failed to fetch reviews", error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, filter]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Debounce all list fetches (search typing, filter change, pagination).
+  useEffect(() => {
+    if (!mounted) return;
+    const timer = setTimeout(fetchReviews, 250);
+    return () => clearTimeout(timer);
+  }, [mounted, fetchReviews]);
 
   const handleUpdateStatus = async (id: string, newStatus: "APPROVED" | "REJECTED" | "PENDING") => {
+    let reason: string | null = null;
+    if (newStatus === "REJECTED") {
+      reason = await prompt({
+        title: "Reject review",
+        message: "Provide a reason. It is stored on the review and written to the audit log.",
+        placeholder: "e.g. Off-topic / abusive / unverifiable claim",
+        confirmText: "Reject",
+      });
+      if (!reason || !reason.trim()) return;
+    }
+
     try {
       const res = await fetch(`/api/admin/reviews/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, reason: reason ?? undefined }),
       });
 
       if (res.ok) {
-        setReviews(reviews.map(r => r.id === id ? { ...r, status: newStatus } : r));
-        toast.success(`Review ${newStatus.toLowerCase()}!`);
+        toast.success(`Review ${newStatus.toLowerCase()}`);
+        fetchReviews();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Action failed");
       }
     } catch (error) {
+      console.error("Failed to update review", error);
       toast.error("Action failed");
     }
   };
@@ -118,26 +160,23 @@ export default function AdminReviewsPage() {
       });
 
       if (res.ok) {
-        setReviews(reviews.filter(r => r.id !== id));
         toast.success("Review deleted");
+        fetchReviews();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Delete failed");
       }
     } catch (error) {
+      console.error("Failed to delete review", error);
       toast.error("Delete failed");
     }
   };
 
-  const filteredReviews = reviews.filter(r => {
-    const matchesSearch = r.user.name.toLowerCase().includes(search.toLowerCase()) || 
-                         r.comment.toLowerCase().includes(search.toLowerCase()) ||
-                         r.user.email.toLowerCase().includes(search.toLowerCase());
-    
-    if (filter === "all") return matchesSearch;
-    return matchesSearch && r.status === filter;
-  });
+  const totalPages = Math.max(1, Math.ceil(total / 25));
 
 
   const handleRequestFeedback = async () => {
-    let finalFilter: any = null;
+    let finalFilter: Record<string, unknown> | null = null;
 
     if (recipientType === "filter") {
       finalFilter = { ...filterSegment };
@@ -164,7 +203,7 @@ export default function AdminReviewsPage() {
       } else {
         toast.error(data.error || "Failed to send requests");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     } finally {
       setSending(false);
@@ -204,24 +243,47 @@ export default function AdminReviewsPage() {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="p-6 bg-[var(--admin-bg-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm">
-          <p className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest mb-1">Total Reviews</p>
-          <h2 className="text-3xl font-bold text-[var(--admin-text-primary)]">{reviews.length}</h2>
+          <p className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest mb-1">Total reviews</p>
+          <h2 className="text-3xl font-bold text-[var(--admin-text-primary)]">{stats ? stats.total : "—"}</h2>
+          <p className="text-[10px] font-medium text-[var(--admin-text-muted)] mt-1">All reviews, every status</p>
         </div>
         <div className="p-6 bg-[var(--admin-bg-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm">
-          <p className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest mb-1">Pending Approval</p>
-          <h2 className="text-3xl font-bold text-amber-500">{reviews.filter(r => r.status === "PENDING").length}</h2>
+          <p className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest mb-1">Pending approval</p>
+          <h2 className="text-3xl font-bold text-amber-500">{stats ? stats.pending : "—"}</h2>
+          <p className="text-[10px] font-medium text-[var(--admin-text-muted)] mt-1">Awaiting moderation</p>
         </div>
 
         <div className="p-6 bg-[var(--admin-bg-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm">
-          <p className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest mb-1">Average Rating</p>
+          <p className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest mb-1">Approved</p>
+          <h2 className="text-3xl font-bold text-emerald-500">{stats ? stats.approved : "—"}</h2>
+          <p className="text-[10px] font-medium text-[var(--admin-text-muted)] mt-1">{stats ? `${stats.rejected} rejected` : ""}</p>
+        </div>
+
+        <div className="p-6 bg-[var(--admin-bg-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm">
+          <p className="text-[10px] font-bold text-[var(--admin-text-muted)] uppercase tracking-widest mb-1">Average rating</p>
           <h2 className="text-3xl font-bold text-primary-500">
-            {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : "0.0"}
+            {stats?.averageRating != null ? stats.averageRating.toFixed(1) : "—"}
             <span className="text-sm text-[var(--admin-text-muted)] ml-1">/ 5.0</span>
           </h2>
+          <p className="text-[10px] font-medium text-[var(--admin-text-muted)] mt-1">
+            {stats ? `Mean over ${stats.approved} approved review(s)` : "—"}
+          </p>
         </div>
       </div>
+
+      {loadError && (
+        <div className="flex items-center justify-between gap-4 p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <AlertTriangle size={18} className="text-rose-500 shrink-0" />
+            <p className="text-xs md:text-sm font-medium text-rose-600 dark:text-rose-400">Failed to load reviews.</p>
+          </div>
+          <button onClick={fetchReviews} className="shrink-0 flex items-center gap-2 px-3 py-1.5 text-[10px] md:text-xs font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 rounded-lg transition-colors">
+            <RefreshCcw size={14} className={loading ? "animate-spin" : ""} /> Retry
+          </button>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row gap-4">
@@ -231,7 +293,7 @@ export default function AdminReviewsPage() {
             type="text"
             placeholder="Search reviews, users or comments..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-12 pr-4 py-4 bg-[var(--admin-bg-card)] border border-[var(--admin-border)] rounded-2xl focus:ring-2 focus:ring-primary-500 outline-none transition-all font-medium text-[var(--admin-text-primary)]"
           />
         </div>
@@ -239,7 +301,7 @@ export default function AdminReviewsPage() {
           {(["all", "PENDING", "APPROVED", "REJECTED"] as const).map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => { setFilter(f); setPage(1); }}
               className={`px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all
                 ${filter === f ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20" : "text-[var(--admin-text-muted)] hover:text-[var(--admin-text-primary)]"}`}
             >
@@ -257,8 +319,8 @@ export default function AdminReviewsPage() {
             <RefreshCcw size={40} className="animate-spin text-primary-500" />
             <p className="text-[var(--admin-text-muted)] font-bold uppercase tracking-widest text-xs">Loading feedbacks...</p>
           </div>
-        ) : filteredReviews.length > 0 ? (
-          filteredReviews.map((review) => (
+        ) : reviews.length > 0 ? (
+          reviews.map((review) => (
             <motion.div
               layout
               key={review.id}
@@ -283,6 +345,15 @@ export default function AdminReviewsPage() {
                       <Clock size={10} />
                       {new Date(review.createdAt).toLocaleDateString()}
                     </div>
+                    <span className={`inline-block mt-2 px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                      review.status === "APPROVED"
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : review.status === "REJECTED"
+                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        : "bg-[var(--admin-bg-surface-variant)] text-[var(--admin-text-secondary)]"
+                    }`}>
+                      {review.status}
+                    </span>
                   </div>
                 </div>
 
@@ -298,8 +369,13 @@ export default function AdminReviewsPage() {
                     ))}
                   </div>
                   <p className="text-[var(--admin-text-secondary)] font-medium leading-relaxed italic">
-                    "{review.comment}"
+                    &ldquo;{review.comment}&rdquo;
                   </p>
+                  {review.status === "REJECTED" && review.moderationReason && (
+                    <p className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 rounded-lg px-3 py-2">
+                      Rejected: {review.moderationReason}
+                    </p>
+                  )}
                 </div>
 
                 {/* Actions */}
@@ -343,6 +419,31 @@ export default function AdminReviewsPage() {
         )}
       </div>
 
+      {/* Pagination */}
+      {total > 25 && (
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-medium text-[var(--admin-text-muted)]">
+            Page {page} of {totalPages} · {total} review{total === 1 ? "" : "s"}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              className="p-2.5 rounded-xl border border-[var(--admin-border)] text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-surface-variant)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="p-2.5 rounded-xl border border-[var(--admin-border)] text-[var(--admin-text-secondary)] hover:bg-[var(--admin-bg-surface-variant)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Request Feedback Modal */}
       <AnimatePresence>
         {isModalOpen && (
@@ -381,7 +482,7 @@ export default function AdminReviewsPage() {
                   <label className="text-xs font-bold text-[var(--admin-text-muted)] uppercase tracking-widest">Recipients</label>
                   <select
                     value={recipientType}
-                    onChange={(e) => setRecipientType(e.target.value as any)}
+                    onChange={(e) => setRecipientType(e.target.value as "all" | "filter" | "specific")}
                     className="w-full p-4 bg-[var(--admin-bg-surface-variant)] border border-[var(--admin-border-subtle)] rounded-2xl focus:ring-2 focus:ring-primary-500 outline-none font-medium text-[var(--admin-text-primary)]"
                   >
                     <option value="all">All Users</option>

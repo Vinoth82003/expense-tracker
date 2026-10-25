@@ -76,6 +76,12 @@ model Review {
   status      String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
   createdAt   DateTime @default(now())
 
+  // Moderation audit trail (spec 04). Optional so legacy rows read null and no
+  // migration is required on the schemaless MongoDB store.
+  moderationReason String?
+  moderatedBy      String?
+  moderatedAt      DateTime?
+
   userId      String   @db.ObjectId
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -89,6 +95,13 @@ model SecurityAlert {
   user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   status      String   @default("ACTIVE") // "ACTIVE", "DISMISSED"
   createdAt   DateTime @default(now())
+  // Optional provenance / resolution (spec 11 — severity + source + first/last
+  // seen + resolution). Optional so existing rows and the Mongo store need no
+  // migration; `createdAt` is the first-seen time when `lastSeenAt` is null.
+  source      String?
+  lastSeenAt  DateTime?
+  resolvedAt  DateTime?
+  resolvedBy  String?
 }
 
 model BlockedIP {
@@ -98,6 +111,9 @@ model BlockedIP {
   addedBy   String   // Admin name
   requests  Int      @default(0)
   createdAt DateTime @default(now())
+  // Optional expiry (spec 11 — "IP blocks need reason and expiry"). Optional so
+  // existing rows and the schemaless Mongo store need no migration.
+  expiresAt DateTime?
 }
 
 model AuditLog {
@@ -118,9 +134,31 @@ model Notification {
   bodyFormat     String   @default("text") // "text" | "html"
   recipientCount Int
   recipientFilter String? // JSON stringified filter
-  status         String   // "SENT", "FAILED"
-  error          String?  // Error message if failed
+  // Lifecycle: PROCESSING -> SUCCESS | PARTIAL | FAILED. (Legacy rows may also
+  // carry "SENT".) SUCCESS means the provider ACCEPTED the message; it is NOT a
+  // delivery confirmation — see deliveryConfirmed.
+  status         String
+  error          String?  // Sanitized error summary if failed
   adminName      String
+
+  // --- Shared mail-job lifecycle fields (spec 14) ---
+  // Stable id shared with SystemLog.correlationId so Notifications, Logs, and
+  // Overview read the same job. Defaults to this row's id when unset (legacy).
+  correlationId     String?
+  messageType       String?   // "ANNOUNCEMENT" | "TEST" | "FEEDBACK_REQUEST" | ...
+  templateId        String?
+  templateVersion   String?   // Snapshot of the template name/version at send time
+  attempts          Int?      // Logical send attempts; a retry is NOT a new message
+  deliveredCount    Int?      // Recipients the provider accepted
+  failedCount       Int?
+  queuedAt          DateTime?
+  processingAt      DateTime?
+  completedAt       DateTime?
+  // true only when the provider returns independent delivery evidence (DSN).
+  // nodemailer's SMTP "accepted" is NOT delivery confirmation.
+  deliveryConfirmed Boolean?
+  errorCode         String?   // Sanitized machine code, e.g. "ETIMEDOUT"
+
   createdAt      DateTime @default(now())
 }
 
@@ -358,6 +396,9 @@ model SystemLog {
   details   String?  // JSON string or long text
   ip        String?
   userId    String?  @db.ObjectId
+  // Job/correlation id linking an email job's log lines back to its Notification
+  // row (spec 14), so Notifications and Logs share the same terminal state.
+  correlationId String?
   createdAt DateTime @default(now())
 
   @@index([level, createdAt])

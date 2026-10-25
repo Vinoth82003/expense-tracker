@@ -32,6 +32,29 @@ export async function GET(req: NextRequest) {
     const viewsByCountry = new Map<string, number>();
     const sessions = new Set<string>();
     let referrerKnown = 0;
+    const referrerCategories = { direct: 0, search: 0, referral: 0 };
+
+    // Only a known search-engine *result* host counts as search. This is a strict
+    // allowlist rather than a suffix match, so product hosts such as
+    // search.google.com (Search Console) are NOT mislabelled as organic search —
+    // they fall through to "referral".
+    const SEARCH_HOSTS = new Set([
+      "google.com",
+      "www.google.com",
+      "bing.com",
+      "www.bing.com",
+      "duckduckgo.com",
+      "www.duckduckgo.com",
+      "search.yahoo.com",
+      "yahoo.com",
+      "www.yahoo.com",
+      "baidu.com",
+      "www.baidu.com",
+      "yandex.com",
+      "www.yandex.com",
+      "ecosia.org",
+      "www.ecosia.org",
+    ]);
 
     for (const row of rows) {
       const key = format(row.createdAt, "yyyy-MM-dd");
@@ -45,13 +68,20 @@ export async function GET(req: NextRequest) {
       if (row.referrer) {
         referrerKnown += 1;
         let source = row.referrer;
+        let host = "";
         try {
           // Collapse to registrable host so ga/utm noise doesn't fragment.
-          source = new URL(row.referrer).host;
+          host = new URL(row.referrer).host;
+          source = host;
         } catch {
           /* keep raw */
         }
         viewsByReferrer.set(source, (viewsByReferrer.get(source) || 0) + 1);
+
+        if (SEARCH_HOSTS.has(host.toLowerCase())) referrerCategories.search += 1;
+        else referrerCategories.referral += 1;
+      } else {
+        referrerCategories.direct += 1;
       }
 
       if (row.country) {
@@ -74,6 +104,9 @@ export async function GET(req: NextRequest) {
           rows.length > 0
             ? Math.round(((rows.length - referrerKnown) / rows.length) * 100)
             : 0,
+        // Direct = no referrer; Search = known SERP host; Referral = everything
+        // else (including product hosts like search.google.com).
+        referrerCategories,
       },
       daily: dayKeys.map((key) => ({
         date: format(new Date(`${key}T00:00:00`), "MMM dd"),

@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
   try {
     const { userId } = await req.json();
 
-    if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+    if (!userId || !/^[0-9a-fA-F]{24}$/.test(userId)) {
+      return NextResponse.json({ error: "A valid user ID is required" }, { status: 400 });
     }
 
     // Fetch user data for the report
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    const report = await (prisma as any).report.create({
+    const report = await prisma.report.create({
       data: {
         userId,
         content: mockContent,
