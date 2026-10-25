@@ -43,6 +43,7 @@ export interface DraftOperation {
   amount: number;
   category: "Needs" | "Wants" | null;
   subcategory: string | null;
+  person?: string | null;
   source: IncomeSource | null;
   note: string;
   date: string | null;
@@ -220,11 +221,11 @@ export function toDraftOperations(
 
   return operations.map((op) => {
     const note = (op.note || op.subcategory || "").toString().trim();
-    // With no date in the user's own words, the model's date is discarded
-    // outright rather than trusted: a model told "today's date is X" will
-    // manufacture a date, and accepting that invention is the exact bug this
-    // gate exists to stop.
-    const date = statedDate;
+    // Prefer op.date if resolved as a valid YYYY-MM-DD date.
+    // Fall back to statedDate detected from the message.
+    const date = typeof op.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(op.date)
+      ? op.date
+      : statedDate;
 
     if (op.kind === "EXPENSE") {
       return {
@@ -232,6 +233,7 @@ export function toDraftOperations(
         amount: op.amount,
         category: op.category ?? null,
         subcategory: op.subcategory ?? null,
+        person: op.person ?? null,
         source: null,
         note,
         date,
@@ -539,9 +541,10 @@ function buildSuccessReply(operations: DraftOperation[]): string {
     .filter((op) => op.kind !== "BUDGET_UPDATE")
     .map((op) => {
       const label = op.kind === "EXPENSE" ? op.subcategory : op.source;
+      const personPart = op.person ? ` · ${op.person.charAt(0).toUpperCase() + op.person.slice(1)}` : "";
       return `• ${label || "Other"} · ${formatCurrency(op.amount)}${
         op.date ? ` · ${formatFriendlyDate(op.date)}` : ""
-      }`;
+      }${personPart}`;
     });
   if (details.length) {
     lines.push("");
@@ -764,6 +767,7 @@ async function executeSession(
     amount: op.amount,
     category: op.category ?? undefined,
     subcategory: op.subcategory ?? undefined,
+    person: op.person ?? undefined,
     source: op.source ?? undefined,
     note: op.note || undefined,
     date: op.date ?? undefined,

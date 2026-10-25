@@ -79,6 +79,7 @@ export const CATEGORY_MAPPINGS: CategoryMapping[] = [
       "indigo", "spicejet", "vistara", "air india", "akasa", "boardingpass",
       "hotel", "oyo", "airbnb", "lodge", "homestay",
       "makemytrip", "goibibo", "yatra", "cleartrip", "ixigo",
+      "bus", "auto", "cab", "taxi", "petrol", "train", "ticket",
     ],
   },
   {

@@ -394,5 +394,79 @@ describe("operation typing", () => {
     expect(op.amount).toBe(10);
     expect(op.note).toBeUndefined();
     expect(op.date).toBeUndefined();
+    expect(op.person).toBeUndefined();
+  });
+
+  it("parses prompt expenses schema with person, date, and needs_clarification", async () => {
+    const payload = {
+      type: "TRANSACTION_BATCH",
+      reply: "✅ Recorded 3 expenses, total ₹500",
+      expenses: [
+        { amount: 200, category: "Food", person: "vinoth", date: "2026-10-24", note: null },
+        { amount: 100, category: "Travel", person: "vinoth", date: "2026-10-24", note: null },
+        { amount: 200, category: "Food", person: "goms", date: "2026-10-25", note: null },
+      ],
+      needs_clarification: [],
+    };
+    groqReturns(payload);
+
+    const res = await extractFinancialIntent(
+      "I spent 200 on food and 100 for travel all this for vinoth yesterday and spent 200 for food today for goms",
+      "u1",
+    );
+
+    expect(res.type).toBe("TRANSACTION_BATCH");
+    expect(res.operations).toHaveLength(3);
+    expect(res.operations![0]).toEqual({
+      kind: "EXPENSE",
+      amount: 200,
+      category: "Needs",
+      subcategory: "Food",
+      person: "vinoth",
+      note: "for vinoth",
+      date: "2026-10-24",
+    });
+    expect(res.operations![1]).toEqual({
+      kind: "EXPENSE",
+      amount: 100,
+      category: "Wants",
+      subcategory: "Travel",
+      person: "vinoth",
+      note: "for vinoth",
+      date: "2026-10-24",
+    });
+    expect(res.operations![2]).toEqual({
+      kind: "EXPENSE",
+      amount: 200,
+      category: "Needs",
+      subcategory: "Food",
+      person: "goms",
+      note: "for goms",
+      date: "2026-10-25",
+    });
+  });
+
+  it("parses JSON before reply text using parseModelJson", async () => {
+    const raw = `{"expenses":[{"amount":80,"category":"Travel","person":null,"date":"2026-10-25","note":"auto"},{"amount":150,"category":"Food","person":null,"date":"2026-10-25","note":"lunch"}],"needs_clarification":[]}
+✅ Recorded 2 expenses, total ₹230
+• Travel · ₹80 · 25 Oct 2026
+• Food · ₹150 · 25 Oct 2026
+(No date given, so I used today.)`;
+
+    mockCallGroqNLU.mockResolvedValue({
+      content: raw,
+      data: raw,
+      usage: { promptTokens: 10, outputTokens: 20 },
+    });
+
+    const res = await extractFinancialIntent("auto 80, lunch 150", "u1");
+
+    expect(res.type).toBe("TRANSACTION_BATCH");
+    expect(res.operations).toHaveLength(2);
+    expect(res.operations![0].subcategory).toBe("Travel");
+    expect(res.operations![0].amount).toBe(80);
+    expect(res.operations![1].subcategory).toBe("Food");
+    expect(res.operations![1].amount).toBe(150);
+    expect(res.reply).toContain("Recorded 2 expenses");
   });
 });

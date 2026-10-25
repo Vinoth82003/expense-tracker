@@ -39,13 +39,22 @@ export async function executeOperationsBatch(
     let updatedBudget: any = null;
 
     for (const exp of expensesToCreate) {
+      let finalNote = exp.note || null;
+      if (exp.person) {
+        if (!finalNote) {
+          finalNote = `for ${exp.person}`;
+        } else if (!finalNote.toLowerCase().includes(exp.person.toLowerCase())) {
+          finalNote = `${finalNote} (for ${exp.person})`;
+        }
+      }
+
       const record = await tx.expense.create({
         data: {
           userId,
           amount: exp.amount,
           category: exp.category || "Needs",
           subcategory: exp.subcategory || "Other",
-          note: exp.note || null,
+          note: finalNote,
           date: exp.date ? new Date(exp.date) : new Date(),
           entrySource: ENTRY_SOURCE.SAGE,
         },
